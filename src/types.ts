@@ -1,5 +1,3 @@
-// src/types.ts 전문
-
 export const UserRole = {
   GUEST: 'GUEST',
   USER: 'USER',
