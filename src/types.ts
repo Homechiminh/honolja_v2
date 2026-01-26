@@ -1,3 +1,5 @@
+// src/types.ts 전문
+
 export const UserRole = {
   GUEST: 'GUEST',
   USER: 'USER',
@@ -23,50 +25,29 @@ export const Region = {
 } as const;
 export type Region = typeof Region[keyof typeof Region];
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  level: number;
-  points: number;
-  profileImage?: string;
-}
-
 export interface Store {
   id: string;
   name: string;
   category: CategoryType;
   region: Region;
   rating: number;
-  review_count: number; // snake_case 반영
+  review_count: number;
   description: string;
-  image_url: string;    // snake_case 반영
-  image_index?: number; // snake_case 반영
+  image_url: string;
+  image_index?: number;
   tags: string[];
   address: string;
   is_hot: boolean;
   author_id: string;
 }
 
-export interface CommunityPost {
+// User 인터페이스 통합 (사용자님의 Profile 정보 포함)
+export interface User {
   id: string;
-  title: string;
-  author: string;
-  author_id: string;
-  level: number;
+  email: string;
+  nickname: string;
+  role: UserRole;
+  points: number;
   created_at: string;
-  views: number;
-  likes: number;
-  content: string;
-  is_veteran?: boolean;
-}
-
-export interface Notice {
-  id: string;
-  title: string;
-  created_at: string;
-  views: number;
-  is_important: boolean;
-  content: string;
+  profile_image?: string;
 }
