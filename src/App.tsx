@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './index.css'
+import Header from './components/Header' // 1. 모듈화된 헤더 불러오기
 
 // 카테고리 데이터 정의
 const CATEGORIES = [
@@ -24,36 +25,10 @@ function App() {
   return (
     <div className="min-h-screen bg-[#050505] text-[#f8fafc] font-sans selection:bg-red-500/30">
       
-      {/* 1. 상단 네비게이션 (GNB) */}
-      <header className="sticky top-0 z-50 w-full bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            {/* 로고: 나중에 이미지로 교체 가능 */}
-            <h1 className="text-2xl font-black tracking-tighter cursor-pointer group">
-              HONOLJA<span className="text-red-600 group-hover:animate-pulse">.</span>
-            </h1>
-            
-            <nav className="hidden lg:flex items-center gap-8 text-sm font-bold text-gray-400">
-              {CATEGORIES.map(cat => (
-                <a key={cat.id} href={`#${cat.id}`} className="hover:text-white transition-colors">
-                  {cat.name}
-                </a>
-              ))}
-            </nav>
-          </div>
+      {/* 2. 기존 헤더 자리를 컴포넌트로 교체 (로그인 연동 완료) */}
+      <Header />
 
-          <div className="flex items-center gap-3">
-            <button className="text-sm font-bold px-4 py-2 hover:text-red-500 transition-colors">
-              회원가입
-            </button>
-            <button className="text-sm font-bold px-6 py-2 bg-red-600 hover:bg-red-700 rounded-full transition-all active:scale-95 shadow-lg shadow-red-600/20">
-              로그인
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. 히어로 섹션 */}
+      {/* 3. 히어로 섹션 */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
         {/* 배경 빛 효과 */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-red-600/10 blur-[120px] rounded-full pointer-events-none" />
@@ -83,7 +58,7 @@ function App() {
         </div>
       </section>
 
-      {/* 3. 카테고리 퀵 메뉴 */}
+      {/* 4. 카테고리 퀵 메뉴 */}
       <section className="max-w-7xl mx-auto px-6 py-10">
         <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
           {CATEGORIES.map(cat => (
@@ -95,7 +70,7 @@ function App() {
         </div>
       </section>
 
-      {/* 4. 메인 리스트 섹션 */}
+      {/* 5. 메인 리스트 섹션 */}
       <main className="max-w-7xl mx-auto px-6 py-16">
         <div className="flex items-center justify-between mb-10">
           <div>
@@ -140,7 +115,7 @@ function App() {
         </div>
       </main>
 
-      {/* Footer */}
+      {/* 6. Footer */}
       <footer className="border-t border-white/5 py-12 px-6 mt-20">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-gray-600 text-sm font-bold">© 2026 HONOLJA. All rights reserved.</p>
