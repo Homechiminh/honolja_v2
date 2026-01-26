@@ -1,26 +1,27 @@
-// src/types.ts 전문
+export const UserRole = {
+  GUEST: 'GUEST',
+  USER: 'USER',
+  VETERAN: 'VETERAN',
+  ADMIN: 'ADMIN'
+} as const;
+export type UserRole = typeof UserRole[keyof typeof UserRole];
 
-export enum UserRole {
-  GUEST = 'GUEST',
-  USER = 'USER',
-  VETERAN = 'VETERAN',
-  ADMIN = 'ADMIN'
-}
+export const CategoryType = {
+  MASSAGE: 'massage',
+  BARBER: 'barber',
+  KARAOKE: 'karaoke',
+  BAR_CLUB: 'barclub',
+  COMMUNITY: 'community',
+  VILLA: 'villa'
+} as const;
+export type CategoryType = typeof CategoryType[keyof typeof CategoryType];
 
-export enum CategoryType {
-  MASSAGE = 'massage',
-  BARBER = 'barber',
-  KARAOKE = 'karaoke',
-  BAR_CLUB = 'barclub',
-  COMMUNITY = 'community',
-  VILLA = 'villa'
-}
-
-export enum Region {
-  HCMC = 'HCMC',
-  DANANG = 'DANANG',
-  NHA_TRANG = 'NHA_TRANG'
-}
+export const Region = {
+  HCMC: 'HCMC',
+  DANANG: 'DANANG',
+  NHA_TRANG: 'NHA_TRANG'
+} as const;
+export type Region = typeof Region[keyof typeof Region];
 
 export interface User {
   id: string;
@@ -38,45 +39,34 @@ export interface Store {
   category: CategoryType;
   region: Region;
   rating: number;
-  reviewCount: number;
+  review_count: number; // snake_case 반영
   description: string;
-  imageUrl: string;
-  imageIndex?: number;
+  image_url: string;    // snake_case 반영
+  image_index?: number; // snake_case 반영
   tags: string[];
   address: string;
-  isHot: boolean;
-  authorId: string;
-  promoImages?: string[];
-  benefits?: string[];
+  is_hot: boolean;
+  author_id: string;
 }
 
 export interface CommunityPost {
   id: string;
   title: string;
   author: string;
-  authorId: string;
+  author_id: string;
   level: number;
-  createdAt: string;
+  created_at: string;
   views: number;
   likes: number;
   content: string;
-  isVeteran?: boolean;
+  is_veteran?: boolean;
 }
 
 export interface Notice {
   id: string;
   title: string;
-  createdAt: string;
+  created_at: string;
   views: number;
-  isImportant: boolean;
+  is_important: boolean;
   content: string;
-}
-
-export interface Coupon {
-  id: string;
-  title: string;
-  category: CategoryType;
-  pointCost: number;
-  discount: string;
-  description: string;
 }
