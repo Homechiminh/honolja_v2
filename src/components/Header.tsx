@@ -1,73 +1,112 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import AuthModal from './AuthModal';
 
-const Footer: React.FC = () => {
+const Header: React.FC = () => {
+  const { user, signOut } = useAuth();
+  
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+
+  const navItems = [
+    { name: '마사지', href: '#' },
+    { name: '이발소', href: '#' },
+    { name: '가라오케', href: '#' },
+    { name: '커뮤니티', href: '#' },
+    { name: '바/클럽', href: '#' },
+  ];
+
+  const openAuth = (view: 'login' | 'signup') => {
+    setAuthView(view);
+    setIsAuthOpen(true);
+  };
+
   return (
-    <footer className="bg-[#050505] border-t border-white/5 pt-20 pb-12 px-6">
-      <div className="max-w-[1400px] mx-auto">
-        
-        {/* 상단 3개 섹션 레이아웃 (이미지 f29465 기준) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
+    <>
+      <header className="fixed top-0 z-50 w-full bg-black/90 backdrop-blur-md border-b border-white/10 px-6 py-3">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           
-          {/* 1. 브랜드 정보 섹션 (좌측) */}
-          <div className="lg:col-span-5">
-            <div className="flex items-center gap-1 mb-6">
-              <span className="text-2xl font-black text-white tracking-tighter">호놀자</span>
-              <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2"></span>
+          {/* 1. 좌측 로고 및 메뉴 */}
+          <div className="flex items-center gap-8">
+            <div 
+              className="flex items-center gap-2 cursor-pointer group"
+              onClick={() => window.location.href = '/'}
+            >
+              <div className="bg-red-600 w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-red-700 transition-colors">
+                <span className="text-white font-black italic text-xl">H</span>
+              </div>
+              <span className="text-xl font-black tracking-tighter text-white">호놀자</span>
             </div>
-            <p className="text-gray-400 text-[15px] leading-relaxed mb-8 max-w-sm font-medium">
-              베트남 여행의 모든 즐거움을 한 곳에, 호놀자입니다.<br />
-              정직한 리뷰와 프리미엄 정보를 통해 여러분의 여행을 더욱 특별하게 만들어드리겠습니다.
-            </p>
-            
-            {/* 소셜 버튼 세트 - 이미지와 동일한 컬러 적용 */}
-            <div className="flex flex-wrap gap-3">
-              <button className="flex items-center gap-2 bg-[#FEE500] text-black px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#F7D600] transition-colors shadow-lg shadow-yellow-500/10">
-                <span className="text-lg">💬</span> 호놀자 카톡
+
+            {/* 메인 메뉴 영역 (수정 완료: nav 태그 짝을 맞췄습니다) */}
+            <nav className="hidden lg:flex items-center gap-6">
+              {navItems.map((item) => (
+                <a 
+                  key={item.name} 
+                  href={item.href} 
+                  className="text-[14px] font-bold text-gray-400 hover:text-white transition-colors"
+                >
+                  {item.name}
+                </a>
+              ))}
+              <span className="text-[14px] font-bold text-red-500 italic animate-pulse">COUPON SHOP</span>
+            </nav>
+          </div>
+
+          {/* 2. 우측 버튼 섹션 */}
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 mr-2">
+              <button className="px-3 py-1.5 rounded-lg border border-blue-900/50 bg-blue-900/10 text-[11px] font-bold text-blue-400 hover:bg-blue-900/20 transition-all shadow-[0_0_10px_rgba(30,64,175,0.2)]">
+                다낭놀자
               </button>
-              <button className="flex items-center gap-2 bg-[#0088cc] text-white px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#0077b5] transition-colors shadow-lg shadow-blue-500/10">
-                <span className="text-lg">✈️</span> 호놀자 텔레그램
+              <button className="px-3 py-1.5 rounded-lg border border-green-900/50 bg-green-900/10 text-[11px] font-bold text-green-400 hover:bg-green-900/20 transition-all shadow-[0_0_10px_rgba(6,95,70,0.2)]">
+                나트랑놀자
               </button>
             </div>
+
+            {user ? (
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] text-gray-500 font-black tracking-widest uppercase">Member</span>
+                  <span className="text-sm font-black text-white">
+                    {user.user_metadata?.nickname || user.email?.split('@')[0]}님
+                  </span>
+                </div>
+                <button 
+                  onClick={() => signOut()}
+                  className="px-5 py-2 text-xs font-black bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => openAuth('signup')}
+                  className="text-[13px] font-bold text-gray-300 hover:text-white px-3 py-2 transition-colors"
+                >
+                  회원가입
+                </button>
+                <button 
+                  onClick={() => openAuth('login')}
+                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-[13px] font-black transition-all active:scale-95 shadow-lg shadow-red-600/20"
+                >
+                  로그인
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* 2. SERVICE 섹션 (중앙) */}
-          <div className="lg:col-span-4 lg:pl-20">
-            <h4 className="text-white font-black text-[13px] mb-8 tracking-[0.2em] uppercase italic">Service</h4>
-            <ul className="space-y-4 text-gray-500 text-[14px] font-bold">
-              <li className="hover:text-white cursor-pointer transition-colors">힐링 & 테라피 (마사지)</li>
-              <li className="hover:text-white cursor-pointer transition-colors">토탈 그루밍 케어 (이발소)</li>
-              <li className="hover:text-white cursor-pointer transition-colors">가라오케</li>
-              <li className="hover:text-white cursor-pointer transition-colors">럭셔리 나이트라이프 (바/클럽)</li>
-              <li className="hover:text-white cursor-pointer transition-colors">커뮤니티 게시판</li>
-            </ul>
-          </div>
-
-          {/* 3. SUPPORT 섹션 (우측) */}
-          <div className="lg:col-span-3">
-            <h4 className="text-white font-black text-[13px] mb-8 tracking-[0.2em] uppercase italic">Support</h4>
-            <ul className="space-y-4 text-gray-500 text-[14px] font-bold">
-              <li className="hover:text-white cursor-pointer transition-colors">공지사항</li>
-              <li className="hover:text-white cursor-pointer transition-colors">숙소 및 투어 문의</li>
-              {/* 이미지 f29465에서 빨간색으로 강조된 부분 반영 */}
-              <li className="text-red-600 hover:text-red-500 cursor-pointer transition-colors">광고 및 제휴문의</li>
-              <li className="hover:text-white cursor-pointer transition-colors">이용약관 및 정책</li>
-            </ul>
-          </div>
         </div>
+      </header>
 
-        {/* 하단 카피라이트 섹션 (이미지 하단 텍스트 반영) */}
-        <div className="pt-10 border-t border-white/5 text-center">
-          <p className="text-[12px] text-gray-600 font-bold mb-2">
-            © 2024 호놀자 VIETNAM. All rights reserved.
-          </p>
-          <p className="text-[11px] text-gray-700 font-bold italic uppercase tracking-wider">
-            High-End Lifestyle Concierge for Vietnam Travelers.
-          </p>
-        </div>
-
-      </div>
-    </footer>
+      <AuthModal 
+        isOpen={isAuthOpen} 
+        onClose={() => setIsAuthOpen(false)} 
+        initialView={authView} 
+      />
+    </>
   );
 };
 
-export default Footer;
+export default Header;
