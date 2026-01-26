@@ -2,32 +2,30 @@
 
 @layer base {
   :root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    background-color: #050505; /* 호놀자 블랙 */
-    color: rgba(255, 255, 255, 0.87);
-    color-scheme: dark;
+    background-color: #050505;
+    color: #ffffff;
+    font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
   }
   body {
     margin: 0;
-    display: block; 
-    min-width: 320px;
-    min-height: 100vh;
-  }
-  button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
+    display: block !important;
   }
 }
 
 @layer components {
-  .text-gradient {
-    background: linear-gradient(to right, #ff0000, #ff8a00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+  /* "놀자!" 부분의 강렬한 레드 네온 효과 */
+  .text-glow-red {
+    color: #ff0000;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 0, 0, 0.4);
+  }
+  
+  /* 다낭/나트랑 버튼의 발광 테두리 */
+  .btn-outline-blue {
+    border: 1px solid #1e40af;
+    box-shadow: 0 0 5px rgba(30, 64, 175, 0.5);
+  }
+  .btn-outline-green {
+    border: 1px solid #065f46;
+    box-shadow: 0 0 5px rgba(6, 95, 70, 0.5);
   }
 }
