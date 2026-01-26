@@ -1,4 +1,3 @@
-// src/components/StoreCard.tsx 전문
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Store } from '../types'; // import type 적용 (TS1484 해결)
