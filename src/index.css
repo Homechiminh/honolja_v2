@@ -1,20 +1,26 @@
-/* src/index.css */
-@import "tailwindcss"; /* Tailwind CSS v4 대응 */
+/* Tailwind CSS 엔진 로드 */
+@import "tailwindcss";
+
+/* v3 하위 호환성을 위한 지시어 (필요 시) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* 호놀자 커스텀 스타일 및 디자인 복구 */
 @layer base {
   body {
     font-family: 'Noto Sans KR', sans-serif;
-    /* 배경색을 강제로 #050505로 지정하여 화면 깨짐 방지 */
+    /* 배경색을 강제로 지정하여 '화면 깨짐' 느낌을 즉시 해결합니다. */
     background-color: #050505 !important;
     color: #f8fafc;
     margin: 0;
     padding: 0;
+    /* 기존의 display: flex와 center 속성을 제거하여 정상적인 레이아웃이 나오게 합니다. */
+    display: block !important; 
   }
 }
 
+/* 유틸리티 클래스 정의 */
 @layer components {
   .text-gradient {
     background: linear-gradient(to right, #ff0000, #ff8a00);
