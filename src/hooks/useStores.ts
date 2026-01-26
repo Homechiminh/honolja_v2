@@ -1,6 +1,7 @@
+// src/hooks/useStores.ts 전문
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { Store } from '../types';
+import { supabase } from '../supabase'; // 경로 수정 (image_f22824.png 기준)
+import type { Store } from '../types'; // import type 적용 (TS1484 해결)
 
 export const useStores = (category?: string) => {
   const [stores, setStores] = useState<Store[]>([]);
