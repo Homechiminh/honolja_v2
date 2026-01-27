@@ -1,30 +1,27 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-// 🔴 type 키워드 추가 (TS1484 에러 해결)
 import type { Store } from '../types'; 
 
 interface StoreCardProps { 
   store: Store; 
 }
 
-// 사용할 스프라이트 이미지 URL 정의
 const SPRITE_9 = 'https://tqscfshshsh.supabase.co/storage/v1/object/public/stores/Gemini_Generated_Image.jpg';
 const SPRITE_12 = 'https://tqscfshshsh.supabase.co/storage/v1/object/public/stores/lucid-origin.jpg';
 
 const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
-  // 1. 이미지 결정 로직 (DB에 이미지가 있으면 사용, 없으면 스프라이트 할당)
+  // 1. 이미지 결정 (image_url로 통일)
   const displayImage = useMemo(() => {
-    // imageUrl과 image_url 혼용 방지를 위해 수정
-    const url = store.image_url || store.imageUrl; 
+    const url = store.image_url; 
     if (url && url.startsWith('http')) {
       return url;
     }
     const idNum = store.id.replace(/[^0-9]/g, '');
     const lastDigit = idNum ? parseInt(idNum.slice(-1)) : 0;
     return lastDigit % 2 === 0 ? SPRITE_9 : SPRITE_12;
-  }, [store.image_url, store.imageUrl, store.id]);
+  }, [store.image_url, store.id]);
 
-  // 2. 스프라이트 판별 및 설정
+  // 2. 스프라이트 설정
   const isSprite = useMemo(() => {
     return displayImage.includes('Gemini_Generated_Image') || displayImage.includes('lucid-origin');
   }, [displayImage]);
@@ -37,7 +34,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
     return { cols: 3, rows: 3, size: '300% 300%' };
   }, [displayImage, isSprite]);
 
-  // 3. 배경 위치 계산 (ID 기반 고정 랜덤)
+  // 3. 배경 위치 계산
   const backgroundPosition = useMemo(() => {
     if (!spriteConfig) return 'center';
     const { cols, rows } = spriteConfig;
@@ -66,7 +63,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 transition-opacity"></div>
         
         <div className="absolute top-4 left-4 z-20">
-          {(store.is_hot || store.isHot) && (
+          {store.is_hot && (
             <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse uppercase italic">Hot</div>
           )}
         </div>
@@ -82,7 +79,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
               </span>
             ))}
           </div>
-          <h3 className="text-lg md:text-2xl font-black text-white mb-1 tracking-tighter group-hover:text-red-500 transition-colors uppercase italic">
+          <h3 className="text-lg md:text-2xl font-black text-white mb-1 tracking-tighter group-hover:text-red-500 transition-colors uppercase italic leading-none">
             {store.name}
           </h3>
           <p className="text-[10px] md:text-[11px] text-slate-400 line-clamp-1 mb-4 font-medium opacity-80 italic">
