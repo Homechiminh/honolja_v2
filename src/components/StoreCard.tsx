@@ -11,7 +11,6 @@ const SPRITE_9_URL = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1768906
 const SPRITE_12_URL = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1768960502/lucid-origin_9_asian_girls_with_well_dressed_such_as_Sequin_Dress_off_shoulder_dress_Slip_Dre-0_2_kuf0m2.jpg";
 
 const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
-  // 1. 21명 중 누구를 보여줄지 결정하는 엔진
   const spriteConfig = useMemo(() => {
     const index = store.image_index || 0;
 
