@@ -49,6 +49,7 @@ export interface User {
   role: UserRole;
   level: number;
   points: number;
+  is_blocked: boolean;
   created_at: string;
   profile_image?: string;
 }
