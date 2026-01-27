@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
-import { useAuth } from './hooks/useAuth'; // 인증 감시 훅
+import { useAuth } from './hooks/useAuth';
 
 // 레이아웃 컴포넌트
 import Header from './components/Header';
@@ -13,22 +13,18 @@ import Signup from './pages/Signup';
 import MyPage from './pages/MyPage';
 import StoreList from './pages/StoreList';
 import StoreDetail from './pages/StoreDetail';
+import AdminDashboard from './pages/AdminDashboard';
 import AdminStoreCreate from './pages/AdminStoreCreate';
+import AdminManageUsers from './pages/AdminManageUsers';
 
 function App() {
-  // 1. 앱 최상단에서 사용자의 로그인 상태를 낚아챕니다.
   const { currentUser, loading } = useAuth();
 
-  // 2. 인증 정보를 불러오는 동안(Loading) 화면이 완전히 검게 변하지 않도록 
-  // 배경색과 스피너를 확실히 보여줍니다.
+  // 인증 로딩 처리
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
-        {/* 스피너 디자인을 조금 더 강조하여 로딩 중임을 알립니다. */}
-        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(220,38,38,0.5)]"></div>
-        <p className="text-white/50 font-black italic animate-pulse uppercase tracking-widest text-[10px]">
-          Authenticating...
-        </p>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -36,35 +32,30 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30">
-        {/* 3. 모든 페이지 공통 상단 Header: currentUser가 null이면 로그인 버튼을 보여줍니다. */}
         <Header currentUser={currentUser} />
 
-        {/* 4. 주소(Path)에 따라 메인 콘텐츠가 바뀌는 영역 */}
-        <div className="flex-grow pt-[80px]"> {/* 헤더 높이만큼 여백 확보 */}
+        <div className="flex-grow">
           <Routes>
-            {/* 메인 홈 */}
+            {/* 기본 서비스 페이지 */}
             <Route path="/" element={<Home />} />
-            
-            {/* 인증 관련 */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            
-            {/* 사용자 공간 */}
             <Route path="/mypage" element={<MyPage currentUser={currentUser} />} />
             
-            {/* 업소 리스트 및 상세 정보 */}
+            {/* 업소 관련 페이지 */}
             <Route path="/stores/:category" element={<StoreList />} />
             <Route path="/store/detail/:id" element={<StoreDetail currentUser={currentUser} />} />
             
-            {/* 관리자 전용 영역 */}
+            {/* 🔴 관리자 전용 영역 */}
+            <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
             <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
+            <Route path="/admin/manage-users" element={<AdminManageUsers currentUser={currentUser} />} />
 
-            {/* 잘못된 주소 접근 시 홈으로 이동 (보안 및 UX 강화) */}
+            {/* 잘못된 접근 시 홈으로 리다이렉트 */}
             <Route path="*" element={<Home />} />
           </Routes>
         </div>
 
-        {/* 5. 모든 페이지 공통 하단 푸터 */}
         <Footer />
       </div>
     </Router>
