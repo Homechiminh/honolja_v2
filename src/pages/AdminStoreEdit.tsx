@@ -17,6 +17,7 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     address: '',
     description: '',
     image_url: '',
+    rating: 4.5, // 🔴 추가: 수동 관리를 위한 별점 필드
     tags: '',
     benefits: '',
     kakao_url: '',
@@ -37,7 +38,8 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
         setFormData({
           ...data,
           tags: data.tags?.join(', ') || '',
-          benefits: data.benefits?.join(', ') || ''
+          benefits: data.benefits?.join(', ') || '',
+          rating: data.rating || 4.5 // 🔴 DB에서 기존 별점 가져오기
         });
       }
       setLoading(false);
@@ -83,13 +85,14 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
         .from('stores')
         .update({
           ...formData,
+          rating: Number(formData.rating), // 🔴 숫자로 변환하여 저장
           tags: formData.tags.split(',').map((t) => t.trim()),
           benefits: formData.benefits.split(',').map((b) => b.trim())
         })
         .eq('id', id);
       
       if (error) throw error;
-      alert('업소 정보가 성공적으로 수정되었습니다!');
+      alert('업소 정보와 별점이 성공적으로 수정되었습니다!');
       navigate('/admin/manage-stores');
     } catch (err) {
       alert('수정 중 에러가 발생했습니다.');
@@ -111,7 +114,7 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
           <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter inline-block border-b-8 border-emerald-500 pb-4">
             Edit <span className="text-emerald-500">Store</span>
           </h2>
-          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-6">기존 업소 정보 수정 및 HOT 상태 관리</p>
+          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-6">기존 업소 정보 수정 및 별점/HOT 상태 관리</p>
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-12">
@@ -134,7 +137,21 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
             {/* 기본 정보 */}
             <div className="space-y-4">
               <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">🏢 업소/숙소 명</label>
-              <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-lg font-bold text-white focus:border-emerald-500 outline-none transition-all shadow-inner" />
+              <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-lg font-bold text-white focus:border-emerald-500 outline-none transition-all" />
+            </div>
+
+            {/* 🔴 추가: 별점(Star Rating) 수동 관리 */}
+            <div className="space-y-4">
+              <label className="text-sm font-black text-yellow-500 uppercase tracking-widest ml-2">⭐ 별점 관리 (0.5 ~ 5.0)</label>
+              <input 
+                type="number" 
+                step="0.1" 
+                min="0" 
+                max="5"
+                value={formData.rating} 
+                onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} 
+                className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-lg font-black text-yellow-500 focus:border-yellow-500 outline-none transition-all"
+              />
             </div>
 
             <div className="space-y-4">
@@ -142,19 +159,6 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
               <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-lg font-black text-white outline-none focus:border-emerald-500 italic">
                 {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
               </select>
-            </div>
-
-            {/* 이미지 수정 */}
-            <div className="md:col-span-2 space-y-4">
-              <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">🖼️ 대표 이미지 변경 (파일첨부)</label>
-              <div className="flex items-center gap-6">
-                {formData.image_url && (
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 shrink-0">
-                    <img src={formData.image_url} alt="Current" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-emerald-600 file:text-white cursor-pointer" />
-              </div>
             </div>
 
             {/* 연락처 수정 */}
@@ -167,28 +171,16 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
               <label className="text-sm font-black text-blue-500 uppercase tracking-widest ml-2">✈️ Telegram Link</label>
               <input value={formData.telegram_url} onChange={(e) => setFormData({...formData, telegram_url: e.target.value})} className="w-full bg-black border border-blue-600/30 rounded-2xl px-8 py-5 text-lg font-medium text-white focus:border-blue-500 outline-none" placeholder="https://t.me/..." />
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">📍 상세 주소 (Google Maps)</label>
-            <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-lg font-bold text-white outline-none focus:border-emerald-500" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            
             <div className="space-y-4">
-              <label className="text-sm font-black text-emerald-500 uppercase tracking-widest ml-2">🏷️ 태그 (쉼표 구분)</label>
-              <input value={formData.tags} onChange={(e) => setFormData({...formData, tags: e.target.value})} className="w-full bg-black border border-emerald-600/30 rounded-2xl px-8 py-5 text-lg text-white outline-none" />
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-sm font-black text-red-500 uppercase tracking-widest ml-2">🎁 제휴 혜택 (쉼표 구분)</label>
-              <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className="w-full bg-black border border-red-600/30 rounded-2xl px-8 py-5 text-lg text-white outline-none" />
+              <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">📍 상세 주소</label>
+              <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-lg font-bold text-white outline-none focus:border-emerald-500" />
             </div>
           </div>
 
           <div className="space-y-4">
             <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">📝 업소 상세 설명</label>
-            <textarea rows={6} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-3xl px-8 py-6 text-lg font-medium text-white outline-none focus:border-emerald-500 resize-none leading-relaxed" />
+            <textarea rows={4} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-3xl px-8 py-6 text-lg font-medium text-white outline-none focus:border-emerald-500 resize-none leading-relaxed" />
           </div>
 
           <div className="flex gap-4">
@@ -196,7 +188,7 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
               취소
             </button>
             <button type="submit" disabled={updating} className="flex-[2] py-8 bg-emerald-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-emerald-700 transition-all shadow-2xl uppercase italic tracking-tighter">
-              {updating ? 'Updating...' : '업소 정보 수정 완료'}
+              {updating ? 'Updating...' : '수정 완료'}
             </button>
           </div>
         </form>
