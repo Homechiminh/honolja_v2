@@ -2,13 +2,16 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStores } from '../hooks/useStores';
 import { SNS_LINKS } from '../constants'; // SNS 링크 활용
-import type { CategoryType } from '../types';
 import StoreCard from '../components/StoreCard';
 
 const StoreList: React.FC = () => {
+  // 1. 주소창에서 카테고리명을 가져옵니다.
   const { category } = useParams<{ category: string }>();
+  
+  // 2. 해당 카테고리의 데이터를 실시간으로 가져옵니다.
   const { stores, loading } = useStores(category);
 
+  // 카테고리별 한글 타이틀 매핑 로직
   const getTitle = (cat: string | undefined) => {
     switch(cat) {
       case 'massage': return '마사지 / 스파';
@@ -61,7 +64,7 @@ const StoreList: React.FC = () => {
         </>
       )}
 
-      {/* [수정된 하단 CTA] 친근한 상담 멘트 적용 */}
+      {/* 하단 CTA: 친근한 상담 멘트 적용 */}
       <div className="mt-40 bg-gradient-to-br from-[#111] to-black rounded-[4rem] p-16 md:p-32 border border-white/5 text-center shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent"></div>
         <span className="text-red-500 font-black text-xs uppercase tracking-[0.5em] block mb-8">Honolja Direct Contact</span>
