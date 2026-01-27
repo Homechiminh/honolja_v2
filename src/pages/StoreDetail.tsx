@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useStoreDetail } from '../hooks/useStoreDetail'; // 낚싯대 연결
+import { useStoreDetail } from '../hooks/useStoreDetail'; 
 import { SNS_LINKS } from '../constants';
 import type { User } from '../types';
 import { UserRole } from '../types';
