@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
-import { useAuth } from './hooks/useAuth'; // 실시간 인증 감시 훅
+import { useAuth } from './hooks/useAuth';
 
 // 레이아웃 컴포넌트
 import Header from './components/Header';
