@@ -33,17 +33,16 @@ export const Region = {
 } as const;
 export type Region = typeof Region[keyof typeof Region];
 
-// 5. 업소 정보 인터페이스 (AdminEdit 및 StoreCard 연동용)
+// 5. 업소 정보 인터페이스 (리스트/상세 페이지용)
 export interface Store {
   id: string;
   name: string;
   category: CategoryType;
   region: Region;
-  rating: number;         // 🔴 추가: 관리자가 수정할 별점
-  review_count: number;   // 🔴 추가: 관리자가 수정할 리뷰 수
+  rating: number;         // 관리자가 지정하는 업소 점수 (예: 4.8)
   description: string;
-  image_url: string;      // 🔴 Snake Case 통일
-  image_index: number;    // 🔴 21명 모델 선택용 인덱스
+  image_url: string;      // 배경 이미지 주소
+  image_index: number;    // 21명 모델 중 선택 번호
   tags: string[];
   benefits?: string[];
   address: string;
@@ -54,7 +53,7 @@ export interface Store {
   telegram_url?: string;
 }
 
-// 6. 사용자 정보 인터페이스 (MyPage 에러 해결 및 포인트 연동용)
+// 6. 사용자 정보 인터페이스 (에러 해결 및 확장용)
 export interface User {
   id: string;
   email: string;
@@ -62,7 +61,7 @@ export interface User {
   role: UserRole;
   level: number;         // 1~4 등급
   points: number;        // 활동 포인트
-  avatar_url?: string;   // 🔴 필독: TS2339 에러 해결을 위해 추가 (DB 칼럼명과 일치)
+  avatar_url?: string;   // 프로필 이미지 주소 (TS2339 에러 해결)
   is_blocked: boolean;   // 차단 여부
   created_at: string;
 }
