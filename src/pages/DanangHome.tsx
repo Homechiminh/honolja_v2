@@ -9,7 +9,6 @@ const DanangHome: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 다낭 데이터만 가져오기
   useEffect(() => {
     const fetchDanangStores = async () => {
       setLoading(false);
