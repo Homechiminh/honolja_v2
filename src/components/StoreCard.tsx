@@ -1,26 +1,28 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Store } from '../types';
+// 🔴 type 키워드 추가 (TS1484 에러 해결)
+import type { Store } from '../types'; 
 
 interface StoreCardProps { 
   store: Store; 
 }
 
-// 🔴 사용할 스프라이트 이미지 URL 정의
-const SPRITE_9 = 'https://tqscfshshsh.supabase.co/storage/v1/object/public/stores/Gemini_Generated_Image.jpg'; // 3x3
-const SPRITE_12 = 'https://tqscfshshsh.supabase.co/storage/v1/object/public/stores/lucid-origin.jpg'; // 4x3
+// 사용할 스프라이트 이미지 URL 정의
+const SPRITE_9 = 'https://tqscfshshsh.supabase.co/storage/v1/object/public/stores/Gemini_Generated_Image.jpg';
+const SPRITE_12 = 'https://tqscfshshsh.supabase.co/storage/v1/object/public/stores/lucid-origin.jpg';
 
 const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
   // 1. 이미지 결정 로직 (DB에 이미지가 있으면 사용, 없으면 스프라이트 할당)
   const displayImage = useMemo(() => {
-    if (store.image_url && store.image_url.startsWith('http')) {
-      return store.image_url;
+    // imageUrl과 image_url 혼용 방지를 위해 수정
+    const url = store.image_url || store.imageUrl; 
+    if (url && url.startsWith('http')) {
+      return url;
     }
-    // ID의 마지막 숫자를 이용해 9등분과 12등분 중 하나 선택
     const idNum = store.id.replace(/[^0-9]/g, '');
     const lastDigit = idNum ? parseInt(idNum.slice(-1)) : 0;
     return lastDigit % 2 === 0 ? SPRITE_9 : SPRITE_12;
-  }, [store.image_url, store.id]);
+  }, [store.image_url, store.imageUrl, store.id]);
 
   // 2. 스프라이트 판별 및 설정
   const isSprite = useMemo(() => {
@@ -29,19 +31,16 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
 
   const spriteConfig = useMemo(() => {
     if (!isSprite) return null;
-    // 12등분 이미지(lucid-origin)인 경우
     if (displayImage.includes('lucid-origin')) {
       return { cols: 4, rows: 3, size: '400% 300%' };
     }
-    // 9등분 이미지(Gemini)인 경우
     return { cols: 3, rows: 3, size: '300% 300%' };
   }, [displayImage, isSprite]);
 
-  // 3. 배경 위치 계산 (업소 ID를 기반으로 랜덤 위치 지정)
+  // 3. 배경 위치 계산 (ID 기반 고정 랜덤)
   const backgroundPosition = useMemo(() => {
     if (!spriteConfig) return 'center';
     const { cols, rows } = spriteConfig;
-    // ID를 숫자로 변환해 인덱스 결정
     const idHash = store.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const index = idHash % (cols * rows);
     
@@ -66,9 +65,8 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-90 transition-opacity"></div>
         
-        {/* 상단 HOT/별점 레이어 */}
         <div className="absolute top-4 left-4 z-20">
-          {store.is_hot && (
+          {(store.is_hot || store.isHot) && (
             <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse uppercase italic">Hot</div>
           )}
         </div>
@@ -76,7 +74,6 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
           <span className="text-[10px] text-white font-black">⭐ {store.rating || '4.5'}</span>
         </div>
 
-        {/* 하단 정보 레이어 */}
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7 z-30">
           <div className="flex flex-wrap gap-1.5 mb-2">
             {store.tags?.slice(0, 2).map(tag => (
