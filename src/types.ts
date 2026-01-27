@@ -47,6 +47,7 @@ export interface User {
   email: string;
   nickname: string;
   role: UserRole;
+  level: number;
   points: number;
   created_at: string;
   profile_image?: string;
