@@ -8,18 +8,33 @@ export const useAuth = () => {
 
   useEffect(() => {
     const fetchProfile = async (sessionUser: any) => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sessionUser.id)
-        .single();
-      if (data) setCurrentUser(data as User);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sessionUser.id)
+          .single();
+        
+        if (error) throw error;
+        if (data) setCurrentUser(data as User);
+      } catch (err) {
+        console.error("프로필 로드 에러:", err);
+      } finally {
+        setLoading(false); // 성공하든 실패하든 로딩은 끝내야 합니다.
+      }
     };
 
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) await fetchProfile(session.user);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await fetchProfile(session.user);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        setLoading(false);
+      }
     };
 
     getSession();
@@ -29,6 +44,7 @@ export const useAuth = () => {
         await fetchProfile(session.user);
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
 
