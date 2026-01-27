@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // 🔴 Link 사용됨
+import { useNavigate, Link } from 'react-router-dom'; 
 import { supabase } from '../supabase';
 import type { User } from '../types';
 
