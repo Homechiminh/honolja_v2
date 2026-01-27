@@ -27,9 +27,18 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 🔴 로그아웃 기능: 세션을 끊고 페이지를 새로고침하여 상태를 완벽히 초기화합니다.
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // 홈으로 이동 후 새로고침하여 currentUser 등 모든 상태 초기화
+      navigate('/');
+      window.location.reload(); 
+    } catch (err: any) {
+      alert(`로그아웃 에러: ${err.message}`);
+    }
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -38,7 +47,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     <header 
       className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 border-b ${
         isScrolled 
-          ? 'py-3 bg-black/90 backdrop-blur-md border-white/10' 
+          ? 'py-3 bg-black/95 backdrop-blur-md border-white/10' 
           : 'py-6 bg-transparent border-transparent'
       }`}
     >
@@ -73,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
 
         {/* 2. 우측 버튼 섹션 (지역 이동 + 인증) */}
         <div className="flex items-center gap-4">
-          {/* 🔴 다낭/나트랑 이동 버튼 (Link로 변경 및 이미지 위치 적용) */}
+          {/* 다낭/나트랑 이동 버튼 */}
           <div className="hidden xl:flex items-center gap-2 mr-2">
             <Link 
               to="/danang" 
@@ -99,12 +108,12 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
                   </span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-red-500 font-black italic shadow-xl group-hover:border-red-600 transition-all">
-                  {currentUser.nickname?.[0].toUpperCase()}
+                  {currentUser.nickname?.[0]?.toUpperCase()}
                 </div>
               </Link>
               <button 
                 onClick={handleLogout}
-                className="px-5 py-2 text-[11px] font-black bg-white/5 hover:bg-red-600 hover:text-white border border-white/10 rounded-full transition-all text-gray-400 uppercase italic"
+                className="px-5 py-2 text-[11px] font-black bg-white/5 hover:bg-red-600 hover:text-white border border-white/10 rounded-full transition-all text-gray-400 uppercase italic shadow-lg"
               >
                 로그아웃
               </button>
