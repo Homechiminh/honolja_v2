@@ -10,7 +10,6 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
   const navigate = useNavigate();
 
-  // 보안 체크: 관리자가 아니면 홈으로
   if (currentUser?.role !== UserRole.ADMIN) {
     navigate('/');
     return null;
