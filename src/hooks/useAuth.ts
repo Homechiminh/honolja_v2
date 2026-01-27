@@ -14,35 +14,38 @@ export const useAuth = () => {
           .select('*')
           .eq('id', sessionUser.id)
           .single();
-        
-        if (error) throw error;
-        if (data) setCurrentUser(data as User);
-      } catch (err) {
-        console.error("프로필 로드 에러:", err);
+
+        if (error) {
+          console.warn("프로필 없음, 기본값 세팅");
+          setCurrentUser({
+            id: sessionUser.id,
+            email: sessionUser.email,
+            nickname: sessionUser.email.split('@')[0],
+            role: 'USER' as any,
+            level: 1,
+            points: 0,
+            is_blocked: false,
+            created_at: new Date().toISOString()
+          });
+        } else {
+          setCurrentUser(data as User);
+        }
       } finally {
-        setLoading(false); // 성공하든 실패하든 로딩은 끝내야 합니다.
+        setLoading(false);
       }
     };
 
     const getSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await fetchProfile(session.user);
-        } else {
-          setLoading(false);
-        }
-      } catch (err) {
-        setLoading(false);
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) await fetchProfile(session.user);
+      else setLoading(false);
     };
 
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        await fetchProfile(session.user);
-      } else {
+      if (session?.user) await fetchProfile(session.user);
+      else {
         setCurrentUser(null);
         setLoading(false);
       }
