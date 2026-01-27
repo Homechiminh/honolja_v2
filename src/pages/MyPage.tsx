@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { UserRole } from '../types';
+import { UserRole, LEVEL_NAMES } from '../types'; // 등급 명칭 가져오기
 import type { User } from '../types';
 
 interface MyPageProps {
@@ -12,7 +12,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'posts' | 'history'>('posts');
 
-  // 1. 로그아웃 로직: Supabase 세션을 종료하고 홈으로 보냅니다.
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -22,7 +21,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
     }
   };
 
-  // 2. 비로그인 상태 처리: App.tsx에서 loading 처리를 하지만, 안전을 위해 한 번 더 체크합니다.
   if (!currentUser) {
     return (
       <div className="container mx-auto px-4 py-20 text-center min-h-screen flex flex-col items-center justify-center">
@@ -36,23 +34,23 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
   }
 
   const isAdmin = currentUser.role === UserRole.ADMIN;
+  // 현재 유저의 레벨 명칭 (1: 여행자, 2: 방랑자, 3: 베테랑, 4: VIP)
+  const currentLevelName = LEVEL_NAMES[currentUser.level] || '여행자';
 
-  // 가상의 활동 데이터 (추후 DB 연동 예정)
   const stats = { posts: 0, comments: 0, likesReceived: 0 };
 
   return (
     <div className="container mx-auto px-4 py-32 max-w-5xl min-h-screen font-sans">
-      {/* Profile Header Card */}
       <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] rounded-[3rem] border border-white/5 p-8 md:p-12 mb-8 shadow-2xl relative overflow-hidden">
-        {/* 등급 표시 뱃지 */}
-        <div className={`absolute top-0 right-0 px-8 py-3 rounded-bl-3xl text-[10px] font-black uppercase tracking-widest ${isAdmin ? 'bg-red-600 text-white' : 'bg-yellow-500 text-black'}`}>
-          {isAdmin ? 'System Admin' : 'Official Member'}
+        
+        {/* 🔴 등급 표시 뱃지: 레벨 명칭 반영 */}
+        <div className={`absolute top-0 right-0 px-8 py-3 rounded-bl-3xl text-[10px] font-black uppercase tracking-widest ${isAdmin ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
+          {isAdmin ? 'System Admin' : `Lv.${currentUser.level} ${currentLevelName}`}
         </div>
 
         <div className="flex flex-col lg:flex-row items-center gap-12">
-          {/* 프로필 이미지 영역 */}
           <div className="relative shrink-0">
-            <div className={`w-32 h-32 rounded-[2.5rem] p-1.5 border-2 ${isAdmin ? 'border-red-600' : 'border-yellow-600'} shadow-2xl overflow-hidden bg-slate-900`}>
+            <div className={`w-32 h-32 rounded-[2.5rem] p-1.5 border-2 ${isAdmin ? 'border-red-600' : 'border-emerald-600'} shadow-2xl overflow-hidden bg-slate-900`}>
                {currentUser.profile_image ? (
                  <img src={currentUser.profile_image} alt="Profile" className="w-full h-full rounded-[2rem] object-cover" />
                ) : (
@@ -63,13 +61,12 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
             </div>
           </div>
 
-          {/* 사용자 텍스트 정보 */}
           <div className="text-center lg:text-left flex-grow">
             <h2 className="text-4xl font-black text-white mb-3 tracking-tighter italic">{currentUser.nickname} 님</h2>
             <p className="text-slate-500 font-bold mb-6 italic">{currentUser.email}</p>
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
                {isAdmin && (
-                 <Link to="/admin/create-store" className="px-6 py-2 bg-red-600 text-white text-[11px] font-black rounded-xl hover:bg-red-700 transition-all shadow-xl uppercase tracking-widest">
+                 <Link to="/admin" className="px-6 py-2 bg-red-600 text-white text-[11px] font-black rounded-xl hover:bg-red-700 transition-all shadow-xl uppercase tracking-widest">
                    Admin Dashboard
                  </Link>
                )}
@@ -79,7 +76,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
             </div>
           </div>
 
-          {/* 포인트 박스 */}
           <div className="bg-black/60 px-8 py-6 rounded-[2rem] border border-white/5 text-center min-w-[200px]">
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-1">My Points</p>
             <p className="text-3xl font-black text-red-600 tracking-tighter">{currentUser.points.toLocaleString()} P</p>
@@ -87,7 +83,7 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* 활동 스탯 로우 */}
+      {/* 활동 스탯 */}
       <div className="grid grid-cols-3 gap-4 mb-12">
           {[
             { label: '작성한 게시글', value: stats.posts, color: 'text-blue-500' },
@@ -120,7 +116,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
         ))}
       </div>
 
-      {/* 탭 콘텐츠 영역 */}
       <div className="min-h-[300px]">
         {activeTab === 'posts' && (
           <div className="py-20 text-center bg-[#080808] rounded-[3rem] border border-dashed border-white/10 animate-in fade-in duration-500">
