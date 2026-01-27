@@ -17,23 +17,17 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     address: '',
     description: '',
     image_url: '',
-    rating: 4.5, // 수동 별점 관리
+    rating: 4.5,
     tags: '',
-    benefits: '',
+    benefits: '', // 🔴 제휴 혜택
     kakao_url: '',
     telegram_url: '',
     is_hot: false
   });
 
-  // 1. 기존 데이터 로드
   useEffect(() => {
     const fetchStore = async () => {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
+      const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
       if (!error && data) {
         setFormData({
           ...data,
@@ -47,31 +41,22 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     fetchStore();
   }, [id]);
 
-  // 관리자 권한 체크
   if (currentUser?.role !== 'ADMIN') {
     navigate('/');
     return null;
   }
 
-  // 🔴 에러 해결: handleImageUpload 함수가 이제 아래 input에서 호출됩니다.
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUpdating(true);
     const fileName = `${Math.random()}.${file.name.split('.').pop()}`;
     const filePath = `store-images/${fileName}`;
-
     try {
-      const { error: uploadError } = await supabase.storage
-        .from('stores')
-        .upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage.from('stores').upload(filePath, file);
       if (uploadError) throw uploadError;
-
       const { data } = supabase.storage.from('stores').getPublicUrl(filePath);
       setFormData({ ...formData, image_url: data.publicUrl });
-      alert('이미지가 성공적으로 업로드되었습니다.');
     } catch (err) {
       alert('이미지 업로드 실패');
     } finally {
@@ -82,15 +67,14 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdating(true);
-
     try {
       const { error } = await supabase
         .from('stores')
         .update({
           ...formData,
           rating: Number(formData.rating),
-          tags: formData.tags.split(',').map((t) => t.trim()),
-          benefits: formData.benefits.split(',').map((b) => b.trim())
+          tags: formData.tags.split(',').map((t) => t.trim()).filter(t => t !== ''),
+          benefits: formData.benefits.split(',').map((b) => b.trim()).filter(b => b !== '')
         })
         .eq('id', id);
       
@@ -104,11 +88,7 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase">
-      Loading Store Data...
-    </div>
-  );
+  if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase">Loading Store Data...</div>;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
@@ -120,9 +100,11 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-12">
-          {/* HOT 설정 */}
+          {/* HOT 설정 (image_407d60.png 디자인 적용) */}
           <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between">
-            <p className="text-xl font-black text-emerald-500 italic uppercase">🔥 Hot Store Setting</p>
+            <div>
+              <p className="text-xl font-black text-emerald-500 italic uppercase">🔥 Hot Store Setting</p>
+            </div>
             <button 
               type="button"
               onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
@@ -140,44 +122,61 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
 
             <div className="space-y-4">
               <label className="text-sm font-black text-yellow-500 uppercase tracking-widest ml-2">⭐ 별점 관리 (0.5 ~ 5.0)</label>
-              <input 
-                type="number" step="0.1" min="0" max="5"
-                value={formData.rating} 
-                onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} 
-                className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-yellow-500 font-black outline-none"
-              />
+              <input type="number" step="0.1" min="0" max="5" value={formData.rating} onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-yellow-500 font-black outline-none" />
             </div>
 
-            {/* 🔴 이미지 업로드 input: handleImageUpload가 여기서 사용됩니다. */}
+            {/* 대표 이미지 변경 섹션 (image_407d60.png 구조) */}
             <div className="md:col-span-2 space-y-4">
               <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">🖼️ 대표 이미지 변경</label>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 p-2 bg-black/40 rounded-3xl border border-white/5">
                 {formData.image_url && (
                   <img src={formData.image_url} alt="Current" className="w-24 h-24 rounded-2xl object-cover border border-white/10" />
                 )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageUpload} 
-                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white cursor-pointer" 
-                />
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="flex-1 bg-transparent text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white cursor-pointer" />
               </div>
             </div>
 
-            {/* 나머지 필드들 */}
+            {/* SNS 링크 섹션 */}
             <div className="space-y-4">
               <label className="text-sm font-black text-yellow-500 uppercase tracking-widest ml-2">💬 Kakaotalk Link</label>
-              <input value={formData.kakao_url} onChange={(e) => setFormData({...formData, kakao_url: e.target.value})} className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-white outline-none" />
+              <input value={formData.kakao_url} onChange={(e) => setFormData({...formData, kakao_url: e.target.value})} className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-white outline-none focus:border-yellow-500" />
             </div>
             <div className="space-y-4">
               <label className="text-sm font-black text-blue-500 uppercase tracking-widest ml-2">✈️ Telegram Link</label>
-              <input value={formData.telegram_url} onChange={(e) => setFormData({...formData, telegram_url: e.target.value})} className="w-full bg-black border border-blue-600/30 rounded-2xl px-8 py-5 text-white outline-none" />
+              <input value={formData.telegram_url} onChange={(e) => setFormData({...formData, telegram_url: e.target.value})} className="w-full bg-black border border-blue-600/30 rounded-2xl px-8 py-5 text-white outline-none focus:border-blue-500" />
             </div>
           </div>
 
+          {/* 🔴 추가: 제휴 혜택 및 상세 설명 섹션 (누락되었던 부분 보강) */}
+          <div className="space-y-8 pt-8 border-t border-white/5">
+            <div className="space-y-4">
+              <label className="text-sm font-black text-red-500 uppercase tracking-widest ml-2">🎁 제휴 혜택 (쉼표로 구분하여 여러 개 입력)</label>
+              <input 
+                placeholder="예: 호놀자 회원 10% 할인, 웰컴 드링크 제공"
+                value={formData.benefits} 
+                onChange={(e) => setFormData({...formData, benefits: e.target.value})} 
+                className="w-full bg-black border border-red-600/30 rounded-2xl px-8 py-5 text-lg font-bold text-white focus:border-red-600 outline-none transition-all" 
+              />
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">📝 업소 상세 설명</label>
+              <textarea 
+                rows={8} 
+                value={formData.description} 
+                onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-8 text-lg font-medium text-white outline-none focus:border-emerald-500 resize-none leading-relaxed" 
+                placeholder="업소에 대한 상세 정보를 입력해주세요."
+              />
+            </div>
+          </div>
+
+          {/* 하단 버튼 */}
           <div className="flex gap-4 pt-10">
-            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-8 bg-white/5 text-gray-400 font-black text-2xl rounded-[2.5rem] uppercase italic">취소</button>
-            <button type="submit" disabled={updating} className="flex-[2] py-8 bg-emerald-600 text-white font-black text-2xl rounded-[2.5rem] uppercase italic tracking-tighter">
+            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-8 bg-white/5 text-gray-400 font-black text-2xl rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10">
+              취소
+            </button>
+            <button type="submit" disabled={updating} className="flex-[2] py-8 bg-emerald-600 text-white font-black text-2xl rounded-[2.5rem] shadow-2xl uppercase italic tracking-tighter hover:bg-emerald-700 active:scale-95 transition-all">
               {updating ? 'Updating...' : '수정 완료'}
             </button>
           </div>
