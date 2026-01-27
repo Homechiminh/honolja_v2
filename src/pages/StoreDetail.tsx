@@ -13,7 +13,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 실시간 데이터 가져오기 (DB에서 kakao_url, telegram_url 포함됨)
+  // 1. 실시간 데이터 가져오기
   const { store, loading } = useStoreDetail(id);
 
   const isAdmin = currentUser?.role === UserRole.ADMIN;
@@ -24,15 +24,13 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
     }
   };
 
-  // 2. 이미지 스프라이트 설정 (파일 업로드 URL 또는 기존 스프라이트 대응)
+  // 2. 이미지 스프라이트 설정 (업로드 파일 또는 기존 스프라이트 대응)
   const spriteConfig = useMemo(() => {
     if (!store) return { cols: 1, rows: 1, size: 'cover' };
-    // 직접 업로드한 파일(supabase storage)인 경우 스프라이트 로직 건너뜀
-    if (store.image_url.includes('supabase.co')) {
+    if (store.image_url?.includes('supabase.co')) {
       return { cols: 1, rows: 1, size: 'cover' };
     }
-    // 기존 스프라이트 이미지인 경우
-    if (store.image_url.includes('kuf0m2')) {
+    if (store.image_url?.includes('kuf0m2')) {
       return { cols: 4, rows: 3, size: '400% 300%' };
     }
     return { cols: 3, rows: 3, size: '300% 300%' };
@@ -51,7 +49,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
   if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase">Loading Store Info...</div>;
   if (!store) return <div className="p-20 text-center text-white font-black italic uppercase">Store Not Found</div>;
 
-  // 3. 구글 지도 URL 생성 (수정: 템플릿 리터럴 오타 교정)
+  // 3. 구글 지도 URL 생성 (오타 교정 완료)
   const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
 
   return (
@@ -97,7 +95,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
                  <div className="flex items-center space-x-2">
                    <span className="text-yellow-500 text-2xl">⭐</span>
                    <span className="text-2xl tracking-tighter">{store.rating}</span>
-                   <span className="text-white/40 font-medium text-sm">({store.review_count} reviews)</span>
+                   {/* 🔴 review_count 제거됨 */}
                  </div>
               </div>
             </div>
@@ -131,7 +129,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
               </ul>
             </section>
 
-            {/* Introduction 섹션 */}
+            {/* Information 섹션 */}
             <section>
               <h3 className="text-2xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1.5 h-6 bg-red-600 mr-3 rounded-full"></div>
@@ -142,7 +140,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
               </p>
             </section>
 
-            {/* Gallery 섹션 */}
+            {/* Gallery 섹션 (실제 업로드된 갤러리 이미지 출력) */}
             <section>
               <h3 className="text-2xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1.5 h-6 bg-red-600 mr-3 rounded-full"></div>
@@ -164,11 +162,9 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
                 Location
               </h3>
               <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 space-y-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">STREET ADDRESS</p>
-                    <p className="text-white font-bold">{store.address}</p>
-                  </div>
+                <div>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">STREET ADDRESS</p>
+                  <p className="text-white font-bold">{store.address}</p>
                 </div>
                 <div className="h-80 md:h-[450px] bg-slate-900 rounded-[2rem] overflow-hidden border border-white/5">
                    <iframe
@@ -183,17 +179,17 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
             </section>
           </div>
 
-          {/* Sidebar - 고정 예약창 (연락처 링크 적용) */}
+          {/* Sidebar - 고정 예약창 */}
           <div className="space-y-6">
              <div className="sticky top-32 bg-white rounded-[3rem] p-10 text-black shadow-2xl">
                 <span className="text-red-600 font-black text-[11px] uppercase tracking-widest block mb-2 italic">Fast Reservation</span>
                 <h4 className="text-2xl font-black mb-6 tracking-tighter italic">실시간 예약 및 문의</h4>
                 
-                {/* 🔴 업소 개별 담당자 링크 사용 */}
-                <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block mb-3 hover:scale-[1.02] transition-all flex items-center justify-center space-x-2">
+                {/* 개별 담당자 링크 사용, 없을 시 기본 링크로 폴백 */}
+                <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block mb-3 hover:scale-[1.02] transition-all flex items-center justify-center space-x-2 shadow-lg">
                   <span className="uppercase tracking-tighter italic">KakaoTalk 예약</span>
                 </a>
-                <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:scale-[1.02] transition-all flex items-center justify-center space-x-2">
+                <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:scale-[1.02] transition-all flex items-center justify-center space-x-2 shadow-lg">
                   <span className="uppercase tracking-tighter italic">Telegram 문의</span>
                 </a>
                 
