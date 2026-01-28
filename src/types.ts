@@ -21,10 +21,10 @@ export const CategoryType = {
   KARAOKE: 'karaoke',
   BAR_CLUB: 'barclub',
   COMMUNITY: 'community',
-  VILLA: 'villa',      // 🏠 숙소/풀빌라 전용 (헤더 유지)
-  TOUR: 'tour',        // 🎫 투어/골프 (Booking 페이지용)
-  VEHICLE: 'vehicle',  // 🚗 차량/픽업 (Booking 페이지용)
-  VISA: 'visa',        // 📋 비자 연장 (Booking 페이지용)
+  VILLA: 'villa',          // 숙소/풀빌라 전용
+  TOUR: 'tour',            // 투어/골프
+  VEHICLE: 'vehicle',      // 차량/픽업
+  VISA: 'visa_guide',      // 비자 연장 및 가이드 포함
 } as const;
 export type CategoryType = typeof CategoryType[keyof typeof CategoryType];
 
@@ -56,16 +56,16 @@ export interface Store {
   telegram_url?: string;
 }
 
-// 6. 사용자 정보 인터페이스 (등급업 조건 필드 추가)
+// 6. 사용자 정보 인터페이스
 export interface User {
   id: string;
   email: string;
   nickname: string;
   role: UserRole;
-  level: number;         // 1~4 등급 명칭 연동
-  points: number;        // 현재 보유 포인트
-  review_count: number;  // 🔴 추가: 등업 조건 체크용 (실제 작성한 업소후기 수)
+  level: number;         // 1~4 등급
+  points: number;        // 활동 포인트
+  review_count: number;  // 등업 조건: 실제 작성한 업소후기 수
   avatar_url?: string;   // 프로필 이미지 주소
-  is_blocked: boolean;   // 차단 여부
+  is_blocked: boolean;
   created_at: string;
 }
