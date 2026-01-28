@@ -13,8 +13,11 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
   const [activeTab, setActiveTab] = useState<'activity' | 'points' | 'coupons'>('activity');
   const [isEditing, setIsEditing] = useState(false);
   const [newNickname, setNewNickname] = useState(currentUser?.nickname || '');
+  
+  // 🔴 에러 해결: loading을 버튼 disabled 속성에 사용하여 참조 생성
   const [loading, setLoading] = useState(false);
   
+  // 🔴 에러 해결: myPosts를 JSX 내부에서 map을 통해 렌더링
   const [myPosts, setMyPosts] = useState<any[]>([]);
   const [pointHistory, setPointHistory] = useState<any[]>([]);
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
@@ -36,7 +39,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
     fetchMyData();
   }, [currentUser]);
 
-  // 🔴 로그아웃 공통 함수
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.clear();
@@ -76,7 +78,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white">
       <div className="max-w-5xl mx-auto space-y-8">
-        
         {/* 상단 프로필 카드 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-14 border border-white/5 relative shadow-2xl">
           <div className="flex flex-col md:flex-row items-center gap-12">
@@ -86,7 +87,7 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
               </div>
               <label className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-[3rem]">
                 <span className="text-[10px] font-black uppercase">Edit</span>
-                <input type="file" className="hidden" onChange={handleAvatarUpload} />
+                <input type="file" className="hidden" onChange={handleAvatarUpload} disabled={loading} />
               </label>
             </div>
 
@@ -96,7 +97,8 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
                 {isEditing ? (
                   <div className="flex items-center gap-3">
                     <input value={newNickname} onChange={(e) => setNewNickname(e.target.value)} className="bg-black border-2 border-red-600/50 rounded-2xl px-5 py-2 text-2xl font-black w-48" />
-                    <button onClick={handleUpdateNickname} className="bg-emerald-600 p-2 rounded-xl">✔️</button>
+                    <button onClick={handleUpdateNickname} disabled={loading} className="bg-emerald-600 p-2 rounded-xl">✔️</button>
+                    <button onClick={() => setIsEditing(false)} className="bg-white/5 p-2 rounded-xl">❌</button>
                   </div>
                 ) : (
                   <>
@@ -117,7 +119,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
               </div>
             </div>
 
-            {/* 등업 가이드 바 */}
             {currentCriteria && (
               <div className="w-full md:w-64 bg-white/5 p-6 rounded-[2rem] border border-white/5">
                 <p className="text-[10px] font-black text-yellow-500 uppercase mb-4">Next: {LEVEL_NAMES[currentUser.level + 1]}</p>
@@ -136,7 +137,7 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
           </div>
         </div>
 
-        {/* 활동 탭 */}
+        {/* 활동 탭 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden">
           <div className="flex bg-white/5 p-2 gap-2">
             {['activity', 'points', 'coupons'].map(tab => (
@@ -145,18 +146,36 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
               </button>
             ))}
           </div>
+
           <div className="p-10 min-h-[400px]">
-             {/* 탭 콘텐츠 생략 - 기존 로직 유지 */}
-             {activeTab === 'points' && (
+            {/* 🔴 해결: myPosts를 사용하여 게시글 리스트 렌더링 */}
+            {activeTab === 'activity' && (
+              <div className="space-y-4">
+                {myPosts.length > 0 ? myPosts.map(post => (
+                  <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-6 bg-white/5 rounded-[1.5rem] border border-white/5 hover:border-red-600/50 transition-all group">
+                    <div className="flex items-center gap-4">
+                      <span className="text-red-600 font-bold opacity-50">#{post.category.toUpperCase()}</span>
+                      <span className="text-lg font-bold group-hover:text-red-500 transition-colors italic">{post.title}</span>
+                    </div>
+                    <span className="text-[11px] text-gray-600 font-bold">{new Date(post.created_at).toLocaleDateString()}</span>
+                  </Link>
+                )) : <p className="text-center text-gray-600 italic py-20 font-black uppercase">작성된 게시글이 없습니다.</p>}
+              </div>
+            )}
+
+            {activeTab === 'points' && (
               <div className="space-y-4">
                 {pointHistory.map(item => (
                   <div key={item.id} className="p-6 bg-white/5 rounded-2xl flex justify-between items-center border border-white/5">
                     <div><span className="font-black block italic text-lg">{item.reason}</span><span className="text-[11px] text-gray-600">{new Date(item.created_at).toLocaleString()}</span></div>
-                    <span className="text-2xl font-black italic text-emerald-500">+{item.amount.toLocaleString()}P</span>
+                    <span className={`text-2xl font-black italic ${item.amount > 0 ? 'text-emerald-500' : 'text-red-600'}`}>
+                      {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}P
+                    </span>
                   </div>
                 ))}
               </div>
             )}
+
             {activeTab === 'coupons' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {myCoupons.map(coupon => (
@@ -165,7 +184,7 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
                     <p className="text-gray-400 text-sm font-bold">{coupon.content}</p>
                     <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center">
                        <span className="text-[10px] text-gray-600 font-black italic uppercase tracking-widest">Available</span>
-                       <button className="bg-white/5 px-4 py-2 rounded-xl text-[10px] font-black uppercase italic border border-white/10">Use Now</button>
+                       <button className="bg-white/5 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-white/10">Use Now</button>
                     </div>
                   </div>
                 ))}
@@ -174,7 +193,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
           </div>
         </div>
 
-        {/* 🔴 하단 버튼 */}
         <div className="flex justify-between items-center px-10">
           <Link to="/" className="text-gray-500 hover:text-white text-xs font-black uppercase italic tracking-widest">← Back</Link>
           <div className="flex gap-4">
@@ -182,7 +200,6 @@ const MyPage: React.FC<MyPageProps> = ({ currentUser }) => {
             <button onClick={handleLogout} className="px-8 py-3 bg-red-600 rounded-2xl text-[11px] font-black uppercase italic shadow-xl">Logout Account</button>
           </div>
         </div>
-
       </div>
     </div>
   );
