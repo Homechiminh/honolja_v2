@@ -13,7 +13,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. 중앙 서비스 메뉴 (가독성 개선)
+  // 🔴 '커뮤니티' 항목 제거됨
   const serviceItems = [
     { name: '마사지', path: '/stores/massage' },
     { name: '이발소', path: '/stores/barber' },
@@ -21,7 +21,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     { name: '바/클럽', path: '/stores/barclub' },
     { name: '숙소/풀빌라', path: '/stores/villa' },
     { name: '투어/차량', path: '/booking' },
-    { name: '커뮤니티', path: '/community' },
   ];
 
   useEffect(() => {
@@ -62,7 +61,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
                 className={`text-[15px] font-black transition-all uppercase italic tracking-tighter ${
                   isActive(item.path) 
                   ? 'text-red-600 underline underline-offset-8 decoration-2' 
-                  : 'text-gray-100 hover:text-white' // 가독성을 위해 text-gray-100으로 상향
+                  : 'text-gray-100 hover:text-white' 
                 }`}
               >
                 {item.name}
@@ -112,11 +111,9 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
               </div>
             ) : (
               <div className="flex items-center gap-8">
-                {/* 한글 회원가입 */}
                 <Link to="/signup" className="text-[13px] font-black text-gray-300 hover:text-white uppercase italic tracking-widest transition-colors">
                   회원가입
                 </Link>
-                {/* 한글 로그인 버튼 */}
                 <Link to="/login" className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-2xl text-[14px] font-black transition-all shadow-xl shadow-red-600/30 italic uppercase tracking-tighter active:scale-95">
                   로그인
                 </Link>
