@@ -13,14 +13,13 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 🔴 투어/차량 메뉴를 추가하여 Booking 페이지와 연결합니다.
   const navItems = [
     { name: '마사지', path: '/stores/massage' },
     { name: '이발소', path: '/stores/barber' },
     { name: '가라오케', path: '/stores/karaoke' },
     { name: '바/클럽', path: '/stores/barclub' },
     { name: '숙소/풀빌라', path: '/stores/villa' },
-    { name: '투어/차량', path: '/booking' }, // 🟢 새로 추가된 항목
+    { name: '투어/차량', path: '/booking' },
   ];
 
   useEffect(() => {
@@ -29,10 +28,16 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 🔴 로그아웃 강화: 로컬 스토리지 비우기 추가
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-    window.location.reload();
+    try {
+      await supabase.auth.signOut();
+      localStorage.clear(); // 인증 토큰 및 찌꺼기 제거
+      navigate('/');
+      window.location.reload(); // 전체 상태 초기화
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -62,7 +67,8 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
                 {item.name}
               </Link>
             ))}
-            <Link to="/coupon" className="text-[12px] font-black text-red-500 italic animate-pulse tracking-[0.2em] uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20">
+            {/* 🔴 포인트 상점 연결 */}
+            <Link to="/coupon-shop" className="text-[12px] font-black text-red-500 italic animate-pulse tracking-[0.2em] uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20">
               COUPON SHOP
             </Link>
           </nav>
