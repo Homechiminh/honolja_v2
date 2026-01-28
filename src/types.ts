@@ -14,14 +14,17 @@ export const LEVEL_NAMES: { [key: number]: string } = {
   4: 'VIP'
 } as const;
 
-// 3. 카테고리 정의
+// 3. 카테고리 정의 (숙소와 여행 서비스를 분리하여 확장)
 export const CategoryType = {
   MASSAGE: 'massage',
   BARBER: 'barber',
   KARAOKE: 'karaoke',
   BAR_CLUB: 'barclub',
   COMMUNITY: 'community',
-  VILLA: 'villa'
+  VILLA: 'villa',      // 🏠 숙소/풀빌라 전용 (헤더 유지)
+  TOUR: 'tour',        // 🎫 투어/골프 (Booking 페이지용)
+  VEHICLE: 'vehicle',  // 🚗 차량/픽업 (Booking 페이지용)
+  VISA: 'visa',        // 📋 비자 연장 (Booking 페이지용)
 } as const;
 export type CategoryType = typeof CategoryType[keyof typeof CategoryType];
 
@@ -33,16 +36,16 @@ export const Region = {
 } as const;
 export type Region = typeof Region[keyof typeof Region];
 
-// 5. 업소 정보 인터페이스 (리스트/상세 페이지용)
+// 5. 업소 정보 인터페이스
 export interface Store {
   id: string;
   name: string;
   category: CategoryType;
   region: Region;
-  rating: number;         // 관리자가 지정하는 업소 점수 (예: 4.8)
+  rating: number;         // 관리자 지정 별점
   description: string;
-  image_url: string;      // 배경 이미지 주소
-  image_index: number;    // 21명 모델 중 선택 번호
+  image_url: string;
+  image_index: number;
   tags: string[];
   benefits?: string[];
   address: string;
@@ -53,15 +56,16 @@ export interface Store {
   telegram_url?: string;
 }
 
-// 6. 사용자 정보 인터페이스 (에러 해결 및 확장용)
+// 6. 사용자 정보 인터페이스 (등급업 조건 필드 추가)
 export interface User {
   id: string;
   email: string;
   nickname: string;
   role: UserRole;
-  level: number;         // 1~4 등급
-  points: number;        // 활동 포인트
-  avatar_url?: string;   // 프로필 이미지 주소 (TS2339 에러 해결)
+  level: number;         // 1~4 등급 명칭 연동
+  points: number;        // 현재 보유 포인트
+  review_count: number;  // 🔴 추가: 등업 조건 체크용 (실제 작성한 업소후기 수)
+  avatar_url?: string;   // 프로필 이미지 주소
   is_blocked: boolean;   // 차단 여부
   created_at: string;
 }
