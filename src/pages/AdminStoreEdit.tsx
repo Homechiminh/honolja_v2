@@ -16,10 +16,11 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     region: Region.HCMC,
     address: '',
     description: '',
-    image_url: '',
+    image_url: '',       // 대표 이미지 URL
+    promo_images: [] as string[], // 🔴 다중 이미지 배열
     rating: 4.5,
     tags: '',
-    benefits: '', // 🔴 제휴 혜택
+    benefits: '',
     kakao_url: '',
     telegram_url: '',
     is_hot: false
@@ -33,7 +34,8 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
           ...data,
           tags: data.tags?.join(', ') || '',
           benefits: data.benefits?.join(', ') || '',
-          rating: data.rating || 4.5
+          rating: data.rating || 4.5,
+          promo_images: data.promo_images || [] // 🔴 DB에서 다중 이미지 로드
         });
       }
       setLoading(false);
@@ -46,17 +48,31 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     return null;
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // 🔴 다중 이미지 업로드 핸들러
+  const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
     setUpdating(true);
-    const fileName = `${Math.random()}.${file.name.split('.').pop()}`;
-    const filePath = `store-images/${fileName}`;
+    const newUrls: string[] = [];
+
     try {
-      const { error: uploadError } = await supabase.storage.from('stores').upload(filePath, file);
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('stores').getPublicUrl(filePath);
-      setFormData({ ...formData, image_url: data.publicUrl });
+      for (const file of Array.from(files)) {
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const filePath = `store-images/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage.from('stores').upload(filePath, file);
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from('stores').getPublicUrl(filePath);
+        newUrls.push(data.publicUrl);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        promo_images: [...prev.promo_images, ...newUrls],
+        image_url: prev.image_url || newUrls[0] // 메인이 없으면 첫 장 자동 지정
+      }));
     } catch (err) {
       alert('이미지 업로드 실패');
     } finally {
@@ -100,18 +116,22 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-12">
-          {/* HOT 설정 (image_407d60.png 디자인 적용) */}
-          <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between">
-            <div>
+          {/* HOT & 별점 관리 섹션 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between">
               <p className="text-xl font-black text-emerald-500 italic uppercase">🔥 Hot Store Setting</p>
+              <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
+                className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-emerald-600' : 'bg-gray-800'}`}>
+                <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${formData.is_hot ? 'left-11' : 'left-1'}`} />
+              </button>
             </div>
-            <button 
-              type="button"
-              onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
-              className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-emerald-600' : 'bg-gray-800'}`}
-            >
-              <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${formData.is_hot ? 'left-11' : 'left-1'}`} />
-            </button>
+
+            <div className="bg-yellow-600/10 p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between">
+              <p className="text-xl font-black text-yellow-500 italic uppercase">⭐ Star Rating</p>
+              <input type="number" step="0.1" min="0" max="5" value={formData.rating} 
+                onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} 
+                className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -121,22 +141,41 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
             </div>
 
             <div className="space-y-4">
-              <label className="text-sm font-black text-yellow-500 uppercase tracking-widest ml-2">⭐ 별점 관리 (0.5 ~ 5.0)</label>
-              <input type="number" step="0.1" min="0" max="5" value={formData.rating} onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-yellow-500 font-black outline-none" />
+              <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">📂 카테고리</label>
+              <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none">
+                {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
+              </select>
             </div>
 
-            {/* 대표 이미지 변경 섹션 (image_407d60.png 구조) */}
+            {/* 🔴 다중 이미지 관리 섹션 */}
             <div className="md:col-span-2 space-y-4">
-              <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">🖼️ 대표 이미지 변경</label>
-              <div className="flex items-center gap-6 p-2 bg-black/40 rounded-3xl border border-white/5">
-                {formData.image_url && (
-                  <img src={formData.image_url} alt="Current" className="w-24 h-24 rounded-2xl object-cover border border-white/10" />
-                )}
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="flex-1 bg-transparent text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white cursor-pointer" />
+              <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">🖼️ 갤러리 및 대표 이미지 관리</label>
+              <div className="p-6 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-6">
+                <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} 
+                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white cursor-pointer" />
+                
+                {/* 🔴 이미지 타일 리스트 */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                  {formData.promo_images.map((url, idx) => (
+                    <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
+                      className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all ${formData.image_url === url ? 'border-red-600 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+                      <img src={url} className="w-full h-full object-cover" alt="gallery" />
+                      {formData.image_url === url && (
+                        <div className="absolute inset-0 bg-red-600/20 flex items-center justify-center">
+                          <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded italic uppercase">Main</span>
+                        </div>
+                      )}
+                      <button type="button" onClick={(e) => {
+                        e.stopPropagation();
+                        setFormData({...formData, promo_images: formData.promo_images.filter(img => img !== url)});
+                      }} className="absolute top-2 right-2 bg-black/80 text-white w-6 h-6 rounded-full text-[10px] hover:bg-red-600">✕</button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-500 font-bold italic uppercase">* 이미지를 클릭하여 [대표 이미지]를 설정하세요.</p>
               </div>
             </div>
 
-            {/* SNS 링크 섹션 */}
             <div className="space-y-4">
               <label className="text-sm font-black text-yellow-500 uppercase tracking-widest ml-2">💬 Kakaotalk Link</label>
               <input value={formData.kakao_url} onChange={(e) => setFormData({...formData, kakao_url: e.target.value})} className="w-full bg-black border border-yellow-600/30 rounded-2xl px-8 py-5 text-white outline-none focus:border-yellow-500" />
@@ -147,36 +186,21 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
             </div>
           </div>
 
-          {/* 🔴 추가: 제휴 혜택 및 상세 설명 섹션 (누락되었던 부분 보강) */}
           <div className="space-y-8 pt-8 border-t border-white/5">
             <div className="space-y-4">
-              <label className="text-sm font-black text-red-500 uppercase tracking-widest ml-2">🎁 제휴 혜택 (쉼표로 구분하여 여러 개 입력)</label>
-              <input 
-                placeholder="예: 호놀자 회원 10% 할인, 웰컴 드링크 제공"
-                value={formData.benefits} 
-                onChange={(e) => setFormData({...formData, benefits: e.target.value})} 
-                className="w-full bg-black border border-red-600/30 rounded-2xl px-8 py-5 text-lg font-bold text-white focus:border-red-600 outline-none transition-all" 
-              />
+              <label className="text-sm font-black text-red-500 uppercase tracking-widest ml-2">🎁 제휴 혜택</label>
+              <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className="w-full bg-black border border-red-600/30 rounded-2xl px-8 py-5 text-white outline-none" placeholder="10% 할인, 무료 음료 등" />
             </div>
 
             <div className="space-y-4">
               <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">📝 업소 상세 설명</label>
-              <textarea 
-                rows={8} 
-                value={formData.description} 
-                onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-8 text-lg font-medium text-white outline-none focus:border-emerald-500 resize-none leading-relaxed" 
-                placeholder="업소에 대한 상세 정보를 입력해주세요."
-              />
+              <textarea rows={6} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-8 text-white outline-none focus:border-emerald-500 resize-none leading-relaxed" />
             </div>
           </div>
 
-          {/* 하단 버튼 */}
           <div className="flex gap-4 pt-10">
-            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-8 bg-white/5 text-gray-400 font-black text-2xl rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10">
-              취소
-            </button>
-            <button type="submit" disabled={updating} className="flex-[2] py-8 bg-emerald-600 text-white font-black text-2xl rounded-[2.5rem] shadow-2xl uppercase italic tracking-tighter hover:bg-emerald-700 active:scale-95 transition-all">
+            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-8 bg-white/5 text-gray-400 font-black text-2xl rounded-[2.5rem] uppercase italic border border-white/5">취소</button>
+            <button type="submit" disabled={updating} className="flex-[2] py-8 bg-emerald-600 text-white font-black text-2xl rounded-[2.5rem] shadow-2xl uppercase italic tracking-tighter hover:bg-emerald-700">
               {updating ? 'Updating...' : '수정 완료'}
             </button>
           </div>
