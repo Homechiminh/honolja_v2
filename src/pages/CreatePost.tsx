@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-// 🔴 해결(TS1484): verbatimModuleSyntax 대응을 위해 'import type' 사용
 import type { User, Store } from '../types';
 
 const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
@@ -10,6 +9,8 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
   const [stores, setStores] = useState<Store[]>([]); 
 
   const [category, setCategory] = useState('free');
+  // 🔴 추가: VIP 세부 카테고리 상태
+  const [subCategory, setSubCategory] = useState('시크릿 꿀정보'); 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState('');
@@ -18,12 +19,7 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
   useEffect(() => {
     const fetchStores = async () => {
-      // 🔴 해결(TS2345): Store 인터페이스의 모든 필수 필드를 만족시키기 위해 '*' 선택
-      const { data } = await supabase
-        .from('stores')
-        .select('*') 
-        .order('name');
-      
+      const { data } = await supabase.from('stores').select('*').order('name');
       if (data) setStores(data as Store[]);
     };
     fetchStores();
@@ -32,19 +28,14 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     setLoading(true);
     const newUrls: string[] = [];
-
     try {
       for (const file of Array.from(files)) {
         const fileName = `${Date.now()}_post_${Math.random().toString(36).substring(7)}`;
-        const filePath = `post-images/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage.from('posts').upload(filePath, file);
+        const { error: uploadError } = await supabase.storage.from('posts').upload(`post-images/${fileName}`, file);
         if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from('posts').getPublicUrl(filePath);
+        const { data } = supabase.storage.from('posts').getPublicUrl(`post-images/${fileName}`);
         newUrls.push(data.publicUrl);
       }
       setImageUrls(prev => [...prev, ...newUrls]);
@@ -59,6 +50,12 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
     e.preventDefault();
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (!title || !content) return alert('제목과 내용을 입력해주세요.');
+    
+    // 🔴 보안 강화: 베테랑 권한 Hard Guard
+    if (category === 'vip' && currentUser.level < 3) {
+      alert('베테랑 등급만 작성이 가능합니다.');
+      return;
+    }
     if (category === 'review' && !selectedStoreId) return alert('후기를 남길 업소를 선택해주세요.');
 
     setLoading(true);
@@ -70,6 +67,8 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
         title: finalTitle,
         content,
         category,
+        // 🔴 추가: sub_category 저장
+        sub_category: category === 'vip' ? subCategory : null, 
         store_id: category === 'review' ? selectedStoreId : null,
         image_urls: imageUrls,
         link_url: linkUrl
@@ -77,7 +76,7 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
       if (postError) throw postError;
 
-      // 포인트 및 등업 로직 (기존과 동일)
+      // 포인트 정책: 후기 100P, 일반 20P, 사진보너스 10P
       const isReview = category === 'review';
       const basePoints = isReview ? 100 : 20;
       const photoBonus = imageUrls.length > 0 ? 10 : 0;
@@ -113,7 +112,7 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
       }
 
       alert(`등록 완료! ${totalEarned}P 적립되었습니다.`);
-      navigate('/community');
+      navigate(category === 'vip' ? '/vip-lounge' : '/community');
 
     } catch (err: any) {
       alert('등록 중 에러가 발생했습니다.');
@@ -141,40 +140,46 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
                 <option value="qna">🙋 질문/답변 (20P)</option>
                 <option value="food">🍜 맛집/관광 (20P)</option>
                 <option value="business">🏢 부동산/비즈니스 (20P)</option>
-                {/* 베테랑(3) 이상 카테고리 노출 */}
                 {currentUser && currentUser.level >= 3 && (
                   <option value="vip" className="text-yellow-500 font-bold">👑 베테랑 전용 정보 (20P)</option>
                 )}
               </select>
             </div>
 
+            {/* 🔴 추가: VIP 선택 시 나타나는 세부 카테고리 */}
+            {category === 'vip' && (
+              <div className="space-y-2 animate-in slide-in-from-top-2">
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2">VIP Sub-Category</label>
+                <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
+                  <option value="시크릿 꿀정보">💎 시크릿 꿀정보</option>
+                  <option value="업소후기">📸 업소후기 (VIP 전용)</option>
+                  <option value="VIP 혜택">🎁 VIP 혜택</option>
+                  <option value="블랙리스트">🚫 블랙리스트</option>
+                </select>
+              </div>
+            )}
+
             {category === 'review' && (
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-2">Target Store</label>
-                <select 
-                  required
-                  value={selectedStoreId} 
-                  onChange={(e) => setSelectedStoreId(e.target.value)} 
-                  className={`${inputStyle} border-emerald-500/30 text-emerald-500`}
-                >
+                <select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className={`${inputStyle} border-emerald-500/30 text-emerald-500`}>
                   <option value="">후기를 남길 업소를 선택하세요</option>
                   {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
             )}
           </div>
-
+          {/* ... 이하 제목/본문/사진 필드 동일 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목을 입력하세요" className={`${inputStyle} md:col-span-2 font-bold`} />
             <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="외부 링크 (Optional)" className={inputStyle} />
           </div>
-
           <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요..." className={`${inputStyle} resize-none h-80 leading-relaxed`} />
-
+          
+          {/* 사진 첨부 영역 */}
           <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-4">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Photo Attachment</label>
             <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:border-0 file:bg-red-600 file:text-white cursor-pointer" />
-            
             <div className="flex flex-wrap gap-4 mt-4">
               {imageUrls.map((url, i) => (
                 <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden group border border-white/10">
@@ -187,7 +192,7 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
           <div className="flex gap-4 pt-10">
             <button type="button" onClick={() => navigate(-1)} className="flex-1 py-8 bg-white/5 text-gray-500 font-black text-xl rounded-[2.5rem] uppercase italic">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-[2] py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 transition-all shadow-xl shadow-red-600/20 uppercase italic">
+            <button type="submit" disabled={loading} className="flex-[2] py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 shadow-xl">
               {loading ? 'Posting...' : 'Post Content'}
             </button>
           </div>
