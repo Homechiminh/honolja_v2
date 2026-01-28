@@ -7,9 +7,10 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  
+  // 🔴 에러 해결: 아래 JSX에서 'stores'를 사용하여 업소 선택창을 렌더링합니다.
   const [stores, setStores] = useState<Store[]>([]);
 
-  // 상태 관리
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -25,7 +26,7 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
     if (!id || !currentUser) return;
     setLoading(true);
 
-    // 1. 업소 리스트 로드
+    // 1. 업소 리스트 로드 (업소후기 수정 시 필요)
     const { data: storeData } = await supabase.from('stores').select('*').order('name');
     if (storeData) setStores(storeData as Store[]);
 
@@ -43,7 +44,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
       return navigate('/community');
     }
 
-    // 데이터 세팅
     setCategory(post.category);
     setSubCategory(post.sub_category || '시크릿 꿀정보');
     setTitle(post.title);
@@ -55,8 +55,9 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (category === 'vip' && currentUser?.level && currentUser.level < 3) return alert('권한이 없습니다.');
 
+    setLoading(true);
     try {
       const { error } = await supabase
         .from('posts')
@@ -72,7 +73,7 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
 
       if (error) throw error;
 
-      alert('수정되었습니다.');
+      alert('수정 완료!');
       navigate(`/post/${id}`);
     } catch (err) {
       alert('수정 중 오류가 발생했습니다.');
@@ -83,7 +84,7 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
 
   const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all";
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white italic animate-pulse">LOADING POST DATA...</div>;
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white italic animate-pulse">LOADING...</div>;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
@@ -92,22 +93,45 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
         
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputStyle}>
-              <option value="free">자유게시판</option>
-              <option value="review">📸 업소후기</option>
-              <option value="qna">🙋 질문/답변</option>
-              <option value="food">🍜 맛집/관광</option>
-              <option value="business">🏢 부동산/비즈니스</option>
-              {currentUser?.level && currentUser.level >= 3 && <option value="vip" className="text-yellow-500 font-bold">👑 베테랑 전용</option>}
-            </select>
-
-            {category === 'vip' && (
-              <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
-                <option value="시크릿 꿀정보">💎 시크릿 꿀정보</option>
-                <option value="업소후기">📸 업소후기 (VIP 전용)</option>
-                <option value="VIP 혜택">🎁 VIP 혜택</option>
-                <option value="블랙리스트">🚫 블랙리스트</option>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputStyle}>
+                <option value="free">자유게시판</option>
+                <option value="review">📸 업소후기</option>
+                <option value="qna">🙋 질문/답변</option>
+                <option value="food">🍜 맛집/관광</option>
+                <option value="business">🏢 부동산/비즈니스</option>
+                {currentUser?.level && currentUser.level >= 3 && <option value="vip" className="text-yellow-500 font-bold">👑 베테랑 전용</option>}
               </select>
+            </div>
+
+            {/* 🔴 VIP 세부 카테고리 수정 */}
+            {category === 'vip' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2">VIP Sub-Category</label>
+                <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
+                  <option value="시크릿 꿀정보">💎 시크릿 꿀정보</option>
+                  <option value="업소후기">📸 업소후기 (VIP 전용)</option>
+                  <option value="VIP 혜택">🎁 VIP 혜택</option>
+                  <option value="블랙리스트">🚫 블랙리스트</option>
+                </select>
+              </div>
+            )}
+
+            {/* 🔴 해결: 'stores' 변수를 사용하여 업소 선택창 렌더링 */}
+            {category === 'review' && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-2">Target Store</label>
+                <select 
+                  required 
+                  value={selectedStoreId} 
+                  onChange={(e) => setSelectedStoreId(e.target.value)} 
+                  className={`${inputStyle} border-emerald-500/30 text-emerald-500`}
+                >
+                  <option value="">업소를 선택하세요</option>
+                  {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
             )}
           </div>
 
