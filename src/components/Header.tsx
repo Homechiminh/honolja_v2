@@ -13,12 +13,14 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // 🔴 투어/차량 메뉴를 추가하여 Booking 페이지와 연결합니다.
   const navItems = [
     { name: '마사지', path: '/stores/massage' },
     { name: '이발소', path: '/stores/barber' },
     { name: '가라오케', path: '/stores/karaoke' },
-    { name: '클럽', path: '/stores/barclub' },
+    { name: '바/클럽', path: '/stores/barclub' },
     { name: '숙소/풀빌라', path: '/stores/villa' },
+    { name: '투어/차량', path: '/booking' }, // 🟢 새로 추가된 항목
   ];
 
   useEffect(() => {
@@ -27,111 +29,77 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 🔴 로그아웃 기능 수정: signOut 후 새로고침을 통해 currentUser 상태를 완전히 비웁니다.
   const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      // 홈으로 이동 후 새로고침을 실행하여 앱 전체의 Auth 상태를 초기화합니다.
-      navigate('/');
-      window.location.reload(); 
-    } catch (err: any) {
-      console.error('Logout error:', err);
-      alert('로그아웃 도중 오류가 발생했습니다.');
-    }
+    await supabase.auth.signOut();
+    navigate('/');
+    window.location.reload();
   };
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header 
-      className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 border-b ${
-        isScrolled 
-          ? 'py-3 bg-black/90 backdrop-blur-md border-white/10' 
-          : 'py-6 bg-transparent border-transparent'
-      }`}
-    >
+    <header className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 border-b ${
+      isScrolled ? 'py-3 bg-black/90 backdrop-blur-md border-white/10 shadow-2xl' : 'py-6 bg-transparent border-transparent'
+    }`}>
       <div className="max-w-[1400px] mx-auto px-6 flex items-center justify-between">
-        
-        {/* 1. 좌측 로고 및 메뉴 */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-10">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="bg-red-600 w-9 h-9 rounded-xl flex items-center justify-center group-hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">
-              <span className="text-white font-black italic text-xl">H</span>
+            <div className="bg-red-600 w-10 h-10 rounded-xl flex items-center justify-center group-hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95">
+              <span className="text-white font-black italic text-2xl">H</span>
             </div>
-            <span className="text-xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
+            <span className="text-2xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden xl:flex items-center gap-8">
             {navItems.map((item) => (
               <Link 
                 key={item.name} 
-                to={item.path}
-                className={`text-[14px] font-bold transition-all hover:text-white uppercase italic ${
-                  isActive(item.path) ? 'text-red-500' : 'text-gray-400'
+                to={item.path} 
+                className={`text-[13px] font-black transition-all hover:text-white uppercase italic tracking-wider ${
+                  isActive(item.path) ? 'text-red-600 underline underline-offset-8 decoration-2' : 'text-gray-400'
                 }`}
               >
                 {item.name}
               </Link>
             ))}
-            <Link to="/coupon" className="text-[13px] font-black text-red-500 italic animate-pulse tracking-widest uppercase">
+            <Link to="/coupon" className="text-[12px] font-black text-red-500 italic animate-pulse tracking-[0.2em] uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20">
               COUPON SHOP
             </Link>
           </nav>
         </div>
 
-        {/* 2. 우측 버튼 섹션 (지역 이동 + 인증) */}
-        <div className="flex items-center gap-4">
-          <div className="hidden xl:flex items-center gap-2 mr-2">
-            <Link 
-              to="/danang" 
-              className="px-4 py-1.5 rounded-lg border border-blue-900/50 bg-blue-900/10 text-[11px] font-black text-blue-400 hover:bg-blue-600 hover:text-white transition-all uppercase italic shadow-lg shadow-blue-900/20"
-            >
-              다낭놀자
-            </Link>
-            <Link 
-              to="/nhatrang" 
-              className="px-4 py-1.5 rounded-lg border border-emerald-900/50 bg-emerald-900/10 text-[11px] font-black text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all uppercase italic shadow-lg shadow-emerald-900/20"
-            >
-              나트랑놀자
-            </Link>
-          </div>
-
+        <div className="flex items-center gap-6">
           {currentUser ? (
-            <div className="flex items-center gap-5">
-              <Link to="/mypage" className="flex items-center gap-3 group">
-                <div className="flex flex-col items-end hidden sm:flex">
-                  <span className="text-[9px] text-gray-500 font-black tracking-[0.2em] uppercase italic">Member</span>
-                  <span className="text-sm font-black text-white group-hover:text-red-500 transition-colors italic">
+            <div className="flex items-center gap-6">
+              <Link to="/mypage" className="flex items-center gap-4 group">
+                <div className="flex flex-col items-end hidden md:flex">
+                  {currentUser.role === 'ADMIN' && (
+                    <span className="text-[9px] text-red-500 font-black tracking-widest uppercase italic mb-0.5">Administrator</span>
+                  )}
+                  <span className="text-sm font-black text-white group-hover:text-red-600 transition-colors italic tracking-tighter">
                     {currentUser.nickname}님
                   </span>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-red-500 font-black italic shadow-xl group-hover:border-red-600 transition-all">
-                  {currentUser.nickname?.[0]?.toUpperCase()}
+                <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-red-600 font-black italic text-xl shadow-xl group-hover:border-red-600/50 transition-all overflow-hidden">
+                  {currentUser.avatar_url ? (
+                    <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" />
+                  ) : (
+                    currentUser.nickname?.[0].toUpperCase()
+                  )}
                 </div>
               </Link>
-              {/* 로그아웃 버튼: handleLogout 연결 확인 */}
               <button 
-                onClick={handleLogout}
-                className="px-5 py-2 text-[11px] font-black bg-white/5 hover:bg-red-600 hover:text-white border border-white/10 rounded-full transition-all text-gray-400 uppercase italic shadow-lg"
+                onClick={handleLogout} 
+                className="px-6 py-2.5 text-[11px] font-black bg-white/5 hover:bg-red-600 hover:text-white border border-white/10 rounded-xl transition-all text-gray-400 uppercase italic shadow-lg shadow-black/40"
               >
-                로그아웃
+                LOGOUT
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <Link 
-                to="/signup" 
-                className="text-[13px] font-black text-gray-400 hover:text-white px-3 py-2 transition-colors uppercase italic"
-              >
-                회원가입
-              </Link>
-              <Link 
-                to="/login" 
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-[13px] font-black transition-all active:scale-95 shadow-lg shadow-red-600/20 italic uppercase"
-              >
-                로그인
+            <div className="flex items-center gap-4">
+              <Link to="/signup" className="text-[12px] font-black text-gray-500 hover:text-white transition-colors uppercase italic tracking-widest">Join</Link>
+              <Link to="/login" className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-2xl text-[13px] font-black transition-all shadow-xl shadow-red-600/20 italic uppercase tracking-tighter active:scale-95">
+                Login
               </Link>
             </div>
           )}
