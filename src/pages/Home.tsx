@@ -70,7 +70,7 @@ const Home: React.FC = () => {
             { id: 'barber', name: '이발소', icon: '💈' },
             { id: 'karaoke', name: '가라오케', icon: '🎤' },
             { id: 'barclub', name: '바/클럽', icon: '🍸' },
-            { id: 'villa', name: '숙소/차량', icon: '🏠' },
+            { id: 'villa', name: '숙소/풀빌라', icon: '🏠' },
           ].map((cat) => (
             <Link key={cat.id} to={`/stores/${cat.id}`} className="flex flex-col items-center gap-4 p-6 md:p-10 bg-white/5 backdrop-blur-sm rounded-[32px] border border-white/5 hover:bg-white/10 hover:border-red-600/30 transition-all group">
               <span className="text-3xl md:text-5xl group-hover:scale-110 transition-transform">{cat.icon}</span>
