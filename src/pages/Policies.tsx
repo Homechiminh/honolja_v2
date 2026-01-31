@@ -1,9 +1,7 @@
-// ✅ 'React' 대신 필요한 { useState }만 임포트하여 에러 해결
 import { useState } from 'react';
 
 const Policies = () => {
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy' | 'guide'>('terms');
-  const TELEGRAM_URL = "https://t.me/honolja84";
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-16 min-h-screen bg-white">
@@ -33,7 +31,7 @@ const Policies = () => {
         ))}
       </div>
 
-      {/* 정책 내용 */}
+      {/* 정책 내용 섹션 */}
       <div className="bg-gray-50 rounded-3xl p-8 md:p-12 border border-gray-100 shadow-sm leading-relaxed text-gray-700">
         {activeTab === 'terms' && (
           <div className="space-y-6">
@@ -54,7 +52,7 @@ const Policies = () => {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-red-600">클린 커뮤니티 가이드라인</h2>
             <ul className="list-disc pl-5 space-y-3 text-red-800 font-medium">
-              <li>특정 업체나 개인에 대한 근거 없는 비방 금지</li>
+              <li>특정 업체나 개인에 대한 악의적인 비방 금지</li>
               <li>상업적인 목적의 도배 및 스팸 게시물 삭제</li>
               <li>현지 법규 및 풍속을 해치는 게시물 즉시 차단</li>
             </ul>
@@ -62,21 +60,9 @@ const Policies = () => {
         )}
       </div>
 
-      {/* 텔레그램 연동 푸터 */}
-      <div className="mt-12 p-8 bg-gray-900 rounded-[2rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-        <div className="text-center md:text-left">
-          <h3 className="text-xl font-bold mb-2">도움이 필요하신가요?</h3>
-          <p className="text-gray-400 text-sm">모든 문의 및 신고는 텔레그램 고객센터가 가장 빠릅니다.</p>
-        </div>
-        <a 
-          href={TELEGRAM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-8 py-4 bg-blue-500 hover:bg-blue-400 text-white font-black rounded-2xl transition-all"
-        >
-          텔레그램 @honolja84
-        </a>
-      </div>
+      <p className="mt-10 text-center text-gray-300 text-xs tracking-tighter">
+        Copyright © HONOLJA. All rights reserved.
+      </p>
     </div>
   );
 };
