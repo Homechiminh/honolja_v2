@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { CategoryType, Region } from '../types';
@@ -16,8 +16,8 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     region: Region.HCMC,
     address: '',
     description: '',
-    image_url: '',
-    promo_images: [] as string[],
+    image_url: '',       // 대표 이미지 URL
+    promo_images: [] as string[], // 🔴 다중 이미지 배열
     rating: 4.5,
     tags: '',
     benefits: '',
@@ -30,22 +30,12 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     const fetchStore = async () => {
       const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
       if (!error && data) {
-        // 🔴 수정 포인트: data 전체를 spread하지 말고 필요한 것만 명시적으로 세팅
-        // (시스템 컬럼인 id, created_at 등이 formData에 섞이는 것 방지)
         setFormData({
-          name: data.name || '',
-          category: data.category || CategoryType.MASSAGE,
-          region: data.region || Region.HCMC,
-          address: data.address || '',
-          description: data.description || '',
-          image_url: data.image_url || '',
-          promo_images: data.promo_images || [],
-          rating: data.rating ?? 4.5, // 🔴 || 대신 ?? 사용 (0점도 허용)
+          ...data,
           tags: data.tags?.join(', ') || '',
           benefits: data.benefits?.join(', ') || '',
-          kakao_url: data.kakao_url || '',
-          telegram_url: data.telegram_url || '',
-          is_hot: data.is_hot ?? false
+          rating: data.rating || 4.5,
+          promo_images: data.promo_images || [] // 🔴 DB에서 다중 이미지 로드
         });
       }
       setLoading(false);
@@ -58,6 +48,7 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     return null;
   }
 
+  // 🔴 다중 이미지 업로드 핸들러
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -80,7 +71,7 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
       setFormData(prev => ({
         ...prev,
         promo_images: [...prev.promo_images, ...newUrls],
-        image_url: prev.image_url || newUrls[0]
+        image_url: prev.image_url || newUrls[0] // 메인이 없으면 첫 장 자동 지정
       }));
     } catch (err) {
       alert('이미지 업로드 실패');
@@ -93,33 +84,20 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
     e.preventDefault();
     setUpdating(true);
     try {
-      // 🔴 수정 포인트: 전송할 데이터 객체를 정제함
-      const updateData = {
-        name: formData.name,
-        category: formData.category,
-        region: formData.region,
-        address: formData.address,
-        description: formData.description,
-        image_url: formData.image_url,
-        promo_images: formData.promo_images,
-        rating: Number(formData.rating), // 🔴 숫자로 확실히 변환
-        tags: formData.tags.split(',').map((t) => t.trim()).filter(t => t !== ''),
-        benefits: formData.benefits.split(',').map((b) => b.trim()).filter(b => b !== ''),
-        kakao_url: formData.kakao_url,
-        telegram_url: formData.telegram_url,
-        is_hot: formData.is_hot
-      };
-
       const { error } = await supabase
         .from('stores')
-        .update(updateData)
+        .update({
+          ...formData,
+          rating: Number(formData.rating),
+          tags: formData.tags.split(',').map((t) => t.trim()).filter(t => t !== ''),
+          benefits: formData.benefits.split(',').map((b) => b.trim()).filter(b => b !== '')
+        })
         .eq('id', id);
       
       if (error) throw error;
       alert('업소 정보가 성공적으로 수정되었습니다!');
       navigate('/admin/manage-stores');
     } catch (err) {
-      console.error(err);
       alert('수정 중 에러가 발생했습니다.');
     } finally {
       setUpdating(false);
@@ -150,15 +128,9 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
 
             <div className="bg-yellow-600/10 p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between">
               <p className="text-xl font-black text-yellow-500 italic uppercase">⭐ Star Rating</p>
-              <input 
-                type="number" 
-                step="0.1" 
-                min="0" 
-                max="5" 
-                value={formData.rating} 
+              <input type="number" step="0.1" min="0" max="5" value={formData.rating} 
                 onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} 
-                className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600" 
-              />
+                className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600" />
             </div>
           </div>
 
@@ -175,13 +147,14 @@ const AdminStoreEdit: React.FC<{ currentUser: User | null }> = ({ currentUser })
               </select>
             </div>
 
-            {/* 다중 이미지 관리 섹션 */}
+            {/* 🔴 다중 이미지 관리 섹션 */}
             <div className="md:col-span-2 space-y-4">
               <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-2">🖼️ 갤러리 및 대표 이미지 관리</label>
               <div className="p-6 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-6">
                 <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} 
                   className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white cursor-pointer" />
                 
+                {/* 🔴 이미지 타일 리스트 */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
                   {formData.promo_images.map((url, idx) => (
                     <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
