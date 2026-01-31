@@ -1,4 +1,3 @@
-// ✅ 'React' 임포트를 제거하여 TS6133 에러 해결
 const Partnership = () => {
   const TELEGRAM_URL = "https://t.me/honolja84";
 
