@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { UserRole, LEVEL_NAMES } from '../types';
+import { LEVEL_NAMES } from '../types'; // 🔴 UserRole 제거
 import type { User } from '../types';
 
-const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+const AdminManageUsers: React.FC = () => { // 🔴 currentUser 프롭 제거
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true); // 🔴 데이터 로드 상태 추가 (UX용)
+  const [loading, setLoading] = useState(true);
   const [inputAmounts, setInputAmounts] = useState<{ [key: string]: string }>({});
 
-  // 🔴 권한 체크는 이미 App.tsx의 AdminRoute에서 처리하므로 삭제함
-  // 🔴 데이터 패칭 로직을 안정화함
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -56,7 +54,6 @@ const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser 
     if (!error) fetchUsers();
   };
 
-  // 🔴 로딩 중일 때 표시할 UI (다른 관리자 페이지와 통일)
   if (loading && users.length === 0) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -126,8 +123,8 @@ const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser 
                       </div>
                       <div className="flex gap-2">
                         <input type="number" placeholder="금액" value={inputAmounts[user.id] || ''} onChange={(e) => setInputAmounts({...inputAmounts, [user.id]: e.target.value})} className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] w-20 outline-none" />
-                        <button onClick={() => handleUpdatePoints(user.id, user.points, parseInt(inputAmounts[user.id]))} className="px-3 py-1 bg-emerald-600 text-[10px] font-black rounded-lg uppercase italic">지급</button>
-                        <button onClick={() => handleUpdatePoints(user.id, user.points, -parseInt(inputAmounts[user.id]))} className="px-3 py-1 bg-red-600 text-[10px] font-black rounded-lg uppercase italic">차감</button>
+                        <button onClick={() => handleUpdatePoints(user.id, user.points, parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-emerald-600 text-[10px] font-black rounded-lg uppercase italic">지급</button>
+                        <button onClick={() => handleUpdatePoints(user.id, user.points, -parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-red-600 text-[10px] font-black rounded-lg uppercase italic">차감</button>
                       </div>
                     </div>
                   </td>
