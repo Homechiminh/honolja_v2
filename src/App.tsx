@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext'; // 
+import { useAuth } from './contexts/AuthContext'; 
 import { Region } from './types'; 
 import './index.css';
 
@@ -33,31 +33,45 @@ import AdminManageStores from './pages/AdminManageStores';
 import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
-// 🔒 [가드 1] 관리자 전용
-const AdminRoute = ({ user, loading }: { user: any; loading: boolean }) => {
-  if (loading) return null; 
-  return user?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
+/**
+ * 🔒 [가드 1] 관리자 전용 (내부 구독형)
+ * 부모로부터 props를 받지 않고 Context에서 직접 꺼내어 엇박자를 방지합니다.
+ */
+const AdminRoute = () => {
+  const { currentUser, loading } = useAuth();
+  if (loading) return null; // 로딩 중에는 판단 유보
+  return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
-// 🔒 [가드 2] 일반 로그인 유저 전용
-const PrivateRoute = ({ user, loading }: { user: any; loading: boolean }) => {
+/**
+ * 🔒 [가드 2] 일반 로그인 유저 전용 (내부 구독형)
+ */
+const PrivateRoute = () => {
+  const { currentUser, loading } = useAuth();
   if (loading) return null;
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-// 🔒 [가드 3] 특정 등급(Level) 이상 전용
-const LevelRoute = ({ user, loading, minLevel }: { user: any; loading: boolean; minLevel: number }) => {
+/**
+ * 🔒 [가드 3] 특정 등급(Level) 이상 전용 (내부 구독형)
+ */
+const LevelRoute = ({ minLevel }: { minLevel: number }) => {
+  const { currentUser, loading } = useAuth();
   if (loading) return null;
-  return user && user.level >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
+  return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
-  const { currentUser, loading } = useAuth();
+  const { loading } = useAuth();
 
+  // 🔴 앱 최상단 로딩 가드: 인증이 확정될 때까지 (최대 3초) 라우터 실행을 대기합니다.
+  // 이 처리가 되어야 직접 링크 접속 시 '존재하지 않는 유저'로 오판하여 홈으로 튕기는 걸 막습니다.
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-red-600 font-black animate-pulse tracking-[0.3em] text-xl italic">
+          HONOLJA SYNCING...
+        </div>
       </div>
     );
   }
@@ -65,7 +79,8 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30">
-        <Header currentUser={currentUser} />
+        {/* 🔴 Header에서도 currentUser 프롭 제거 (Header 내부에서 useAuth 사용 권장) */}
+        <Header />
         
         <main className="flex-grow pt-[80px]">
           <Routes>
@@ -80,7 +95,6 @@ function App() {
             <Route path="/partnership" element={<Partnership />} />
             <Route path="/policies" element={<Policies />} />
             
-            {/* 🔴 currentUser={currentUser} 제거 포인트 */}
             <Route path="/community" element={<Community />} />
             <Route path="/store/:id" element={<StoreDetail />} />
             <Route path="/post/:id" element={<PostDetail />} />
@@ -89,7 +103,7 @@ function App() {
             <Route path="/signup" element={<Signup />} />
 
             {/* --- 보호 구역 (로그인 필수) --- */}
-            <Route element={<PrivateRoute user={currentUser} loading={loading} />}>
+            <Route element={<PrivateRoute />}>
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/coupon-shop" element={<CouponShop />} />
               <Route path="/community/create" element={<CreatePost />} />
@@ -97,12 +111,12 @@ function App() {
             </Route>
 
             {/* --- VIP 구역 (Lv.3 이상) --- */}
-            <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
+            <Route element={<LevelRoute minLevel={3} />}>
               <Route path="/vip-lounge" element={<VipLounge />} />
             </Route>
 
             {/* --- 관리자 구역 (ADMIN 전용) --- */}
-            <Route element={<AdminRoute user={currentUser} loading={loading} />}>
+            <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/create-store" element={<AdminStoreCreate />} />
               <Route path="/admin/manage-users" element={<AdminManageUsers />} />
@@ -111,6 +125,7 @@ function App() {
               <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
             </Route>
 
+            {/* 잘못된 경로는 홈으로 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
