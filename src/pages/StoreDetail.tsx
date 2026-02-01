@@ -1,18 +1,18 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStoreDetail } from '../hooks/useStoreDetail'; 
-import { useAuth } from '../contexts/AuthContext'; // 
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
 import { SNS_LINKS } from '../constants';
 import { UserRole } from '../types';
 
-// 🔴 StoreDetailProps 인터페이스 제거 (더 이상 프롭을 받지 않음)
+// 🔴 StoreDetailProps 인터페이스 제거 (프롭 의존성 제거)
 
-const StoreDetail: React.FC = () => { // 🔴 프롭 정의 제거
+const StoreDetail: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 전역 인증 정보 가져오기
-  const { currentUser, loading: authLoading } = useAuth(); // 🔴 Context에서 구독
+  // 1. 전역 인증 정보 가져오기 (엔진 교체)
+  const { currentUser, loading: authLoading } = useAuth(); 
 
   // 2. 실시간 업소 데이터 가져오기
   const { store, loading: storeLoading } = useStoreDetail(id);
@@ -53,7 +53,7 @@ const StoreDetail: React.FC = () => { // 🔴 프롭 정의 제거
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
-  // 🔴 인증 로딩이나 데이터 로딩 중일 때 로딩 바 표시
+  // 🔴 전역 인증 로딩 또는 데이터 로딩 중일 때 로딩 바 표시 (동기화 보장)
   if (authLoading || storeLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase font-black">
       Syncing Store Intelligence...
