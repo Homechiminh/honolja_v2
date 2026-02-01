@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  
+  // 🔴 전역 인증 정보 구독 (이미 로그인된 유저 튕겨내기용)
+  const { currentUser, loading: authLoading } = useAuth();
+
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '', nickname: '' });
+
+  // 🔴 로그인된 유저가 가입 페이지 접근 시 홈으로 리다이렉트
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, authLoading, navigate]);
 
   // 1. 구글 연동 가입 (OAuth)
   const handleGoogleSignup = async () => {
@@ -35,7 +47,6 @@ const Signup: React.FC = () => {
         email: formData.email,
         password: formData.password,
         options: { 
-          // 🔴 닉네임을 유저 메타데이터에 포함하여 profiles 테이블과 연동되게 함
           data: { nickname: formData.nickname } 
         }
       });
@@ -54,6 +65,9 @@ const Signup: React.FC = () => {
   };
 
   const inputStyle = "w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700 font-bold";
+
+  // 인증 확인 중일 때 깜빡임 방지
+  if (authLoading) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans">
@@ -137,7 +151,7 @@ const Signup: React.FC = () => {
 
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10 text-slate-400 text-sm font-bold leading-relaxed">
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10 text-slate-400 text-sm font-bold leading-relaxed shadow-inner">
                   <p className="mb-2 text-white italic tracking-tighter uppercase">Terms & Policy</p>
                   {BRAND_NAME}의 서비스 이용약관 및 <br/>개인정보 처리방침에 동의하여 가입을 진행합니다.
                 </div>
