@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import type { Store } from '../types';
 
-// 🔴 currentUser 프롭 제거 (TS6133 해결)
 const AdminManageStores: React.FC = () => {
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
