@@ -93,17 +93,16 @@ function App() {
               <Route path="/coupon-shop" element={<CouponShop currentUser={currentUser} />} />
             </Route>
 
-            {/* 관리자 보호 구역 */}
+            {/* 👑 관리자 보호 구역 (가장 중요한 수정 섹션) */}
             <Route element={<AdminRoute user={currentUser} loading={loading} />}>
               <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
               <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
               
-              {/* 🟢 🔴 currentUser 전달 제거 (TS2322 해결 포인트) */}
+              {/* 🟢 🔴 TS2322 해결: 프롭 전달을 모두 제거했습니다. */}
               <Route path="/admin/manage-users" element={<AdminManageUsers />} />
               <Route path="/admin/manage-stores" element={<AdminManageStores />} />
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
-              
-              <Route path="/admin/manage-coupons" element={<AdminManageCoupons currentUser={currentUser} />} />
+              <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
             </Route>
 
             <Route path="*" element={<Home />} />
