@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { CategoryType, Region } from '../types';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
 
-const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제거
+const AdminStoreCreate: React.FC = () => { // 🔴 프롭 제거 완료
   const navigate = useNavigate();
-  const { currentUser } = useAuth(); // 🔴 Context에서 호출
+  
+  // 1. 전역 인증 정보 및 로딩 상태 구독
+  const { currentUser, loading: authLoading } = useAuth(); 
+  
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -26,6 +29,7 @@ const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제�
     is_hot: false
   });
 
+  // 2. 이미지 업로드 로직 (기존 유지)
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -52,6 +56,7 @@ const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제�
     }
   };
 
+  // 3. 폼 제출 로직 (기존 유지)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image_url) return alert('최소 한 장 이상의 이미지를 업로드하세요.');
@@ -62,7 +67,7 @@ const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제�
         rating: Number(formData.rating),
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
         benefits: formData.benefits.split(',').map(b => b.trim()).filter(b => b !== ''),
-        author_id: currentUser?.id // 🔴 전역 상태의 ID 사용
+        author_id: currentUser?.id // 🔴 중앙 컨텍스트의 유저 ID 사용
       }]);
       if (error) throw error;
       alert('새 업소 등록 완료!');
@@ -73,6 +78,17 @@ const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제�
       setLoading(false);
     }
   };
+
+  // 🔴 4. 전역 로딩 처리 (인증 확인 중일 때)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic">
+          Syncing Admin Intelligence...
+        </div>
+      </div>
+    );
+  }
 
   const inputStyle = "w-full bg-[#1c1c1c] border-2 border-[#333] rounded-2xl px-6 py-5 text-lg font-bold text-white focus:border-red-600 focus:bg-black outline-none transition-all shadow-md placeholder:text-gray-700";
   const labelStyle = "text-sm font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block";
@@ -90,7 +106,7 @@ const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제�
             <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between">
               <p className="text-xl font-black text-red-500 italic uppercase">🔥 Hot Store</p>
               <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
-                className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-red-600' : 'bg-gray-800'}`}>
+                className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}>
                 <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${formData.is_hot ? 'left-11' : 'left-1'}`} />
               </button>
             </div>
@@ -126,7 +142,7 @@ const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제�
               </div>
             </div>
           </div>
-          <button type="submit" disabled={loading || !formData.image_url} className="w-full py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 transition-all uppercase italic shadow-2xl shadow-red-900/40">
+          <button type="submit" disabled={loading || !formData.image_url} className="w-full py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 transition-all uppercase italic shadow-2xl shadow-red-900/40 active:scale-[0.98]">
             {loading ? 'Processing...' : '새 업소 등록 완료'}
           </button>
         </form>
