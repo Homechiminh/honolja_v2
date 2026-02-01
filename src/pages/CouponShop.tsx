@@ -12,7 +12,7 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔴 사용자님이 주신 데이터 그대로 적용 (price 필드명 유지)
+  // 🔴 사용자님이 주신 데이터 그대로 적용
   const COUPON_LIST = [
     { id: 'c1', title: '5만동 즉시 할인권', price: 200, content: '제휴 업체 어디서나 즉시 사용 가능한 입문용 할인권', icon: '🎫' },
     { id: 'c2', title: '소주 1병 무료 쿠폰', price: 300, content: '식사 또는 유흥 업체 방문 시 소주 1병 서비스', icon: '🍶' },
@@ -25,17 +25,30 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
     { id: 'c9', title: '운영진과 맥주 한 잔', price: 3000, content: '[SPECIAL] 운영진과 만나 꿀정보를 나누는 특별한 시간', icon: '👑' },
   ];
 
+  // 🔴 데이터 로드 안정화: currentUser가 확실히 있을 때 즉시 호출
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser?.id) {
       fetchUserData();
     }
-  }, [currentUser, activeTab]);
+  }, [currentUser?.id, activeTab]);
 
   const fetchUserData = async () => {
-    const { data: profile } = await supabase.from('profiles').select('points').eq('id', currentUser?.id).single();
+    if (!currentUser?.id) return;
+    
+    // 포인트 정보 동기화
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('points')
+      .eq('id', currentUser.id)
+      .single();
     if (profile) setPoints(profile.points);
 
-    const { data: coupons } = await supabase.from('coupons').select('*').eq('user_id', currentUser?.id).order('created_at', { ascending: false });
+    // 내 쿠폰 목록 동기화
+    const { data: coupons } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
     if (coupons) setMyCoupons(coupons);
   };
 
@@ -47,7 +60,10 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
     setLoading(true);
     try {
       // 1. 포인트 차감
-      const { error: pError } = await supabase.from('profiles').update({ points: points - item.price }).eq('id', currentUser.id);
+      const { error: pError } = await supabase
+        .from('profiles')
+        .update({ points: points - item.price })
+        .eq('id', currentUser.id);
       if (pError) throw pError;
 
       // 2. 쿠폰 발급
@@ -126,7 +142,7 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
               </div>
             ) : (
               myCoupons.map((coupon) => (
-                <div key={coupon.id} className={`p-8 rounded-[2.5rem] border flex justify-between items-center ${coupon.is_used ? 'bg-black/40 border-white/5 opacity-20' : 'bg-[#111] border-red-600/20 shadow-2xl'}`}>
+                <div key={coupon.id} className={`p-8 rounded-[2.5rem] border flex justify-between items-center transition-all ${coupon.is_used ? 'bg-black/40 border-white/5 opacity-30' : 'bg-[#111] border-red-600/20 shadow-2xl'}`}>
                   <div>
                     <h4 className="text-xl font-black italic uppercase text-white">{coupon.title}</h4>
                     <p className="text-gray-500 text-[10px] font-bold mt-2 uppercase italic">Exp: {new Date(coupon.expired_at).toLocaleDateString()}</p>
