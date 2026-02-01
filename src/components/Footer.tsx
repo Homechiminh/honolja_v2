@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom'; // 🔴 링크 연결을 위해 추가
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
@@ -22,9 +22,14 @@ const Footer: React.FC = () => {
               <button className="flex items-center gap-2 bg-[#FEE500] text-black px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#F7D600] transition-colors">
                 <span className="text-lg">💬</span> 호놀자 카톡
               </button>
-              <button className="flex items-center gap-2 bg-[#0088cc] text-white px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#0077b5] transition-colors">
+              <a 
+                href="https://t.me/honolja84" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 bg-[#0088cc] text-white px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#0077b5] transition-colors"
+              >
                 <span className="text-lg">✈️</span> 호놀자 텔레그램
-              </button>
+              </a>
             </div>
           </div>
 
@@ -32,11 +37,21 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-4 lg:pl-20">
             <h4 className="text-white font-black text-[13px] mb-8 tracking-[0.2em] uppercase italic">Service</h4>
             <ul className="space-y-4 text-gray-500 text-[14px] font-bold">
-              <li className="hover:text-white cursor-pointer transition-colors"><Link to="/stores/massage">힐링 & 테라피 (마사지)</Link></li>
-              <li className="hover:text-white cursor-pointer transition-colors"><Link to="/stores/barber">토탈 그루밍 케어 (이발소)</Link></li>
-              <li className="hover:text-white cursor-pointer transition-colors"><Link to="/stores/karaoke">가라오케</Link></li>
-              <li className="hover:text-white cursor-pointer transition-colors"><Link to="/stores/barclub">럭셔리 나이트라이프 (바/클럽)</Link></li>
-              <li className="hover:text-white cursor-pointer transition-colors"><Link to="/community">커뮤니티 게시판</Link></li>
+              <li className="hover:text-white transition-colors">
+                <Link to="/stores/massage">힐링 & 테라피 (마사지)</Link>
+              </li>
+              <li className="hover:text-white transition-colors">
+                <Link to="/stores/barber">토탈 그루밍 케어 (이발소)</Link>
+              </li>
+              <li className="hover:text-white transition-colors">
+                <Link to="/stores/karaoke">가라오케</Link>
+              </li>
+              <li className="hover:text-white transition-colors">
+                <Link to="/stores/barclub">럭셔리 나이트라이프 (바/클럽)</Link>
+              </li>
+              <li className="hover:text-white transition-colors">
+                <Link to="/community">커뮤니티 게시판</Link>
+              </li>
             </ul>
           </div>
 
@@ -44,19 +59,24 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-3">
             <h4 className="text-white font-black text-[13px] mb-8 tracking-[0.2em] uppercase italic">Support</h4>
             <ul className="space-y-4 text-gray-500 text-[14px] font-bold">
-              <li className="hover:text-white cursor-pointer transition-colors">공지사항</li>
-              {/* 🔴 "숙소 및 투어 문의"를 "투어 및 가이드"로 수정 */}
-              <li className="hover:text-white cursor-pointer transition-colors">
+              <li className="hover:text-white transition-colors cursor-pointer">공지사항</li>
+              <li className="hover:text-white transition-colors">
                 <Link to="/booking">투어 및 가이드</Link>
               </li>
-              <li className="text-red-600 hover:text-red-500 cursor-pointer transition-colors">광고 및 제휴문의</li>
-              <li className="hover:text-white cursor-pointer transition-colors">이용약관 및 정책</li>
+              {/* 🔴 광고 및 제휴문의 연결 */}
+              <li className="text-red-600 hover:text-red-500 transition-colors">
+                <Link to="/partnership">광고 및 제휴문의</Link>
+              </li>
+              {/* 🔴 이용약관 및 정책 연결 */}
+              <li className="hover:text-white transition-colors">
+                <Link to="/policies">이용약관 및 정책</Link>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="pt-10 border-t border-white/5 text-center">
-          <p className="text-[12px] text-gray-600 font-bold mb-2">© 2024 호놀자 VIETNAM. All rights reserved.</p>
+          <p className="text-[12px] text-gray-600 font-bold mb-2">© 2024 {new Date().getFullYear() > 2024 ? `2024-${new Date().getFullYear()}` : '2024'} 호놀자 VIETNAM. All rights reserved.</p>
           <p className="text-[11px] text-gray-700 font-bold italic uppercase tracking-wider">High-End Lifestyle Concierge for Vietnam Travelers.</p>
         </div>
       </div>
