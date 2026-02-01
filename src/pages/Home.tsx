@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
-import { SNS_LINKS, BRAND_NAME } from '../constants';
+import { SNS_LINKS } from '../constants'; // BRAND_NAME 삭제
 import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
 import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 임포트 추가
 import StoreCard from '../components/StoreCard';
@@ -10,7 +10,7 @@ import StoreCard from '../components/StoreCard';
 const Home: React.FC = () => {
   const navigate = useNavigate();
   // 1. 전역 인증 정보 구독
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser } = useAuth(); // authLoading 삭제
   
   // 2. 실시간 데이터 상태
   const { stores, loading: storesLoading } = useStores('all');
