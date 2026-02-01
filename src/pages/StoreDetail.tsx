@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStoreDetail } from '../hooks/useStoreDetail'; 
-import { useAuth } from '../contexts/AuthContext'; // 🔴 useAuth 임포트 추가
+import { useAuth } from '../contexts/AuthContext'; // 
 import { SNS_LINKS } from '../constants';
 import { UserRole } from '../types';
 
