@@ -9,43 +9,63 @@ const Signup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '', nickname: '' });
 
-  // 1. 구글 연동 가입 로직
+  // 1. 구글 연동 가입 (OAuth)
   const handleGoogleSignup = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) alert(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+          redirectTo: window.location.origin 
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   // 2. 이메일 가입 로직
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setIsLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: { data: { nickname: formData.nickname } }
-    });
-    if (error) {
-      alert(error.message);
-    } else if (data.user) {
-      alert('회원가입 성공! 로그인 해주세요.');
-      navigate('/login');
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: { 
+          // 🔴 닉네임을 유저 메타데이터에 포함하여 profiles 테이블과 연동되게 함
+          data: { nickname: formData.nickname } 
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        alert('회원가입 성공! 로그인 페이지로 이동합니다.');
+        navigate('/login');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
+
+  const inputStyle = "w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700 font-bold";
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans">
+      {/* 배경 장식 */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
       </div>
 
       <div className="max-w-xl w-full relative z-10">
         <div className="text-center mb-12">
-          <Link to="/" className="inline-flex items-center space-x-3 mb-8">
-            <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-2xl">
+          <Link to="/" className="inline-flex items-center space-x-3 mb-8 group">
+            <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
               <span className="text-white font-black text-2xl italic">H</span>
             </div>
             <span className="text-3xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
@@ -54,11 +74,11 @@ const Signup: React.FC = () => {
         </div>
 
         <div className="bg-[#111] p-10 md:p-14 rounded-[3rem] border border-white/5 shadow-2xl">
-          {/* 🔴 구글 연동 가입 버튼 */}
+          {/* 구글 연동 버튼 */}
           <div className="mb-12">
             <button 
               onClick={handleGoogleSignup}
-              className="w-full flex items-center justify-center space-x-4 bg-white text-black py-5 rounded-2xl font-black text-lg hover:scale-[1.02] transition-all shadow-xl"
+              className="w-full flex items-center justify-center space-x-4 bg-white text-black py-5 rounded-2xl font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
             >
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -72,43 +92,75 @@ const Signup: React.FC = () => {
 
           <div className="relative my-12 text-center">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-            <span className="relative bg-[#111] px-6 text-[10px] text-slate-600 font-black uppercase tracking-widest">Or create a manual account</span>
+            <span className="relative bg-[#111] px-6 text-[10px] text-slate-600 font-black uppercase tracking-widest italic">Or create a manual account</span>
           </div>
 
+          {/* 단계 표시 바 */}
           <div className="flex items-center justify-center space-x-4 mb-12">
-            {[1, 2, 3].map(i => <div key={i} className={`h-1.5 w-16 rounded-full transition-all duration-500 ${step >= i ? 'bg-red-600' : 'bg-white/5'}`}></div>)}
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`h-1.5 w-16 rounded-full transition-all duration-500 ${step >= i ? 'bg-red-600' : 'bg-white/5'}`}></div>
+            ))}
           </div>
 
           <form className="space-y-8" onSubmit={handleSignup}>
             {step === 1 && (
-              <div className="space-y-6">
-                <input type="text" placeholder="Nickname" value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all" required />
-                <input type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all" required />
-                <button type="button" onClick={() => setStep(2)} className="w-full py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl">다음 단계로</button>
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <div className="space-y-4">
+                  <input type="text" placeholder="Nickname" value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} className={inputStyle} required />
+                  <input type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputStyle} required />
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => formData.nickname && formData.email && setStep(2)} 
+                  className="w-full py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl uppercase italic active:scale-95"
+                >
+                  다음 단계로
+                </button>
               </div>
             )}
+
             {step === 2 && (
-              <div className="space-y-6">
-                <input type="password" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all" required />
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <input type="password" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className={inputStyle} required minLength={6} />
                 <div className="flex space-x-4">
-                  <button type="button" onClick={() => setStep(1)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all">이전</button>
-                  <button type="button" onClick={() => setStep(3)} className="flex-1 py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all">다음</button>
+                  <button type="button" onClick={() => setStep(1)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
+                  <button 
+                    type="button" 
+                    onClick={() => formData.password.length >= 6 && setStep(3)} 
+                    className="flex-1 py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all uppercase italic"
+                  >
+                    다음
+                  </button>
                 </div>
               </div>
             )}
+
             {step === 3 && (
-              <div className="space-y-6">
-                <div className="bg-white/5 p-6 rounded-3xl border border-white/10 text-slate-400 text-sm font-bold">서비스 이용약관 및 개인정보 처리방침에 동의합니다.</div>
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10 text-slate-400 text-sm font-bold leading-relaxed">
+                  <p className="mb-2 text-white italic tracking-tighter uppercase">Terms & Policy</p>
+                  {BRAND_NAME}의 서비스 이용약관 및 <br/>개인정보 처리방침에 동의하여 가입을 진행합니다.
+                </div>
                 <div className="flex space-x-4">
-                  <button type="button" onClick={() => setStep(2)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all">이전</button>
-                  <button type="submit" disabled={isLoading} className="flex-1 py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all shadow-xl">{isLoading ? '처리 중...' : '회원가입 완료'}</button>
+                  <button type="button" onClick={() => setStep(2)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
+                  <button 
+                    type="submit" 
+                    disabled={isLoading} 
+                    className="flex-1 py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 active:scale-95 uppercase italic"
+                  >
+                    {isLoading ? 'Processing...' : '회원가입 완료'}
+                  </button>
                 </div>
               </div>
             )}
           </form>
         </div>
+
         <p className="text-center mt-8 text-slate-500 text-sm font-bold uppercase tracking-widest">
-          이미 계정이 있으신가요? <Link to="/login" className="text-red-500 font-black ml-2 hover:text-red-400">로그인하기</Link>
+          이미 계정이 있으신가요? 
+          <Link to="/login" className="text-red-500 font-black ml-2 hover:text-red-400 border-b-2 border-transparent hover:border-red-400 transition-all pb-0.5">
+            로그인하기
+          </Link>
         </p>
       </div>
     </div>
