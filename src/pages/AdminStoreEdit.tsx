@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { CategoryType, Region } from '../types';
 
-// 🔴 Props에서 currentUser 제거 (TS6133, TS2741 동시 해결)
 const AdminStoreEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
