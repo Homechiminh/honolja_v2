@@ -1,45 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { Region } from '../types'; 
 import type { Store } from '../types';
 import StoreCard from '../components/StoreCard';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 추가
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 추가
 
 interface StoreListProps {
   forcedRegion?: Region; 
 }
 
-const ITEMS_PER_PAGE = 9; // 한 페이지 당 노출 개수
+const ITEMS_PER_PAGE = 9; 
 
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
+  const { loading: authLoading } = useAuth(); // 🔴 전역 인증 로딩 상태
+  
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   const currentRegion = forcedRegion || Region.HCMC;
 
-  // 1. 필터 변경 시 1페이지로 리셋
+  // 1. 필터 변경 시 1페이지로 리셋 (이 로직은 즉시 실행되어야 하므로 유지)
   useEffect(() => {
     setCurrentPage(1);
   }, [category, currentRegion]);
 
-  // 2. 데이터 호출 및 스크롤 핸들링
-  useEffect(() => {
-    fetchStores();
-    window.scrollTo(0, 0); // 페이지 변경 시 최상단으로 이동 (UX)
-  }, [category, currentRegion, currentPage]);
-
+  // 2. 데이터 호출 로직
   const fetchStores = async () => {
     setLoading(true);
     try {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
-      // 데이터와 전체 카운트를 동시에 가져오는 최적화 쿼리
       let query = supabase
         .from('stores')
         .select('*', { count: 'exact' })
@@ -50,7 +47,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
       }
 
       const { data, error, count } = await query
-        .order('is_hot', { ascending: false }) // 🔴 HOT 업소 우선 노출
+        .order('is_hot', { ascending: false }) 
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -65,12 +62,22 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     }
   };
 
+  // 🔴 [데이터 가드 적용] 
+  // 기존 useEffect 대신 useFetchGuard를 사용하여 인증 로딩 엇박자를 해결합니다.
+  useFetchGuard(fetchStores, [category, currentRegion, currentPage]);
+
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  // 전역 인증 확인 중일 때의 로딩 처리
+  if (authLoading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
       <div className="max-w-7xl mx-auto">
-        {/* 상단 헤더 섹션 */}
         <header className="mb-12 border-l-4 border-red-600 pl-6">
           <h2 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none">
             {currentRegion} 
@@ -95,14 +102,12 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
           </div>
         ) : (
           <>
-            {/* 업소 리스트 그리드 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
               {stores.map((store) => (
                 <StoreCard key={store.id} store={store} />
               ))}
             </div>
 
-            {/* 페이지네이션 컨트롤 */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-3 mt-20">
                 <button
@@ -142,7 +147,6 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
               </div>
             )}
             
-            {/* 하단 개수 정보 */}
             <div className="mt-12 text-center">
                <p className="text-[10px] text-gray-700 font-black uppercase italic tracking-widest">
                  Total {totalCount} premium stores found in {currentRegion}
