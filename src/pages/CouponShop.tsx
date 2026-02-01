@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 임포트 추가
+import { useAuth } from '../contexts/AuthContext'; // 
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 
 
 const CouponShop: React.FC = () => { // 🔴 프롭 제거
   const [activeTab, setActiveTab] = useState<'shop' | 'my'>('shop');
