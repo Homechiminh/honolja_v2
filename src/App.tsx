@@ -22,6 +22,7 @@ import Policies from './pages/Policies';
 import Community from './pages/Community'; 
 import CouponShop from './pages/CouponShop';
 import VipLounge from './pages/VipLounge'; 
+import CreatePost from './pages/CreatePost'; // 추가
 
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
@@ -82,23 +83,22 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/store/:id" element={<StoreDetail currentUser={currentUser} />} />
 
-            {/* VIP 라운지 */}
+            {/* VIP 라운지 (레벨 3 이상) */}
             <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
-              <Route path="/vip-lounge" element={<VipLounge currentUser={currentUser} />} />
+              <Route path="/vip-lounge" element={<VipLounge />} />
             </Route>
 
             {/* 일반 회원 구역 */}
             <Route element={<PrivateRoute user={currentUser} loading={loading} />}>
               <Route path="/mypage" element={<MyPage currentUser={currentUser} />} />
               <Route path="/coupon-shop" element={<CouponShop currentUser={currentUser} />} />
+              <Route path="/community/create" element={<CreatePost currentUser={currentUser} />} />
             </Route>
 
-            {/* 👑 관리자 보호 구역 (가장 중요한 수정 섹션) */}
+            {/* 👑 관리자 보호 구역 */}
             <Route element={<AdminRoute user={currentUser} loading={loading} />}>
               <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
               <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
-              
-              {/* 🟢 🔴 TS2322 해결: 프롭 전달을 모두 제거했습니다. */}
               <Route path="/admin/manage-users" element={<AdminManageUsers />} />
               <Route path="/admin/manage-stores" element={<AdminManageStores />} />
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
