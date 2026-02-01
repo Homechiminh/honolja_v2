@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 useAuth 임포트 추가
+import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 신규 가드 훅 임포트
 import type { Store } from '../types';
 
-const PostEdit: React.FC = () => { // 
+const PostEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
@@ -24,15 +25,9 @@ const PostEdit: React.FC = () => { //
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-  // 🔴 [데이터 가드] 인증 확인이 끝나고 ID가 있을 때만 기존 데이터를 불러옵니다.
-  useEffect(() => {
-    if (authLoading) return;
-    if (id) {
-      fetchInitialData();
-    }
-  }, [id, authLoading]);
-
+  // 데이터 호출 및 권한 검증 로직
   const fetchInitialData = async () => {
+    if (!id) return;
     setLoading(true);
     try {
       // 1. 업소 리스트 로드
@@ -52,8 +47,7 @@ const PostEdit: React.FC = () => { //
         return;
       }
 
-      // 🔴 권한 체크: 작성자 본인 혹은 관리자(ADMIN)인지 확인
-      // Context에서 가져온 currentUser와 대조합니다.
+      // 🔴 권한 체크: 인증이 완료된 확실한 유저 정보와 대조합니다.
       if (post.author_id !== currentUser?.id && currentUser?.role !== 'ADMIN') {
         alert('수정 권한이 없습니다.');
         navigate('/community');
@@ -75,11 +69,14 @@ const PostEdit: React.FC = () => { //
     }
   };
 
+  // 🔴 [데이터 가드 적용] 
+  // 기존의 복잡한 useEffect 대신 이 한 줄이 인증 대기 및 데이터 호출을 처리합니다.
+  useFetchGuard(fetchInitialData, [id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return alert('제목과 내용을 입력해주세요.');
     
-    // VIP 게시글 권한 최종 확인
     if (category === 'vip' && (currentUser?.level || 0) < 3) {
       return alert('베테랑 등급만 작성이 가능합니다.');
     }
@@ -130,7 +127,7 @@ const PostEdit: React.FC = () => { //
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Category</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputStyle}>
                 <option value="free">자유게시판</option>
                 <option value="review">📸 업소후기</option>
@@ -145,7 +142,7 @@ const PostEdit: React.FC = () => { //
 
             {category === 'vip' && (
               <div className="space-y-2 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2">VIP Sub-Category</label>
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">VIP Sub-Category</label>
                 <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
                   <option value="시크릿 꿀정보">💎 시크릿 꿀정보</option>
                   <option value="업소후기">📸 업소후기 (VIP 전용)</option>
@@ -157,7 +154,7 @@ const PostEdit: React.FC = () => { //
 
             {category === 'review' && (
               <div className="space-y-2 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-2">Target Store</label>
+                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-2 italic">Target Store</label>
                 <select 
                   required 
                   value={selectedStoreId} 
@@ -188,18 +185,18 @@ const PostEdit: React.FC = () => { //
           </div>
 
           {imageUrls.length > 0 && (
-            <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5">
-              <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 italic">Attached Images</label>
+            <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
+              <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 italic tracking-widest">Attached Images</label>
               <div className="flex flex-wrap gap-4">
                 {imageUrls.map((url, i) => (
-                  <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group">
+                  <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
                     <img src={url} className="w-full h-full object-cover" alt="preview" />
                     <button 
                       type="button" 
                       onClick={() => setImageUrls(imageUrls.filter(u => u !== url))}
-                      className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-xs"
+                      className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px] italic"
                     >
-                      삭제
+                      DELETE
                     </button>
                   </div>
                 ))}
@@ -218,7 +215,7 @@ const PostEdit: React.FC = () => { //
             <button 
               type="submit" 
               disabled={updating} 
-              className="flex-[2] py-6 bg-red-600 text-white font-black text-xl rounded-2xl uppercase shadow-xl hover:bg-red-700 transition-all disabled:opacity-50 italic"
+              className="flex-[2] py-6 bg-red-600 text-white font-black text-xl rounded-2xl uppercase shadow-2xl shadow-red-900/20 hover:bg-red-500 transition-all active:scale-95 italic"
             >
               {updating ? 'Updating...' : 'Update Post'}
             </button>
