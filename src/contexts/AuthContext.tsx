@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase'; 
-import type { User } from '../types'; // 🔴 주의: @supabase가 아니라 직접 만든 User 타입
+import type { User } from '../types';
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  refreshUser: () => Promise<void>; // 🔴 포인트 등 변동 시 수동 갱신용
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -14,49 +14,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 프로필 데이터를 가져오는 핵심 함수
-  const fetchProfile = async (authUserId: string) => {
+  // 🔴 프로필 데이터를 가져와서 상태에 넣는 단일 창구
+  const updateProfileState = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', authUserId)
+        .eq('id', userId)
         .single();
 
       if (!error && data) {
         setCurrentUser(data as User);
+      } else {
+        setCurrentUser(null);
       }
     } catch (err) {
-      console.error("Profile Fetch Error:", err);
+      console.error("Profile Sync Error:", err);
+      setCurrentUser(null);
     } finally {
-      setLoading(false);
+      setLoading(false); // 🔴 데이터 로드 시도 후 무조건 로딩 해제
     }
   };
 
   const refreshUser = async () => {
-    if (currentUser?.id) await fetchProfile(currentUser.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await updateProfileState(session.user.id);
+    }
   };
 
   useEffect(() => {
-    // 1. 초기 실행 시 세션 확인
+    // 1. 최초 1회 즉시 세션 복구 시도 (직접 링크 접속 대응)
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await updateProfileState(session.user.id);
+        } else {
+          setLoading(false); // 세션 없으면 바로 로딩 해제
+        }
+      } catch (err) {
         setLoading(false);
       }
     };
 
     initAuth();
 
-    // 2. 인증 상태 변화 감지 (로그인/로그아웃/탭 전환 대응)
+    // 2. 인증 이벤트 리스너 (로그인/로그아웃/토큰갱신 실시간 대응)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await fetchProfile(session.user.id);
-        }
+        // 로그인이나 세션 회복 시 프로필 업데이트
+        await updateProfileState(session.user.id);
       } else {
+        // 로그아웃 시 상태 초기화 및 로딩 해제
         setCurrentUser(null);
         setLoading(false);
       }
@@ -65,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  // 로딩 중일 때 (블랙스크린 방지 UI)
+  // 🔴 Provider 내부 로딩 UI (App.tsx의 로딩과 별개로 이중 안전장치)
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
