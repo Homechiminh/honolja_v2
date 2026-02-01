@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Link 삭제
+import { useNavigate } from 'react-router-dom'; 
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useFetchGuard } from '../hooks/useFetchGuard';
