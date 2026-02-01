@@ -1,18 +1,17 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../supabase';
-import type { User } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 임포트 추가
 
-interface CouponShopProps {
-  currentUser: User | null;
-}
-
-const CouponShop = ({ currentUser }: CouponShopProps) => {
+const CouponShop: React.FC = () => { // 🔴 프롭 제거
   const [activeTab, setActiveTab] = useState<'shop' | 'my'>('shop');
   const [points, setPoints] = useState(0);
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔴 사용자님이 주신 데이터 그대로 적용
+  // 전역 인증 정보 가져오기
+  const { currentUser, loading: authLoading } = useAuth();
+
   const COUPON_LIST = [
     { id: 'c1', title: '5만동 즉시 할인권', price: 200, content: '제휴 업체 어디서나 즉시 사용 가능한 입문용 할인권', icon: '🎫' },
     { id: 'c2', title: '소주 1병 무료 쿠폰', price: 300, content: '식사 또는 유흥 업체 방문 시 소주 1병 서비스', icon: '🍶' },
@@ -25,17 +24,11 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
     { id: 'c9', title: '운영진과 맥주 한 잔', price: 3000, content: '[SPECIAL] 운영진과 만나 꿀정보를 나누는 특별한 시간', icon: '👑' },
   ];
 
-  // 🔴 데이터 로드 안정화: currentUser가 확실히 있을 때 즉시 호출
-  useEffect(() => {
-    if (currentUser?.id) {
-      fetchUserData();
-    }
-  }, [currentUser?.id, activeTab]);
-
-  const fetchUserData = async () => {
+  // 🔴 [데이터 가드] 인증이 완료되고 탭이 바뀔 때마다 실행
+  useFetchGuard(async () => {
     if (!currentUser?.id) return;
     
-    // 포인트 정보 동기화
+    // 1. 포인트 정보 동기화
     const { data: profile } = await supabase
       .from('profiles')
       .select('points')
@@ -43,14 +36,14 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
       .single();
     if (profile) setPoints(profile.points);
 
-    // 내 쿠폰 목록 동기화
+    // 2. 내 쿠폰 목록 동기화
     const { data: coupons } = await supabase
       .from('coupons')
       .select('*')
       .eq('user_id', currentUser.id)
       .order('created_at', { ascending: false });
     if (coupons) setMyCoupons(coupons);
-  };
+  }, [activeTab]); // activeTab이 바뀔 때마다 데이터를 최신화함
 
   const handlePurchase = async (item: typeof COUPON_LIST[0]) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
@@ -76,15 +69,21 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
       });
       if (cError) throw cError;
 
-      // 3. 기록 생성
+      // 3. 포인트 내역 기록
       await supabase.from('point_history').insert({
         user_id: currentUser.id,
         amount: -item.price,
         reason: `쿠폰 교환: ${item.title}`
       });
 
-      alert('교환 성공! 마이 지갑에서 확인하세요.');
-      fetchUserData();
+      alert('교환 성공! My Wallet에서 확인하세요.');
+      
+      // 즉시 UI 갱신을 위해 데이터 수동 호출 (혹은 refreshUser 사용 가능)
+      const { data: updatedProfile } = await supabase.from('profiles').select('points').eq('id', currentUser.id).single();
+      if (updatedProfile) setPoints(updatedProfile.points);
+      const { data: updatedCoupons } = await supabase.from('coupons').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+      if (updatedCoupons) setMyCoupons(updatedCoupons);
+
     } catch (err) {
       alert('처리 중 오류가 발생했습니다.');
     } finally {
@@ -92,8 +91,15 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
     }
   };
 
+  // 인증 정보를 확인하는 동안 보여줄 로딩 화면
+  if (authLoading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 font-black italic animate-pulse tracking-widest uppercase">
+      Connecting to Marketplace...
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-red-600/30">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
           <div>
@@ -127,15 +133,15 @@ const CouponShop = ({ currentUser }: CouponShopProps) => {
                 <button 
                   onClick={() => handlePurchase(item)}
                   disabled={loading || points < item.price}
-                  className="w-full py-5 bg-white/5 group-hover:bg-red-600 text-white rounded-2xl font-black italic uppercase text-xs transition-all disabled:opacity-5"
+                  className="w-full py-5 bg-white/5 group-hover:bg-red-600 text-white rounded-2xl font-black italic uppercase text-xs transition-all disabled:opacity-5 active:scale-95"
                 >
-                  {item.price.toLocaleString()} P EXCHANGE
+                  {points < item.price ? 'INSUFFICIENT POINTS' : `${item.price.toLocaleString()} P EXCHANGE`}
                 </button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {myCoupons.length === 0 ? (
               <div className="col-span-2 py-32 text-center bg-[#0a0a0a] rounded-[3rem] border border-dashed border-white/10">
                 <p className="text-gray-600 font-black italic uppercase tracking-widest">No Coupons Found</p>
