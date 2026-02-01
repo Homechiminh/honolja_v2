@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import type { User, Store } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 useAuth 임포트 추가
+import type { Store } from '../types';
 
-const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+const PostEdit: React.FC = () => { // 🔴 프롭 제거
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
+  // 1. 전역 인증 정보 가져오기
+  const { currentUser, loading: authLoading } = useAuth(); 
+
   // 상태 관리
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -20,17 +24,18 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-  // 🔴 데이터 로드 안정화: ID와 유저 정보가 확정되면 즉시 실행
+  // 🔴 [데이터 가드] 인증 확인이 끝나고 ID가 있을 때만 기존 데이터를 불러옵니다.
   useEffect(() => {
-    if (id && currentUser) {
+    if (authLoading) return;
+    if (id) {
       fetchInitialData();
     }
-  }, [id, currentUser?.id]);
+  }, [id, authLoading]);
 
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      // 1. 업소 리스트 로드 (조인 없이 별도 호출하여 안정성 확보)
+      // 1. 업소 리스트 로드
       const { data: storeData } = await supabase.from('stores').select('*').order('name');
       if (storeData) setStores(storeData as Store[]);
 
@@ -48,6 +53,7 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
       }
 
       // 🔴 권한 체크: 작성자 본인 혹은 관리자(ADMIN)인지 확인
+      // Context에서 가져온 currentUser와 대조합니다.
       if (post.author_id !== currentUser?.id && currentUser?.role !== 'ADMIN') {
         alert('수정 권한이 없습니다.');
         navigate('/community');
@@ -105,7 +111,8 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
 
   const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700";
 
-  if (loading) return (
+  // 🔴 전체 로딩 처리 (인증 확인 포함)
+  if (authLoading || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
         Decrypting Post Data...
@@ -122,7 +129,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
         
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 카테고리 선택 */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputStyle}>
@@ -137,7 +143,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
               </select>
             </div>
 
-            {/* VIP 전용 세부 카테고리 (UI 유지) */}
             {category === 'vip' && (
               <div className="space-y-2 animate-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2">VIP Sub-Category</label>
@@ -150,7 +155,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
               </div>
             )}
 
-            {/* 업소 선택 (UI 유지) */}
             {category === 'review' && (
               <div className="space-y-2 animate-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-2">Target Store</label>
@@ -167,7 +171,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
             )}
           </div>
 
-          {/* 제목 및 본문 */}
           <div className="space-y-4">
             <input 
               value={title} 
@@ -184,7 +187,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
             />
           </div>
 
-          {/* 이미지 프리뷰 (수정 시 확인용) */}
           {imageUrls.length > 0 && (
             <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5">
               <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 italic">Attached Images</label>
@@ -205,7 +207,6 @@ const PostEdit: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
             </div>
           )}
 
-          {/* 하단 버튼 그룹 */}
           <div className="flex gap-4 pt-4">
             <button 
               type="button" 
