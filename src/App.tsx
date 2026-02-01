@@ -3,7 +3,6 @@ import { useAuth } from './contexts/AuthContext'; //
 import { Region } from './types'; 
 import './index.css';
 
-// 레이아웃
 import Header from './components/Header';
 import Footer from './components/Footer';
 
