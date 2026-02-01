@@ -1,31 +1,31 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStoreDetail } from '../hooks/useStoreDetail'; 
+import { useAuth } from '../contexts/AuthContext'; // 🔴 useAuth 임포트 추가
 import { SNS_LINKS } from '../constants';
-import type { User } from '../types';
 import { UserRole } from '../types';
 
-interface StoreDetailProps {
-  currentUser: User | null;
-}
+// 🔴 StoreDetailProps 인터페이스 제거 (더 이상 프롭을 받지 않음)
 
-const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
+const StoreDetail: React.FC = () => { // 🔴 프롭 정의 제거
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 실시간 데이터 가져오기 (커스텀 훅 활용)
-  const { store, loading } = useStoreDetail(id);
+  // 1. 전역 인증 정보 가져오기
+  const { currentUser, loading: authLoading } = useAuth(); // 🔴 Context에서 구독
+
+  // 2. 실시간 업소 데이터 가져오기
+  const { store, loading: storeLoading } = useStoreDetail(id);
 
   const isAdmin = currentUser?.role === UserRole.ADMIN;
 
   const handleDelete = () => {
-    // 🔴 관리자 전용 삭제 로직 (기능은 관리자 페이지에서 처리 권장)
     if (window.confirm('관리자 권한으로 이 업소를 삭제하시겠습니까?')) {
       alert('삭제 처리는 관리자 대시보드(Manage Stores)를 이용해 주세요.');
     }
   };
 
-  // 2. 이미지 스프라이트 설정 (기존 로직 유지)
+  // 이미지 스프라이트 설정
   const spriteConfig = useMemo(() => {
     if (!store) return { cols: 1, rows: 1, size: 'cover' };
     if (store.image_url?.includes('supabase.co')) {
@@ -47,22 +47,23 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
     return `${x}% ${y}%`;
   }, [store, spriteConfig]);
 
-  // 3. 구글 지도 URL 생성 (오타 수정: ${} 사용)
+  // 구글 지도 URL 생성
   const mapUrl = useMemo(() => {
     if (!store?.address) return "";
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
-  if (loading) return (
+  // 🔴 인증 로딩이나 데이터 로딩 중일 때 로딩 바 표시
+  if (authLoading || storeLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase font-black">
-      Loading Store Info...
+      Syncing Store Intelligence...
     </div>
   );
 
   if (!store) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="text-center">
-        <p className="text-white font-black italic uppercase text-2xl mb-6 tracking-tighter">Store Not Found</p>
+        <p className="text-white font-black italic uppercase text-2xl mb-6 tracking-tighter">Target Not Found</p>
         <button onClick={() => navigate(-1)} className="text-red-600 font-bold uppercase text-xs border-b border-red-600 pb-1">Go Back</button>
       </div>
     </div>
@@ -125,7 +126,6 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           <div className="lg:col-span-2 space-y-20">
-            
             {/* 제휴 혜택 섹션 */}
             <section className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-[3.5rem] p-10 md:p-14 border border-red-600/20 shadow-2xl">
               <div className="flex items-center space-x-4 mb-10">
@@ -135,7 +135,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
                 <h3 className="text-3xl font-black text-white italic tracking-tighter uppercase">호놀자 전용 멤버십 혜택</h3>
               </div>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(store.benefits || ["호놀자 회원 특별 할인가 제공", "예약 시 대기 시간 최소화", "프리미엄 룸 우선 배정"]).map((benefit, i) => (
+                {(store.benefits || ["호놀자 회원 특별 할인가 제공", "예약 시 대기 시간 최소화"]).map((benefit, i) => (
                   <li key={i} className="flex items-center space-x-4 bg-white/[0.03] p-6 rounded-3xl border border-white/5 group hover:bg-red-600/5 transition-colors">
                     <div className="w-2 h-2 bg-red-600 rounded-full group-hover:animate-ping"></div>
                     <span className="text-slate-200 font-bold italic tracking-tight">{benefit}</span>
@@ -157,7 +157,7 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
               </div>
             </section>
 
-            {/* Gallery 섹션 ( promo_images 지원 ) */}
+            {/* Gallery 섹션 */}
             <section>
               <h3 className="text-2xl font-black text-white mb-10 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1.5 h-6 bg-red-600 mr-4 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></div>
@@ -207,10 +207,10 @@ const StoreDetail: React.FC<StoreDetailProps> = ({ currentUser }) => {
                 
                 <div className="space-y-4">
                   <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-6 bg-[#FAE100] text-[#3C1E1E] rounded-[1.5rem] font-black text-center block hover:bg-[#F2D800] active:scale-[0.98] transition-all flex items-center justify-center space-x-3 shadow-xl group">
-                    <span className="uppercase tracking-tighter italic text-sm group-hover:scale-105 transition-transform">KakaoTalk Fast Reservation</span>
+                    <span className="uppercase tracking-tighter italic text-sm group-hover:scale-105 transition-transform">KakaoTalk Reservation</span>
                   </a>
                   <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-6 bg-[#0088CC] text-white rounded-[1.5rem] font-black text-center block hover:bg-[#007AB8] active:scale-[0.98] transition-all flex items-center justify-center space-x-3 shadow-xl group">
-                    <span className="uppercase tracking-tighter italic text-sm group-hover:scale-105 transition-transform">Telegram Secret Inquiry</span>
+                    <span className="uppercase tracking-tighter italic text-sm group-hover:scale-105 transition-transform">Telegram Inquiry</span>
                   </a>
                 </div>
                 
