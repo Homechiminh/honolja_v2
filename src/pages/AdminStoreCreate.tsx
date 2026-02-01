@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { CategoryType, Region } from '../types';
-import type { User } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
 
-const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+const AdminStoreCreate: React.FC = () => { // 🔴 프롭 타입 및 인자 제거
   const navigate = useNavigate();
+  const { currentUser } = useAuth(); // 🔴 Context에서 호출
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -61,7 +62,7 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
         rating: Number(formData.rating),
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
         benefits: formData.benefits.split(',').map(b => b.trim()).filter(b => b !== ''),
-        author_id: currentUser?.id 
+        author_id: currentUser?.id // 🔴 전역 상태의 ID 사용
       }]);
       if (error) throw error;
       alert('새 업소 등록 완료!');
@@ -73,14 +74,14 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
     }
   };
 
-  const inputStyle = "w-full bg-[#1c1c1c] border-2 border-[#333] rounded-2xl px-6 py-5 text-lg font-bold text-white focus:border-red-600 focus:bg-black outline-none transition-all shadow-md";
+  const inputStyle = "w-full bg-[#1c1c1c] border-2 border-[#333] rounded-2xl px-6 py-5 text-lg font-bold text-white focus:border-red-600 focus:bg-black outline-none transition-all shadow-md placeholder:text-gray-700";
   const labelStyle = "text-sm font-black text-gray-400 uppercase tracking-widest ml-2 mb-2 block";
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
       <div className="max-w-5xl mx-auto bg-[#111] rounded-[3.5rem] p-8 md:p-16 border border-white/5 shadow-2xl">
         <header className="text-center mb-16">
-          <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter inline-block border-b-8 border-red-600 pb-4">
+          <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter inline-block border-b-8 border-red-600 pb-4 leading-none">
             New <span className="text-red-600">Store</span>
           </h2>
         </header>
@@ -125,7 +126,7 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
               </div>
             </div>
           </div>
-          <button type="submit" disabled={loading || !formData.image_url} className="w-full py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 transition-all uppercase italic">
+          <button type="submit" disabled={loading || !formData.image_url} className="w-full py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 transition-all uppercase italic shadow-2xl shadow-red-900/40">
             {loading ? 'Processing...' : '새 업소 등록 완료'}
           </button>
         </form>
