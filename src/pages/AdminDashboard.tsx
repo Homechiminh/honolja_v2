@@ -1,15 +1,29 @@
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
 
-const AdminDashboard = () => { // 🔴 프롭 제거
+const AdminDashboard: React.FC = () => { // 🔴 Prop 제거 완료
   const navigate = useNavigate();
-  const { currentUser } = useAuth(); // 🔴 Context에서 직접 정보 추출
+  
+  // 1. 전역 인증 정보 및 로딩 상태 구독
+  const { currentUser, loading: authLoading } = useAuth(); 
 
-  // 관리자 권한 체크
-  // App.tsx의 가드가 1차로 막아주지만, 컴포넌트 내부에서 한 번 더 안전하게 체크합니다.
+  // 2. 권한 체크 및 보안 가드
+  // authLoading이 true일 때는 로딩바를 보여주고, 
+  // 로딩이 끝났는데 관리자가 아니라면 즉시 홈으로 추방합니다.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic">
+          Syncing System Intelligence...
+        </div>
+      </div>
+    );
+  }
+
   if (!currentUser || currentUser.role !== UserRole.ADMIN) {
-    navigate('/');
+    navigate('/', { replace: true });
     return null;
   }
 
@@ -48,18 +62,18 @@ const AdminDashboard = () => { // 🔴 프롭 제거
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-6xl mx-auto">
         <header className="mb-16">
-          <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter mb-4">
+          <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter mb-4 leading-none">
             System <span className="text-red-600">Dashboard</span>
           </h2>
           <div className="flex items-center gap-3">
             <span className="w-3 h-3 bg-red-600 rounded-full animate-ping"></span>
             <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] italic">
-              Admin Control Center · {currentUser.nickname} Manager Online
+              Admin Control Center · <span className="text-white">{currentUser.nickname}</span> Manager Online
             </p>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {menuItems.map((item) => (
             <Link key={item.path} to={item.path} className="group">
               <div className="bg-[#111] border border-white/5 p-10 rounded-[3rem] hover:border-red-600/50 transition-all shadow-2xl hover:-translate-y-3 duration-500 h-full flex flex-col relative overflow-hidden">
