@@ -1,22 +1,15 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import type { User } from '../types';
 
-// 🔴 AdminRoute에서 이미 검증하므로 내부 Navigate 로직 제거
-const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
+// 🔴 Props에서 currentUser를 제거하여 TS6133 에러를 해결했습니다.
+const AdminManageCoupons: React.FC = () => {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 🔴 탭 전환 시 데이터 로드 안정화: 즉시 실행
-  useEffect(() => {
-    fetchAllCoupons();
-  }, []);
-
   const fetchAllCoupons = async () => {
     setLoading(true);
     try {
-      // 쿠폰 정보와 해당 유저의 프로필 정보를 함께 조인해서 가져옴
       const { data, error } = await supabase
         .from('coupons')
         .select(`
@@ -37,6 +30,10 @@ const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAllCoupons();
+  }, []);
 
   const handleRevoke = async (couponId: string, userName: string) => {
     if (!window.confirm(`[${userName}] 유저의 쿠폰을 강제 회수하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
@@ -60,7 +57,6 @@ const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
     c.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 🔴 로딩 중일 때 표시할 UI (다른 관리자 페이지와 통일)
   if (loading && coupons.length === 0) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse uppercase tracking-[0.3em]">
       Syncing Coupon Database...
@@ -104,7 +100,7 @@ const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
               <tbody className="divide-y divide-white/5">
                 {filteredCoupons.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-20 text-center text-gray-600 font-bold italic uppercase">검색 결과가 없습니다.</td>
+                    <td colSpan={5} className="p-20 text-center text-gray-600 font-bold italic uppercase">발급된 쿠폰이 없습니다.</td>
                   </tr>
                 ) : (
                   filteredCoupons.map((coupon) => (
