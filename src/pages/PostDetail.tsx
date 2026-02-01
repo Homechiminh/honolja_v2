@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
 
-const PostDetail: React.FC = () => { // 🔴 프롭 제거
+const PostDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
@@ -17,40 +18,12 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
   const [commenting, setCommenting] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
-  // 🔴 데이터 로드 및 조회수 증강
-  useEffect(() => {
-    if (id) {
-      fetchPostData();
-      incrementViews();
-    }
-  }, [id]);
-
-  // 🔴 인증 확인이 완료되고 유저 정보가 있을 때만 추천 상태 확인
-  useEffect(() => {
-    if (!authLoading && currentUser && id) {
-      checkLikeStatus();
-    }
-  }, [id, currentUser?.id, authLoading]);
-
-  const incrementViews = async () => {
-    if (!id) return;
-    await supabase.rpc('increment_views', { post_id: id });
-  };
-
-  const checkLikeStatus = async () => {
-    const { data } = await supabase
-      .from('post_likes')
-      .select('*')
-      .eq('post_id', id)
-      .eq('user_id', currentUser?.id)
-      .single();
-    if (data) setIsLiked(true);
-  };
-
+  // 데이터 호출 로직
   const fetchPostData = async () => {
     if (!id) return;
     setLoading(true);
     try {
+      // 게시글 및 작성자 정보
       const { data: postData, error: postErr } = await supabase
         .from('posts')
         .select('*, author:profiles(*)')
@@ -63,19 +36,45 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
       }
       setPost(postData);
 
+      // 댓글 리스트
       const { data: comms } = await supabase
         .from('comments')
         .select('*, author:profiles(*)')
         .eq('post_id', id)
         .order('created_at', { ascending: true });
       if (comms) setComments(comms);
+
+      // 조회수 증강 (병렬 실행)
+      supabase.rpc('increment_views', { post_id: id });
       
     } catch (err) {
-      console.error(err);
+      console.error("데이터 로드 실패:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  // 🔴 [데이터 가드 적용] 
+  // 탭 이동 시 인증 확인을 기다린 후 게시글 데이터를 안전하게 불러옵니다.
+  useFetchGuard(fetchPostData, [id]);
+
+  // 🔴 로그인 정보가 확정되면 추천(좋아요) 상태 확인
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (!currentUser || !id) return;
+      const { data } = await supabase
+        .from('post_likes')
+        .select('*')
+        .eq('post_id', id)
+        .eq('user_id', currentUser.id)
+        .single();
+      if (data) setIsLiked(true);
+    };
+
+    if (!authLoading && currentUser) {
+      checkLikeStatus();
+    }
+  }, [id, currentUser, authLoading]);
 
   const handleLike = async () => {
     if (!currentUser) return alert('로그인이 필요합니다.');
@@ -87,13 +86,9 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
         .insert([{ post_id: id, user_id: currentUser.id }]);
       if (likeErr) throw likeErr;
 
-      await supabase.from('profiles')
-        .update({ points: (post.author.points || 0) + 2 })
-        .eq('id', post.author_id);
-      
-      await supabase.from('posts')
-        .update({ likes: (post.likes || 0) + 1 })
-        .eq('id', id);
+      // 포인트 및 추천수 업데이트
+      await supabase.from('profiles').update({ points: (post.author.points || 0) + 2 }).eq('id', post.author_id);
+      await supabase.from('posts').update({ likes: (post.likes || 0) + 1 }).eq('id', id);
 
       setIsLiked(true);
       fetchPostData(); 
@@ -125,14 +120,9 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
         content: newComment 
       }]);
 
-      await supabase.from('profiles')
-        .update({ points: (currentUser.points || 0) + 5 })
-        .eq('id', currentUser.id);
-
+      await supabase.from('profiles').update({ points: (currentUser.points || 0) + 5 }).eq('id', currentUser.id);
       await supabase.from('point_history').insert([{ 
-        user_id: currentUser.id, 
-        amount: 5, 
-        reason: '댓글 작성 보상' 
+        user_id: currentUser.id, amount: 5, reason: '댓글 작성 보상' 
       }]);
 
       setNewComment('');
@@ -144,7 +134,7 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
     }
   };
 
-  // 게시글 데이터 로딩 중일 때만 스피너 표시
+  // 🔴 전체 로딩 가드
   if (loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
@@ -162,7 +152,6 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
               <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">
                 #{post.category}
               </span>
-              {/* 🔴 권한 체크 로직 (authLoading이 아닐 때만 정확히 판별) */}
               {!authLoading && (currentUser?.id === post.author_id || currentUser?.role === 'ADMIN') && (
                 <div className="flex gap-4">
                   <Link to={`/post/edit/${id}`} className="text-gray-500 hover:text-white text-[10px] font-black uppercase italic transition-colors">Edit</Link>
@@ -210,6 +199,7 @@ const PostDetail: React.FC = () => { // 🔴 프롭 제거
           </article>
         </div>
 
+        {/* 댓글 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
             <span className="w-2 h-8 bg-red-600 rounded-full"></span> 
