@@ -21,7 +21,7 @@ import Partnership from './pages/Partnership';
 import Policies from './pages/Policies';
 import Community from './pages/Community'; 
 import CouponShop from './pages/CouponShop';
-import VIPLounge from './pages/VIPLounge'; // 🔴 추가
+import VIPLounge from './pages/Viplounge'; // 🔴 추가
 
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
@@ -76,7 +76,7 @@ function App() {
 
             {/* 🔑 등급 제한: VIP Lounge (Level 3 이상) */}
             <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
-              <Route path="/vip-lounge" element={<VIPLounge currentUser={currentUser} />} />
+              <Route path="/vip-lounge" element={<Viplounge currentUser={currentUser} />} />
             </Route>
 
             {/* 🔑 일반 유저 전용 */}
