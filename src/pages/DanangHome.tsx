@@ -1,31 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { Region } from '../types';
 import type { Store } from '../types';
 import StoreCard from '../components/StoreCard';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
 
 const DanangHome: React.FC = () => {
+  // 1. 전역 인증 상태 구독
+  const { loading: authLoading } = useAuth();
+
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDanangStores = async () => {
-      setLoading(false);
+  // 2. 데이터 호출 로직 (다낭 지역 필터링)
+  const fetchDanangStores = async () => {
+    setLoading(true);
+    try {
       const { data, error } = await supabase
         .from('stores')
         .select('*')
-        .eq('region', Region.DANANG) // 🔴 다낭 필터 고정
+        .eq('region', Region.DANANG) 
         .limit(8);
 
       if (!error && data) setStores(data as Store[]);
+    } catch (err) {
+      console.error("다낭 데이터 로드 실패:", err);
+    } finally {
       setLoading(false);
-    };
-    fetchDanangStores();
-  }, []);
+    }
+  };
+
+  // 🔴 [데이터 가드 적용] 
+  // 사용자가 탭을 이동했을 때 인증 정보를 먼저 확인한 후 데이터를 낚아옵니다.
+  useFetchGuard(fetchDanangStores, []);
+
+  // 🔴 전체 로딩 가드 (다낭 전용 블루 스피너)
+  if (authLoading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
-    <div className="w-full bg-[#050505]">
+    <div className="w-full bg-[#050505] selection:bg-blue-600/30">
       {/* Hero: 다낭 전용 비주얼 */}
       <section className="relative h-[60vh] md:h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-blue-900/20 to-transparent">
         <div className="absolute inset-0 z-0 opacity-40">
@@ -46,7 +65,7 @@ const DanangHome: React.FC = () => {
         </div>
       </section>
 
-      {/* Categories: 다낭 전용 경로로 연결 */}
+      {/* Categories: 다낭 전용 경로 */}
       <section className="container mx-auto px-4 -mt-20 relative z-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -76,8 +95,12 @@ const DanangHome: React.FC = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {[1,2,3,4].map(n => <div key={n} className="aspect-[3/4] bg-white/5 animate-pulse rounded-[2rem]"></div>)}
           </div>
+        ) : stores.length === 0 ? (
+          <div className="py-32 text-center bg-[#111] rounded-[3.5rem] border border-dashed border-white/5">
+            <p className="text-gray-600 font-black italic uppercase tracking-widest text-xs">No Intel Found in Danang Yet.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 animate-in fade-in duration-700">
             {stores.map(store => (
               <StoreCard key={store.id} store={store} />
             ))}
