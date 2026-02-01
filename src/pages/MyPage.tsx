@@ -2,27 +2,27 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
 import { supabase } from '../supabase';
 import { LEVEL_NAMES } from '../types';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 1. useAuth 임포트
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 2. useFetchGuard 임포트
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 임포트
 
-const MyPage: React.FC = () => { // 🔴 3. Prop 제거
+const MyPage: React.FC = () => { // 🔴 Prop 제거 완료
   const navigate = useNavigate();
   
-  // 전역 인증 상태 구독
+  // 1. 전역 인증 상태 구독 (중앙 엔진)
   const { currentUser, loading: authLoading, refreshUser } = useAuth(); 
 
   const [activeTab, setActiveTab] = useState<'activity' | 'points' | 'coupons'>('activity');
   const [isEditing, setIsEditing] = useState(false);
   const [newNickname, setNewNickname] = useState(currentUser?.nickname || '');
-  const [loading, setLoading] = useState(false); // 버튼 로딩
-  const [dataLoading, setDataLoading] = useState(true); // 데이터 로딩
+  const [loading, setLoading] = useState(false); // 버튼 액션 로딩
+  const [dataLoading, setDataLoading] = useState(true); // DB 데이터 로딩
   
   const [myPosts, setMyPosts] = useState<any[]>([]);
   const [pointHistory, setPointHistory] = useState<any[]>([]);
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
 
-  // 🔴 4. [데이터 가드 적용] 인증이 완료된 후 내 데이터를 가져옵니다.
-  useFetchGuard(async () => {
+  // 2. 데이터 호출 로직
+  const fetchMyData = async () => {
     if (!currentUser?.id) return;
     setDataLoading(true);
     try {
@@ -51,11 +51,15 @@ const MyPage: React.FC = () => { // 🔴 3. Prop 제거
         .order('created_at', { ascending: false });
       if (coupons) setMyCoupons(coupons);
     } catch (err) {
-      console.error('MyPage data fetch error:', err);
+      console.error('MyPage 데이터 로드 에러:', err);
     } finally {
       setDataLoading(false);
     }
-  }, []); // 초기 로드 시 1회 실행
+  };
+
+  // 🔴 3. [데이터 가드 적용] 
+  // 인증이 완료된 후 내 데이터를 가져오며, 페이지 첫 진입 시 엇박자를 방지합니다.
+  useFetchGuard(fetchMyData, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -79,7 +83,7 @@ const MyPage: React.FC = () => { // 🔴 3. Prop 제거
       
       if (updateError) throw updateError;
       
-      // 전역 유저 정보 즉시 갱신
+      // 전역 유저 정보 즉시 갱신 (페이지 리로드 없이)
       await refreshUser(); 
       alert('프로필 이미지가 변경되었습니다.');
     } catch (err: any) { 
@@ -97,7 +101,7 @@ const MyPage: React.FC = () => { // 🔴 3. Prop 제거
       if (error) throw error;
       
       setIsEditing(false);
-      await refreshUser(); // 🔴 페이지 리로드 대신 전역 상태 갱신 권장
+      await refreshUser(); // 중앙 상태 갱신
       alert('닉네임이 변경되었습니다.');
     } catch (err: any) { 
       alert(err.message); 
@@ -106,7 +110,7 @@ const MyPage: React.FC = () => { // 🔴 3. Prop 제거
     }
   };
 
-  // 🔴 5. 로딩 처리
+  // 🔴 4. 전역 로딩 처리 (인증 확인 중일 때)
   if (authLoading || !currentUser) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -171,7 +175,6 @@ const MyPage: React.FC = () => { // 🔴 3. Prop 제거
               </div>
             </div>
 
-            {/* 등급 가이드 (Criteria) */}
             {currentCriteria && (
               <div className="w-full md:w-64 bg-black/40 p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
                 <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 tracking-widest italic border-b border-white/5 pb-2">Next: {LEVEL_NAMES[currentUser.level + 1]}</p>
