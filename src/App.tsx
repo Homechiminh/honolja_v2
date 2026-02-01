@@ -6,7 +6,6 @@ import './index.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
-// 페이지 임포트
 import Home from './pages/Home';
 import DanangHome from './pages/DanangHome';
 import NhatrangHome from './pages/NhatrangHome';
