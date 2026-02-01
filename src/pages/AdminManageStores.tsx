@@ -1,13 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
+import { UserRole } from '../types'; 
 import type { Store } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
 
 const AdminManageStores: React.FC = () => {
   const navigate = useNavigate();
+  
+  // 1. 전역 인증 상태 구독 (중앙 엔진)
+  const { currentUser, loading: authLoading } = useAuth();
+
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 2. 데이터 호출 로직
   const fetchStores = async () => {
     setLoading(true);
     try {
@@ -17,7 +25,6 @@ const AdminManageStores: React.FC = () => {
         .order('created_at', { ascending: false });
       
       if (!error && data) {
-        // 🔴 존재하지 않는 setUsers 호출 삭제 (TS2304 해결)
         setStores(data as Store[]);
       }
     } catch (err) {
@@ -27,9 +34,15 @@ const AdminManageStores: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchStores();
-  }, []);
+  // 🔴 3. [데이터 가드 적용] 
+  // 인증이 완료된 것을 확인한 후, 인벤토리 데이터를 안전하게 낚아옵니다.
+  useFetchGuard(fetchStores, []);
+
+  // 4. 관리자 권한 최종 보안 가드
+  if (!authLoading && currentUser?.role !== UserRole.ADMIN) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   const toggleHotStatus = async (storeId: string, currentStatus: boolean) => {
     const { error } = await supabase
@@ -41,22 +54,25 @@ const AdminManageStores: React.FC = () => {
   };
 
   const deleteStore = async (storeId: string) => {
-    if (!window.confirm('이 업소를 정말 삭제하시겠습니까?')) return;
+    if (!window.confirm('이 업소를 정말 삭제하시겠습니까? 데이터가 영구 삭제됩니다.')) return;
     const { error } = await supabase.from('stores').delete().eq('id', storeId);
     if (!error) {
-      alert('삭제되었습니다.');
+      alert('데이터가 아카이브에서 제거되었습니다.');
       fetchStores();
     }
   };
 
-  if (loading && stores.length === 0) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase">
-      Loading Store Inventory...
+  // 🔴 전체 로딩 가드 (인증 확인 포함)
+  if (authLoading || (loading && stores.length === 0)) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
+        Accessing Store Inventory...
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
@@ -64,14 +80,14 @@ const AdminManageStores: React.FC = () => {
               Store <span className="text-red-600">Inventory</span>
             </h2>
             <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2 ml-1 italic">
-              등록된 업소 현황 파악 및 실시간 데이터 제어
+              등록된 업소 현황 파악 및 실시간 데이터 제어 모듈
             </p>
           </div>
           <button 
             onClick={() => navigate('/admin/create-store')}
-            className="px-8 py-4 bg-red-600 text-white text-xs font-black rounded-xl uppercase italic hover:bg-red-700 transition-all shadow-2xl"
+            className="px-8 py-4 bg-red-600 text-white text-xs font-black rounded-xl uppercase italic hover:bg-red-700 transition-all shadow-2xl active:scale-95"
           >
-            + Add New Store
+            + Add New Intelligence
           </button>
         </header>
 
@@ -79,36 +95,36 @@ const AdminManageStores: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500">
+                <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500 italic tracking-widest">
                   <th className="p-6">업소 정보</th>
                   <th className="p-6">카테고리 / 지역</th>
                   <th className="p-6 text-center">HOT 설정</th>
-                  <th className="p-6 text-right">액션</th>
+                  <th className="p-6 text-right">관리 액션</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {stores.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-20 text-center text-gray-600 font-bold italic uppercase">등록된 업소가 없습니다.</td>
+                    <td colSpan={4} className="p-20 text-center text-gray-700 font-bold italic uppercase tracking-widest">No Registered Intelligence Found.</td>
                   </tr>
                 ) : (
                   stores.map((store) => (
                     <tr key={store.id} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="p-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-xl bg-slate-800 overflow-hidden border border-white/10 shrink-0">
+                          <div className="w-14 h-14 rounded-xl bg-slate-800 overflow-hidden border border-white/10 shrink-0 shadow-lg">
                             <img src={store.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                           </div>
                           <div className="max-w-[300px]">
-                            <p className="font-black text-sm mb-1">{store.name}</p>
+                            <p className="font-black text-sm mb-1 italic tracking-tight">{store.name}</p>
                             <p className="text-gray-600 text-[10px] font-bold italic truncate">{store.address}</p>
                           </div>
                         </div>
                       </td>
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
-                          <span className="text-[9px] font-black uppercase bg-white/5 px-2 py-1 rounded text-gray-400 w-fit">{store.category}</span>
-                          <span className="text-[10px] font-black uppercase text-red-500 ml-1">{store.region}</span>
+                          <span className="text-[9px] font-black uppercase bg-white/5 px-2 py-1 rounded text-gray-400 w-fit border border-white/5">{store.category}</span>
+                          <span className="text-[10px] font-black uppercase text-red-500 ml-1 italic">{store.region}</span>
                         </div>
                       </td>
                       <td className="p-6 text-center">
@@ -120,18 +136,18 @@ const AdminManageStores: React.FC = () => {
                             : 'bg-white/5 text-gray-500 border border-white/10 hover:border-white/30'
                           }`}
                         >
-                          {store.is_hot ? '🔥 Hot Store' : 'Set Hot'}
+                          {store.is_hot ? '🔥 Hot Now' : 'Set Hot'}
                         </button>
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => navigate(`/store/${store.id}`)} className="p-2.5 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-all">
+                          <button onClick={() => navigate(`/store/${store.id}`)} className="p-2.5 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-all border border-white/5 shadow-md">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                           </button>
-                          <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="p-2.5 bg-emerald-600/10 rounded-lg text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all">
+                          <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="p-2.5 bg-emerald-600/10 rounded-lg text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-500/10 shadow-md">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
-                          <button onClick={() => deleteStore(store.id)} className="p-2.5 bg-red-600/10 rounded-lg text-red-500 hover:bg-red-600 hover:text-white transition-all">
+                          <button onClick={() => deleteStore(store.id)} className="p-2.5 bg-red-600/10 rounded-lg text-red-500 hover:bg-red-600 hover:text-white transition-all border border-red-500/10 shadow-md">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
