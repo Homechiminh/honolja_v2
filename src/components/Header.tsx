@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
-import type { User } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
 
-interface HeaderProps {
-  currentUser: User | null;
-}
+// 🔴 HeaderProps 인터페이스 제거 (프롭 의존성 제거)
 
-const Header: React.FC<HeaderProps> = ({ currentUser }) => {
+const Header: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // 1. 전역 인증 정보 가져오기 (엔진 교체)
+  const { currentUser } = useAuth();
 
   const navItems = [
     { name: '마사지', path: '/stores/massage' },
@@ -32,6 +33,8 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     await supabase.auth.signOut();
     localStorage.clear();
     navigate('/');
+    // 🔴 팁: onAuthStateChange가 감지하므로 reload() 없이도 상태가 변하지만, 
+    // 확실한 캐시 초기화를 위해 유지하셔도 좋습니다.
     window.location.reload();
   };
 
@@ -44,7 +47,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
       <div className="max-w-[1500px] mx-auto px-6 flex items-center justify-between">
         <div className="flex items-center gap-10">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="bg-red-600 w-10 h-10 rounded-xl flex items-center justify-center">
+            <div className="bg-red-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-xl shadow-red-600/20 group-hover:scale-105 transition-transform">
               <span className="text-white font-black italic text-2xl">H</span>
             </div>
             <span className="text-2xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
@@ -62,8 +65,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
                 {item.name}
               </Link>
             ))}
-            {/* 🔵 쿠폰샵 버튼: 경로 및 가이드 확인 완료 */}
-            <Link to="/coupon-shop" className="text-[11px] font-black text-red-500 italic uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20 hover:bg-red-600 hover:text-white transition-all">
+            <Link to="/coupon-shop" className="text-[11px] font-black text-red-500 italic uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20 hover:bg-red-600 hover:text-white transition-all shadow-lg">
               COUPON SHOP
             </Link>
           </nav>
@@ -76,15 +78,15 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
           </div>
 
           {currentUser ? (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 animate-in fade-in duration-300">
               <Link to="/mypage" className="flex items-center gap-4 group">
                 <div className="flex flex-col items-end hidden md:flex">
                   {currentUser.role === 'ADMIN' && (
                     <span className="text-[9px] text-red-500 font-black tracking-widest uppercase italic mb-0.5">ADMINISTRATOR</span>
                   )}
-                  <span className="text-sm font-black text-white italic">{currentUser.nickname}님</span>
+                  <span className="text-sm font-black text-white italic tracking-tight">{currentUser.nickname}님</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-red-600 font-black italic shadow-xl group-hover:border-red-600/50 transition-all overflow-hidden">
+                <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-red-600 font-black italic shadow-2xl group-hover:border-red-600/50 transition-all overflow-hidden relative">
                   {currentUser.avatar_url ? (
                     <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" />
                   ) : (
@@ -94,14 +96,14 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
               </Link>
               <button 
                 onClick={handleLogout} 
-                className="px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-lg"
+                className="px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95"
               >
                 로그아웃
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-6">
-              <Link to="/signup" className="text-[13px] font-black text-gray-400 hover:text-white uppercase italic">회원가입</Link>
+            <div className="flex items-center gap-6 animate-in fade-in duration-300">
+              <Link to="/signup" className="text-[13px] font-black text-gray-400 hover:text-white uppercase italic tracking-tighter">회원가입</Link>
               <Link to="/login" className="bg-red-600 text-white px-8 py-3 rounded-2xl text-[14px] font-black italic uppercase shadow-xl shadow-red-600/20 active:scale-95 transition-all">
                 로그인
               </Link>
