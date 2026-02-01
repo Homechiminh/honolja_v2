@@ -10,7 +10,6 @@ const Notice: React.FC = () => {
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 데이터 가드: 인증 로딩이 끝나면 공지사항 아카이브를 엽니다.
   useFetchGuard(async () => {
     setLoading(true);
     try {
