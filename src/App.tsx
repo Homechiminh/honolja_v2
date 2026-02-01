@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext'; // 🔴 반드시 contexts에서 가져와야 함
+import { useAuth } from './contexts/AuthContext'; // 🔴 Context에서 구독
 import { Region } from './types'; 
 import './index.css';
 
@@ -36,7 +36,7 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 // 🔒 [가드 1] 관리자 전용
 const AdminRoute = ({ user, loading }: { user: any; loading: boolean }) => {
-  if (loading) return null; // 인증 확인 중에는 렌더링 중지
+  if (loading) return null; 
   return user?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -53,10 +53,8 @@ const LevelRoute = ({ user, loading, minLevel }: { user: any; loading: boolean; 
 };
 
 function App() {
-  // 🔴 Context에서 뿜어주는 전역 인증 상태를 구독함
   const { currentUser, loading } = useAuth();
 
-  // 첫 접속 시 유저 정보를 Supabase에서 가져오는 동안 보여줄 전체화면 로딩
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -72,52 +70,48 @@ function App() {
         
         <main className="flex-grow pt-[80px]">
           <Routes>
-            {/* --- 공용 구역 (로그인 불필요) --- */}
+            {/* --- 공용 구역 --- */}
             <Route path="/" element={<Home />} />
-            
-            {/* 지역별 업소 리스트 */}
             <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
             <Route path="/danang" element={<DanangHome />} />
             <Route path="/danang/:category" element={<StoreList forcedRegion={Region.DANANG} />} />
             <Route path="/nhatrang" element={<NhatrangHome />} />
             <Route path="/nhatrang/:category" element={<StoreList forcedRegion={Region.NHA_TRANG} />} />
-            
-            {/* 기본 메뉴 */}
             <Route path="/booking" element={<Booking />} />
             <Route path="/partnership" element={<Partnership />} />
             <Route path="/policies" element={<Policies />} />
-            <Route path="/community" element={<Community currentUser={currentUser} />} />
-            <Route path="/store/:id" element={<StoreDetail currentUser={currentUser} />} />
-            <Route path="/post/:id" element={<PostDetail currentUser={currentUser} />} />
             
-            {/* 인증 */}
+            {/* 🔴 currentUser={currentUser} 제거 포인트 */}
+            <Route path="/community" element={<Community />} />
+            <Route path="/store/:id" element={<StoreDetail />} />
+            <Route path="/post/:id" element={<PostDetail />} />
+            
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
             {/* --- 보호 구역 (로그인 필수) --- */}
             <Route element={<PrivateRoute user={currentUser} loading={loading} />}>
-              <Route path="/mypage" element={<MyPage currentUser={currentUser} />} />
-              <Route path="/coupon-shop" element={<CouponShop currentUser={currentUser} />} />
-              <Route path="/community/create" element={<CreatePost currentUser={currentUser} />} />
-              <Route path="/post/edit/:id" element={<PostEdit currentUser={currentUser} />} />
+              <Route path="/mypage" element={<MyPage />} />
+              <Route path="/coupon-shop" element={<CouponShop />} />
+              <Route path="/community/create" element={<CreatePost />} />
+              <Route path="/post/edit/:id" element={<PostEdit />} />
             </Route>
 
-            {/* --- VIP 구역 (Lv.3 베테랑 이상) --- */}
+            {/* --- VIP 구역 (Lv.3 이상) --- */}
             <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
-              <Route path="/vip-lounge" element={<VipLounge currentUser={currentUser} />} />
+              <Route path="/vip-lounge" element={<VipLounge />} />
             </Route>
 
             {/* --- 관리자 구역 (ADMIN 전용) --- */}
             <Route element={<AdminRoute user={currentUser} loading={loading} />}>
-              <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
-              <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/create-store" element={<AdminStoreCreate />} />
               <Route path="/admin/manage-users" element={<AdminManageUsers />} />
               <Route path="/admin/manage-stores" element={<AdminManageStores />} />
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
-              <Route path="/admin/manage-coupons" element={<AdminManageCoupons currentUser={currentUser} />} />
+              <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
             </Route>
 
-            {/* 404 처리 (홈으로 리다이렉트) */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
