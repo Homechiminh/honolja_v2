@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext'; // 🔴 Context에서 구독
+import { useAuth } from './contexts/AuthContext'; // 
 import { Region } from './types'; 
 import './index.css';
 
