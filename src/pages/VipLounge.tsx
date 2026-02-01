@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
 
 const VipLounge: React.FC = () => {
   const navigate = useNavigate();
+  
+  // 🔴 전역 인증 상태 구독
+  const { loading: authLoading } = useAuth();
+
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
@@ -38,12 +44,12 @@ const VipLounge: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchVipPosts();
-    window.scrollTo(0, 0);
-  }, [activeSubMenu]);
+  // 🔴 [데이터 가드 적용] 
+  // 인증이 완료된 후에만 fetchVipPosts를 실행하며, 탭(activeSubMenu)이 바뀔 때마다 재호출합니다.
+  useFetchGuard(fetchVipPosts, [activeSubMenu]);
 
-  if (loading) return (
+  // 🔴 전체 로딩 처리 (인증 로딩 + 데이터 로딩)
+  if (authLoading || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
