@@ -8,17 +8,16 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   
-  // 🔴 다중 이미지(promo_images)와 별점을 포함한 초기 상태
   const [formData, setFormData] = useState({
     name: '',
     category: CategoryType.MASSAGE,
     region: Region.HCMC,
     address: '',
     description: '',
-    image_url: '',       // 대표 이미지 (카드 노출용)
-    promo_images: [] as string[], // 🔴 추가 이미지 갤러리
-    rating: 4.5,         // 🔴 수동 별점 관리
-    image_index: 0,      // 모델 타입일 경우 인덱스
+    image_url: '',
+    promo_images: [] as string[],
+    rating: 4.5,
+    image_index: 0,
     tags: '',
     benefits: '',
     kakao_url: '',
@@ -26,7 +25,6 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
     is_hot: false
   });
 
-  // 🔴 다중 이미지 업로드 로직
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -51,11 +49,9 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
         return { 
           ...prev, 
           promo_images: updatedPromo,
-          // 🔴 첫 번째 업로드된 사진을 자동으로 대표 이미지로 설정
           image_url: prev.image_url || newUrls[0] 
         };
       });
-      alert(`${newUrls.length}장의 사진이 업로드되었습니다.`);
     } catch (err) {
       alert('이미지 업로드 실패');
     } finally {
@@ -65,16 +61,17 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.image_url) return alert('최소 한 장 이상의 이미지를 업로드하고 대표 이미지를 선택해주세요.');
+    if (!formData.image_url) return alert('최소 한 장 이상의 이미지를 업로드하세요.');
     setLoading(true);
     
     try {
+      // 🔴 데이터 로드 안정화: author_id를 명시적으로 currentUser에서 가져옴
       const { error } = await supabase.from('stores').insert([{
         ...formData,
-        rating: Number(formData.rating), // 숫자로 변환
+        rating: Number(formData.rating),
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
         benefits: formData.benefits.split(',').map(b => b.trim()).filter(b => b !== ''),
-        author_id: currentUser?.id
+        author_id: currentUser?.id 
       }]);
 
       if (error) throw error;
@@ -100,12 +97,9 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-10">
-          {/* HOT & 별점 설정 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between">
-              <div>
-                <p className="text-xl font-black text-red-500 italic uppercase">🔥 Hot Store</p>
-              </div>
+              <p className="text-xl font-black text-red-500 italic uppercase">🔥 Hot Store</p>
               <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
                 className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-red-600' : 'bg-gray-700'}`}>
                 <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${formData.is_hot ? 'left-11' : 'left-1'}`} />
@@ -114,12 +108,9 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
 
             <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between">
               <p className="text-xl font-black text-yellow-500 italic uppercase">⭐ Rating</p>
-              <input 
-                type="number" step="0.1" min="0" max="5"
-                value={formData.rating}
+              <input type="number" step="0.1" min="0" max="5" value={formData.rating}
                 onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})}
-                className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600"
-              />
+                className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600" />
             </div>
           </div>
 
@@ -128,7 +119,6 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
               <label className={labelStyle}>🏢 업소/숙소 명</label>
               <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className={inputStyle} placeholder="상호를 입력하세요" />
             </div>
-
             <div>
               <label className={labelStyle}>📂 카테고리</label>
               <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className={inputStyle}>
@@ -136,17 +126,13 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
               </select>
             </div>
 
-            {/* 🔴 다중 이미지 업로드 섹션 */}
             <div className="md:col-span-2 space-y-4">
-              <label className={labelStyle}>🖼️ 갤러리 사진 등록 (여러 장 선택)</label>
+              <label className={labelStyle}>🖼️ 갤러리 사진 등록 (여러 장 선택 가능)</label>
               <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className={inputStyle} />
               
-              {/* 업로드된 이미지 프리뷰 및 대표 이미지 선택 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-4">
                 {formData.promo_images.map((url, idx) => (
-                  <div 
-                    key={idx} 
-                    onClick={() => setFormData({...formData, image_url: url})}
+                  <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
                     className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all ${formData.image_url === url ? 'border-red-600 scale-105 shadow-lg shadow-red-600/20' : 'border-transparent opacity-40 hover:opacity-100'}`}
                   >
                     <img src={url} className="w-full h-full object-cover" alt="preview" />
@@ -158,14 +144,12 @@ const AdminStoreCreate: React.FC<{ currentUser: User | null }> = ({ currentUser 
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-500 font-bold italic uppercase ml-2">* 사진을 클릭하여 리스트에 노출될 [대표 이미지]를 선택하세요.</p>
             </div>
 
             <div>
               <label className="text-sm font-black text-yellow-500 uppercase tracking-widest ml-2 mb-2 block">💬 Kakao Link</label>
               <input value={formData.kakao_url} onChange={(e) => setFormData({...formData, kakao_url: e.target.value})} className={inputStyle} placeholder="https://open.kakao.com/..." />
             </div>
-
             <div>
               <label className="text-sm font-black text-blue-500 uppercase tracking-widest ml-2 mb-2 block">✈️ Telegram Link</label>
               <input value={formData.telegram_url} onChange={(e) => setFormData({...formData, telegram_url: e.target.value})} className={inputStyle} placeholder="https://t.me/..." />
