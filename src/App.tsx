@@ -7,7 +7,7 @@ import './index.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
-// 일반 페이지
+// 페이지 임포트
 import Home from './pages/Home';
 import DanangHome from './pages/DanangHome';
 import NhatrangHome from './pages/NhatrangHome';
@@ -21,6 +21,7 @@ import Partnership from './pages/Partnership';
 import Policies from './pages/Policies';
 import Community from './pages/Community'; 
 import CouponShop from './pages/CouponShop';
+import VIPLounge from './pages/VIPLounge'; // 🔴 추가
 
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
@@ -30,28 +31,26 @@ import AdminManageStores from './pages/AdminManageStores';
 import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
-// 🔒 [보호 장치 1] 관리자 전용 가드
+// 🔒 [가드 1] 관리자 전용
 const AdminRoute = ({ user, loading }: { user: any; loading: boolean }) => {
-  if (loading) return null; // 유저 정보 로딩 중이면 대기
+  if (loading) return null;
   return user?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
-// 🔒 [보호 장치 2] 로그인 유저 전용 가드 (마이페이지, 쿠폰숍 등)
+// 🔒 [가드 2] 일반 로그인 유저 전용
 const PrivateRoute = ({ user, loading }: { user: any; loading: boolean }) => {
   if (loading) return null;
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
+// 🔒 [가드 3] 특정 등급(Level) 이상 전용 (VIP Lounge용)
+const LevelRoute = ({ user, loading, minLevel }: { user: any; loading: boolean; minLevel: number }) => {
+  if (loading) return null;
+  return user && user.level >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
+};
+
 function App() {
   const { currentUser, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
     <Router>
@@ -70,15 +69,20 @@ function App() {
             <Route path="/booking" element={<Booking />} />
             <Route path="/partnership" element={<Partnership />} />
             <Route path="/policies" element={<Policies />} />
+            <Route path="/community" element={<Community currentUser={currentUser} />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/store/:id" element={<StoreDetail currentUser={currentUser} />} />
 
-            {/* 🔑 로그인 유저 전용 (CouponShop 포함) */}
+            {/* 🔑 등급 제한: VIP Lounge (Level 3 이상) */}
+            <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
+              <Route path="/vip-lounge" element={<VIPLounge currentUser={currentUser} />} />
+            </Route>
+
+            {/* 🔑 일반 유저 전용 */}
             <Route element={<PrivateRoute user={currentUser} loading={loading} />}>
               <Route path="/mypage" element={<MyPage currentUser={currentUser} />} />
               <Route path="/coupon-shop" element={<CouponShop currentUser={currentUser} />} />
-              <Route path="/community" element={<Community currentUser={currentUser} />} />
             </Route>
 
             {/* 👑 관리자 전용 보호 구역 */}
