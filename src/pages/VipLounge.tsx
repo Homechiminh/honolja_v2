@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import type { User } from '../types';
 
-interface VipLoungeProps {
-  currentUser: User | null;
-}
-
-const VipLounge: React.FC<VipLoungeProps> = ({ currentUser }) => {
+// 🔴 currentUser를 사용하지 않으므로 Props에서 제거했습니다 (TS6133 해결)
+const VipLounge: React.FC = () => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +19,7 @@ const VipLounge: React.FC<VipLoungeProps> = ({ currentUser }) => {
 
   const activeIcon = subMenus.find(m => m.id === activeSubMenu)?.icon || '👑';
 
-  // 🔴 데이터 호출 로직 안정화
+  // 데이터 호출 로직
   const fetchVipPosts = async () => {
     setFetching(true);
     try {
@@ -43,7 +39,6 @@ const VipLounge: React.FC<VipLoungeProps> = ({ currentUser }) => {
     }
   };
 
-  // 탭 전환 및 메뉴 변경 시 즉시 로드
   useEffect(() => {
     fetchVipPosts();
     window.scrollTo(0, 0);
@@ -58,7 +53,7 @@ const VipLounge: React.FC<VipLoungeProps> = ({ currentUser }) => {
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12">
-        {/* 사이드바 */}
+        {/* 사이드바 디자인 유지 */}
         <aside className="lg:w-80">
           <div className="sticky top-28 bg-[#0f0f0f] border border-yellow-600/10 rounded-[3rem] p-10 space-y-4 shadow-2xl">
             <button onClick={() => navigate('/community')} className="w-full mb-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-gray-400 font-black text-xs uppercase italic hover:text-white transition-all flex items-center justify-center gap-2">
@@ -81,7 +76,7 @@ const VipLounge: React.FC<VipLoungeProps> = ({ currentUser }) => {
           </div>
         </aside>
 
-        {/* 메인 리스트 */}
+        {/* 메인 리스트 디자인 유지 */}
         <main className="flex-1">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
             <div>
