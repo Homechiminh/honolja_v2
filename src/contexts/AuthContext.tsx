@@ -14,8 +14,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 프로필 데이터를 가져와서 상태에 넣는 단일 창구
-  const updateProfileState = async (userId: string) => {
+  // 🔴 프로필 동기화 함수 (어떤 경우에도 마지막엔 로딩을 해제함)
+  const syncProfile = async (userId: string | undefined) => {
+    if (!userId) {
+      setCurrentUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -32,26 +38,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Profile Sync Error:", err);
       setCurrentUser(null);
     } finally {
-      setLoading(false); // 🔴 데이터 로드 시도 후 무조건 로딩 해제
+      // 🔴 통신 성공/실패 여부와 상관없이 로딩 상태 해제
+      setLoading(false);
     }
   };
 
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      await updateProfileState(session.user.id);
-    }
+    await syncProfile(session?.user?.id);
   };
 
   useEffect(() => {
-    // 1. 최초 1회 즉시 세션 복구 시도 (직접 링크 접속 대응)
+    // 1. 안전장치: 네트워크 지연으로 인한 무한 로딩 방지 (3초 후 강제 해제)
+    const backupTimer = setTimeout(() => {
+      setLoading((prevLoading) => {
+        if (prevLoading) {
+          console.warn("Auth check timed out. Forcing UI render.");
+          return false;
+        }
+        return prevLoading;
+      });
+    }, 3000);
+
+    // 2. 초기 접속 시 세션 복구 시도
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          await updateProfileState(session.user.id);
+          await syncProfile(session.user.id);
         } else {
-          setLoading(false); // 세션 없으면 바로 로딩 해제
+          setLoading(false);
         }
       } catch (err) {
         setLoading(false);
@@ -60,31 +76,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    // 2. 인증 이벤트 리스너 (로그인/로그아웃/토큰갱신 실시간 대응)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // 3. 인증 상태 변화 감지 (로그인, 로그아웃, 토큰 갱신 등)
+    // _event: TS6133 에러 방지를 위해 언더바(_) 추가
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        // 로그인이나 세션 회복 시 프로필 업데이트
-        await updateProfileState(session.user.id);
+        await syncProfile(session.user.id);
       } else {
-        // 로그아웃 시 상태 초기화 및 로딩 해제
         setCurrentUser(null);
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(backupTimer);
+      subscription.unsubscribe();
+    };
   }, []);
-
-  // 🔴 Provider 내부 로딩 UI (App.tsx의 로딩과 별개로 이중 안전장치)
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-red-600 font-black animate-pulse tracking-[0.3em] text-xl italic">
-          HONOLJA SYNCING...
-        </div>
-      </div>
-    );
-  }
 
   return (
     <AuthContext.Provider value={{ currentUser, loading, refreshUser }}>
