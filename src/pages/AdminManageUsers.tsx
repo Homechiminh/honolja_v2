@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { LEVEL_NAMES } from '../types'; // 🔴 UserRole 제거
+import { LEVEL_NAMES } from '../types'; // 
 import type { User } from '../types';
 
-const AdminManageUsers: React.FC = () => { // 🔴 currentUser 프롭 제거
+const AdminManageUsers: React.FC = () => { // 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [inputAmounts, setInputAmounts] = useState<{ [key: string]: string }>({});
