@@ -11,52 +11,98 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [commenting, setCommenting] = useState(false);
-  const [isLiked, setIsLiked] = useState(false); // 🔴 추천 상태 추가
+  const [isLiked, setIsLiked] = useState(false);
 
+  // 🔴 데이터 로드 및 조회수 증강 (탭 전환 대응)
   useEffect(() => {
-    fetchPostData();
-    if (id) supabase.rpc('increment_views', { post_id: id });
-    if (currentUser && id) checkLikeStatus();
-  }, [id, currentUser]);
+    if (id) {
+      fetchPostData();
+      incrementViews();
+    }
+  }, [id]);
+
+  // 🔴 로그인 정보가 들어오면 추천 상태 확인
+  useEffect(() => {
+    if (currentUser && id) {
+      checkLikeStatus();
+    }
+  }, [id, currentUser?.id]);
+
+  const incrementViews = async () => {
+    if (!id) return;
+    await supabase.rpc('increment_views', { post_id: id });
+  };
 
   const checkLikeStatus = async () => {
-    const { data } = await supabase.from('post_likes').select('*').eq('post_id', id).eq('user_id', currentUser?.id).single();
+    const { data } = await supabase
+      .from('post_likes')
+      .select('*')
+      .eq('post_id', id)
+      .eq('user_id', currentUser?.id)
+      .single();
     if (data) setIsLiked(true);
   };
 
   const fetchPostData = async () => {
     if (!id) return;
     setLoading(true);
-    const { data } = await supabase.from('posts').select('*, author:profiles(*)').eq('id', id).single();
-    if (!data) return navigate('/community');
-    setPost(data);
+    try {
+      // 게시글 및 작성자 정보
+      const { data: postData, error: postErr } = await supabase
+        .from('posts')
+        .select('*, author:profiles(*)')
+        .eq('id', id)
+        .single();
+      
+      if (postErr || !postData) {
+        navigate('/community');
+        return;
+      }
+      setPost(postData);
 
-    const { data: comms } = await supabase.from('comments').select('*, author:profiles(*)').eq('post_id', id).order('created_at', { ascending: true });
-    if (comms) setComments(comms);
-    setLoading(false);
+      // 댓글 리스트
+      const { data: comms } = await supabase
+        .from('comments')
+        .select('*, author:profiles(*)')
+        .eq('post_id', id)
+        .order('created_at', { ascending: true });
+      if (comms) setComments(comms);
+      
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 🔴 추천 로직 (작성자에게 2P 보너스)
   const handleLike = async () => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (isLiked) return alert('이미 추천한 게시글입니다.');
 
     try {
-      const { error: likeErr } = await supabase.from('post_likes').insert([{ post_id: id, user_id: currentUser.id }]);
+      const { error: likeErr } = await supabase
+        .from('post_likes')
+        .insert([{ post_id: id, user_id: currentUser.id }]);
       if (likeErr) throw likeErr;
 
-      // 작성자 포인트 +2P
-      await supabase.from('profiles').update({ points: (post.author.points || 0) + 2 }).eq('id', post.author_id);
+      // 작성자 포인트 보너스 +2P
+      await supabase.from('profiles')
+        .update({ points: (post.author.points || 0) + 2 })
+        .eq('id', post.author_id);
+      
       // 게시글 추천수 +1
-      await supabase.from('posts').update({ likes: (post.likes || 0) + 1 }).eq('id', id);
+      await supabase.from('posts')
+        .update({ likes: (post.likes || 0) + 1 })
+        .eq('id', id);
 
       setIsLiked(true);
-      fetchPostData();
-      alert('추천 완료! 작성자에게 보너스 포인트가 지급되었습니다.');
-    } catch (e) { alert('이미 추천하셨습니다.'); }
+      fetchPostData(); // UI 갱신
+      alert('추천 완료! 작성자에게 2P가 지급되었습니다.');
+    } catch (e) {
+      alert('처리 중 오류가 발생했습니다.');
+    }
   };
 
-  // 🔴 삭제 로직
   const handleDelete = async () => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
     const { error } = await supabase.from('posts').delete().eq('id', id);
@@ -68,87 +114,158 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !newComment.trim()) return;
+    if (!currentUser) return alert('로그인이 필요합니다.');
+    if (!newComment.trim()) return;
+
     setCommenting(true);
-    await supabase.from('comments').insert([{ post_id: id, author_id: currentUser.id, content: newComment }]);
-    await supabase.from('profiles').update({ points: (currentUser.points || 0) + 5 }).eq('id', currentUser.id);
-    await supabase.from('point_history').insert([{ user_id: currentUser.id, amount: 5, reason: '댓글 작성 보상' }]);
-    setNewComment('');
-    fetchPostData();
-    setCommenting(false);
+    try {
+      // 1. 댓글 삽입
+      await supabase.from('comments').insert([{ 
+        post_id: id, 
+        author_id: currentUser.id, 
+        content: newComment 
+      }]);
+
+      // 2. 작성자 포인트 지급 (+5P)
+      await supabase.from('profiles')
+        .update({ points: (currentUser.points || 0) + 5 })
+        .eq('id', currentUser.id);
+
+      // 3. 포인트 내역 기록
+      await supabase.from('point_history').insert([{ 
+        user_id: currentUser.id, 
+        amount: 5, 
+        reason: '댓글 작성 보상' 
+      }]);
+
+      setNewComment('');
+      fetchPostData(); // 댓글 목록 및 포인트 갱신을 위해 재로드
+    } catch (err) {
+      alert('댓글 등록 실패');
+    } finally {
+      setCommenting(false);
+    }
   };
 
-  if (loading || !post) return <div className="min-h-screen bg-black flex items-center justify-center text-white">LOADING...</div>;
+  if (loading || !post) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
+        Loading Confidential Data...
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
       <div className="max-w-5xl mx-auto space-y-8">
+        {/* 게시글 본문 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <div className="flex justify-between items-start mb-8">
-              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">{post.category}</span>
-              {/* 🔴 수정/삭제 버튼 제어 */}
+              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">
+                #{post.category}
+              </span>
               {(currentUser?.id === post.author_id || currentUser?.role === 'ADMIN') && (
                 <div className="flex gap-4">
-                  <Link to={`/post/edit/${id}`} className="text-gray-500 hover:text-white text-xs font-bold uppercase">Edit</Link>
-                  <button onClick={handleDelete} className="text-red-500 hover:text-red-400 text-xs font-bold uppercase">Delete</button>
+                  <Link to={`/post/edit/${id}`} className="text-gray-500 hover:text-white text-[10px] font-black uppercase italic transition-colors">Edit</Link>
+                  <button onClick={handleDelete} className="text-red-600/50 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors">Delete</button>
                 </div>
               )}
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white mb-10 italic tracking-tighter">{post.title}</h1>
-            <div className="flex justify-between items-center pt-8 border-t border-white/10">
+            
+            <h1 className="text-3xl md:text-5xl font-black text-white mb-10 italic tracking-tighter leading-tight break-keep">
+              {post.title}
+            </h1>
+
+            <div className="flex justify-between items-center pt-8 border-t border-white/5">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 overflow-hidden">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
                   <img src={post.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.nickname}`} alt="avatar" />
                 </div>
                 <div>
-                  <p className="text-white font-black">{post.author?.nickname}</p>
-                  <p className="text-yellow-500 text-[10px] font-black uppercase">Lv.{post.author?.level}</p>
+                  <p className="text-white font-black italic">{post.author?.nickname}</p>
+                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">Lv.{post.author?.level} Verified</p>
                 </div>
               </div>
-              <div className="text-right flex items-center gap-8">
-                {/* 🔴 추천 버튼 UI */}
+              
+              <div className="flex items-center gap-8">
                 <button 
                   onClick={handleLike} 
                   className={`flex flex-col items-center gap-1 transition-all ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}
                 >
                   <span className="text-2xl">{isLiked ? '❤️' : '🤍'}</span>
-                  <span className="text-[10px] font-black uppercase">Like {post.likes || 0}</span>
+                  <span className="text-[9px] font-black uppercase italic">Like {post.likes || 0}</span>
                 </button>
-                <div className="text-[10px] text-gray-600 font-bold uppercase">
-                  <p>Views {post.views || 0}</p>
+                <div className="text-right text-[9px] text-gray-600 font-black uppercase tracking-tighter">
+                  <p className="mb-1">Views {post.views || 0}</p>
                   <p>{new Date(post.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
           </header>
-          <article className="p-10 md:p-16 text-gray-300 text-xl leading-relaxed whitespace-pre-wrap font-medium">
+
+          <article className="p-10 md:p-16 text-gray-300 text-lg md:text-xl leading-relaxed whitespace-pre-wrap font-medium">
             {post.content}
-            {post.image_urls?.map((url: string, i: number) => <img key={i} src={url} className="w-full rounded-[2.5rem] mt-10" alt="content" />)}
+            {post.image_urls?.map((url: string, i: number) => (
+              <img key={i} src={url} className="w-full rounded-[2.5rem] mt-10 shadow-2xl border border-white/5" alt="content" />
+            ))}
           </article>
         </div>
 
-        <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl">
-          <h3 className="text-2xl font-black text-white italic mb-10 uppercase tracking-widest flex items-center gap-3">
-            <span className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></span> Comments ({comments.length})
+        {/* 댓글 섹션 */}
+        <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
+          <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
+            <span className="w-2 h-8 bg-red-600 rounded-full"></span> 
+            Comments <span className="text-red-600">({comments.length})</span>
           </h3>
-          <div className="space-y-8 mb-12">
-            {comments.map((comm) => (
-              <div key={comm.id} className="flex gap-6 items-start">
-                <div className="w-12 h-12 rounded-xl bg-white/5 overflow-hidden">
-                  <img src={comm.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avt" />
+          
+          <div className="space-y-10 mb-16">
+            {comments.length === 0 ? (
+              <p className="text-center text-gray-700 font-black italic uppercase py-10">No comments yet.</p>
+            ) : (
+              comments.map((comm) => (
+                <div key={comm.id} className="flex gap-6 items-start group">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0">
+                    <img src={comm.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avt" />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-black text-xs italic uppercase">
+                        {comm.author?.nickname} <span className="text-yellow-600 ml-2">LV.{comm.author?.level}</span>
+                      </span>
+                      <span className="text-[9px] text-gray-600 font-bold">{new Date(comm.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-gray-400 text-base md:text-lg leading-relaxed">{comm.content}</p>
+                  </div>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex justify-between"><span className="text-white font-black text-sm">{comm.author?.nickname} Lv.{comm.author?.level}</span><span className="text-[10px] text-gray-600">{new Date(comm.created_at).toLocaleString()}</span></div>
-                  <p className="text-gray-400 text-lg font-medium">{comm.content}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-          <form onSubmit={handleCommentSubmit} className="relative group">
-            <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="댓글 작성 시 5P 적립!" className="w-full bg-black border border-white/10 rounded-[2rem] px-8 py-6 text-white outline-none focus:border-red-600 min-h-[120px]" />
-            <button type="submit" disabled={commenting} className="absolute bottom-4 right-4 bg-red-600 text-white px-8 py-3 rounded-xl font-black uppercase text-xs">POST +5P</button>
+
+          {/* 댓글 입력 폼 */}
+          <form onSubmit={handleCommentSubmit} className="relative mt-12">
+            <textarea 
+              value={newComment} 
+              onChange={(e) => setNewComment(e.target.value)} 
+              placeholder={currentUser ? "댓글 작성 시 5P 적립!" : "로그인이 필요합니다."}
+              disabled={!currentUser}
+              className="w-full bg-black border border-white/10 rounded-[2rem] px-8 py-6 text-white outline-none focus:border-red-600 min-h-[140px] transition-all resize-none placeholder:text-gray-700" 
+            />
+            <button 
+              type="submit" 
+              disabled={commenting || !currentUser} 
+              className="absolute bottom-6 right-6 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20"
+            >
+              {commenting ? 'Posting...' : 'Post +5P'}
+            </button>
           </form>
+        </div>
+
+        {/* 하단 네비게이션 */}
+        <div className="flex justify-center">
+          <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-white font-black uppercase italic text-xs tracking-widest transition-colors">
+            ← Back to Community
+          </button>
         </div>
       </div>
     </div>
