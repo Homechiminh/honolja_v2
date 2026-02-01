@@ -4,7 +4,7 @@ import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; // 🔴 useAuth 임포트 추가
 import type { Store } from '../types';
 
-const PostEdit: React.FC = () => { // 🔴 프롭 제거
+const PostEdit: React.FC = () => { // 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
