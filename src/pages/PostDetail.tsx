@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
+import { useAuth } from '../contexts/AuthContext'; // 
 
 const PostDetail: React.FC = () => { // 🔴 프롭 제거
   const { id } = useParams<{ id: string }>();
