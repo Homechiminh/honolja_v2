@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  
+  // 🔴 전역 인증 정보 구독
+  const { currentUser, loading: authLoading } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // 🔴 가드 로직: 이미 로그인된 유저는 로그인 페이지를 볼 수 없게 홈으로 리다이렉트
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      navigate('/', { replace: true });
+    }
+  }, [currentUser, authLoading, navigate]);
 
   // 1. 구글 연동 로그인 (OAuth)
   const handleGoogleLogin = async () => {
@@ -36,19 +48,20 @@ const Login: React.FC = () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       
-      // 🔴 로그인 성공 시 App.tsx의 onAuthStateChange가 감지하여
-      // currentUser를 세팅하므로 즉시 홈으로 이동해도 안전합니다.
-      navigate('/', { replace: true });
+      // 로그인 성공 시 중앙 컨텍스트의 상태가 바뀌며 
+      // 위의 useEffect 가드에 의해 자동으로 홈으로 이동하게 됩니다.
     } catch (err: any) {
       alert(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호를 확인해주세요.' : err.message);
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // 에러 시 버튼 로딩 해제
     }
   };
 
+  // 인증 확인 중일 때 깜빡임 방지 (화면 렌더링 생략)
+  if (authLoading) return null;
+
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans">
-      {/* 배경 장식 (복구) */}
+      {/* 배경 장식 */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[160px]"></div>
@@ -85,7 +98,7 @@ const Login: React.FC = () => {
 
           <div className="relative my-10 text-center">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-            <span className="relative bg-[#111] px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Or login with email</span>
+            <span className="relative bg-[#111] px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest italic">Or login with email</span>
           </div>
 
           <form className="space-y-6" onSubmit={handleFormSubmit}>
