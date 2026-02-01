@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
 
-const Community: React.FC = () => { // 🔴 프롭 제거
+const Community: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, loading: authLoading } = useAuth(); // 🔴 내부에서 구독
+  
+  // 1. 전역 인증 정보 구독
+  const { currentUser, loading: authLoading } = useAuth(); 
   
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,13 +26,7 @@ const Community: React.FC = () => { // 🔴 프롭 제거
     { id: 'business', name: '부동산/비즈니스', icon: '🏢' },
   ];
 
-  // 🔴 [데이터 가드] 인증 확인이 끝난 후에만 포스트를 가져옵니다.
-  useEffect(() => {
-    if (authLoading) return; 
-    fetchPosts();
-    window.scrollTo(0, 0);
-  }, [activeCategory, sortBy, authLoading]);
-
+  // 2. 데이터 호출 로직
   const fetchPosts = async () => {
     setLoading(true);
     try {
@@ -57,6 +54,10 @@ const Community: React.FC = () => { // 🔴 프롭 제거
     }
   };
 
+  // 🔴 3. [데이터 가드 적용] 
+  // 카테고리가 바뀌거나 정렬 기준이 바뀔 때, 인증 정보를 먼저 확인한 후 데이터를 낚아옵니다.
+  useFetchGuard(fetchPosts, [activeCategory, sortBy]);
+
   const handleCreatePost = () => {
     if (!currentUser) {
       alert('로그인이 필요합니다.');
@@ -66,13 +67,20 @@ const Community: React.FC = () => { // 🔴 프롭 제거
     navigate('/community/create');
   };
 
+  // 🔴 4. 전체 로딩 가드
+  if (authLoading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
         
         {/* 사이드바 섹션 */}
         <aside className="lg:w-80 space-y-6">
-          {/* 베테랑 전용 라운지 배너 (가드 적용) */}
+          {/* VIP 라운지 배너 (가드 적용) */}
           <div className={`p-6 rounded-[2.5rem] border transition-all duration-500 ${
             (currentUser?.level || 0) >= 3 
             ? 'bg-yellow-600 border-yellow-500 shadow-2xl shadow-yellow-600/20' 
