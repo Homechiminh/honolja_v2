@@ -1,23 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { UserRole } from '../types';
 import type { User } from '../types';
 
+// 🔴 AdminRoute에서 이미 검증하므로 내부 Navigate 로직 제거
 const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
-  const navigate = useNavigate();
   const [coupons, setCoupons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // 🔴 탭 전환 시 데이터 로드 안정화: 즉시 실행
   useEffect(() => {
-    if (!currentUser || currentUser.role !== UserRole.ADMIN) {
-      alert('관리자 전용 페이지입니다.');
-      navigate('/');
-      return;
-    }
     fetchAllCoupons();
-  }, [currentUser, navigate]);
+  }, []);
 
   const fetchAllCoupons = async () => {
     setLoading(true);
@@ -38,8 +32,7 @@ const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
       if (error) throw error;
       setCoupons(data || []);
     } catch (err) {
-      console.error(err);
-      alert('데이터 로드 실패');
+      console.error('Coupon load error:', err);
     } finally {
       setLoading(false);
     }
@@ -67,7 +60,8 @@ const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
     c.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return (
+  // 🔴 로딩 중일 때 표시할 UI (다른 관리자 페이지와 통일)
+  if (loading && coupons.length === 0) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse uppercase tracking-[0.3em]">
       Syncing Coupon Database...
     </div>
@@ -108,42 +102,48 @@ const AdminManageCoupons = ({ currentUser }: { currentUser: User | null }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredCoupons.map((coupon) => (
-                  <tr key={coupon.id} className="hover:bg-white/[0.01] transition-colors group">
-                    <td className="px-10 py-8">
-                      <div className="flex flex-col">
-                        <span className="text-white font-black italic uppercase tracking-tight">{coupon.user?.nickname}</span>
-                        <span className="text-[10px] text-gray-600 font-medium">{coupon.user?.email}</span>
-                      </div>
-                    </td>
-                    <td className="px-10 py-8">
-                      <div className="flex flex-col">
-                        <span className="text-white font-bold text-sm mb-1">{coupon.title}</span>
-                        <span className="text-[10px] text-gray-500 line-clamp-1">{coupon.content}</span>
-                      </div>
-                    </td>
-                    <td className="px-10 py-8">
-                      <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase italic ${
-                        coupon.is_used ? 'bg-gray-800 text-gray-500' : 'bg-red-600/10 text-red-600 border border-red-600/20'
-                      }`}>
-                        {coupon.is_used ? 'Used' : 'Available'}
-                      </span>
-                    </td>
-                    <td className="px-10 py-8">
-                      <span className="text-xs text-gray-400 font-bold italic">
-                        {new Date(coupon.expired_at).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="px-10 py-8 text-right">
-                      <button 
-                        onClick={() => handleRevoke(coupon.id, coupon.user?.nickname)}
-                        className="px-6 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white hover:text-red-600 transition-all shadow-lg opacity-0 group-hover:opacity-100"
-                      >
-                        Revoke
-                      </button>
-                    </td>
+                {filteredCoupons.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-20 text-center text-gray-600 font-bold italic uppercase">검색 결과가 없습니다.</td>
                   </tr>
-                ))}
+                ) : (
+                  filteredCoupons.map((coupon) => (
+                    <tr key={coupon.id} className="hover:bg-white/[0.01] transition-colors group">
+                      <td className="px-10 py-8">
+                        <div className="flex flex-col">
+                          <span className="text-white font-black italic uppercase tracking-tight">{coupon.user?.nickname}</span>
+                          <span className="text-[10px] text-gray-600 font-medium">{coupon.user?.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-10 py-8">
+                        <div className="flex flex-col">
+                          <span className="text-white font-bold text-sm mb-1">{coupon.title}</span>
+                          <span className="text-[10px] text-gray-500 line-clamp-1">{coupon.content}</span>
+                        </div>
+                      </td>
+                      <td className="px-10 py-8">
+                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase italic ${
+                          coupon.is_used ? 'bg-gray-800 text-gray-500' : 'bg-red-600/10 text-red-600 border border-red-600/20'
+                        }`}>
+                          {coupon.is_used ? 'Used' : 'Available'}
+                        </span>
+                      </td>
+                      <td className="px-10 py-8">
+                        <span className="text-xs text-gray-400 font-bold italic">
+                          {new Date(coupon.expired_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="px-10 py-8 text-right">
+                        <button 
+                          onClick={() => handleRevoke(coupon.id, coupon.user?.nickname)}
+                          className="px-6 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase italic hover:bg-white hover:text-red-600 transition-all shadow-lg opacity-0 group-hover:opacity-100"
+                        >
+                          Revoke
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
