@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-// 🔴 currentUser를 사용하지 않으므로 Props에서 제거했습니다 (TS6133 해결)
 const VipLounge: React.FC = () => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
