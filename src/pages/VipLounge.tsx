@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
+import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 const VipLounge: React.FC = () => {
   const navigate = useNavigate();
   
-  // 🔴 전역 인증 상태 구독
+  // 1. 전역 인증 상태 구독
   const { loading: authLoading } = useAuth();
 
   const [posts, setPosts] = useState<any[]>([]);
@@ -24,9 +24,12 @@ const VipLounge: React.FC = () => {
 
   const activeIcon = subMenus.find(m => m.id === activeSubMenu)?.icon || '👑';
 
-  // 데이터 호출 로직
+  /**
+   * 🔴 [방탄 fetch] 데이터 호출 로직
+   * try-catch-finally 구조를 통해 에러 발생 시에도 로딩을 강제 해제합니다.
+   */
   const fetchVipPosts = async () => {
-    setFetching(true);
+    setFetching(true); // 탭 전환 시 오버레이 활성화
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -35,21 +38,31 @@ const VipLounge: React.FC = () => {
         .eq('sub_category', activeSubMenu)
         .order('created_at', { ascending: false });
 
-      if (!error && data) setPosts(data);
-    } catch (err) {
-      console.error("VIP 로드 에러:", err);
+      if (error) {
+        // 🔴 서버 응답 에러(406 등) 발생 시 catch 블록으로 던짐
+        throw error;
+      }
+
+      if (data) {
+        setPosts(data);
+      }
+    } catch (err: any) {
+      console.error("VIP 데이터 로드 실패 (406 또는 인증 에러):", err.message);
+      // 에러 시 기존 포스트를 비워주어 잘못된 데이터 노출 방지
+      setPosts([]); 
     } finally {
+      // 🔴 핵심: 성공하든 실패하든 무조건 로딩 상태 해제
       setLoading(false);
       setFetching(false);
     }
   };
 
-  // 🔴 [데이터 가드 적용] 
-  // 인증이 완료된 후에만 fetchVipPosts를 실행하며, 탭(activeSubMenu)이 바뀔 때마다 재호출합니다.
+  // 2. [데이터 가드 적용] 
+  // 인증 완료 후 실행 및 카테고리(activeSubMenu) 변경 시 재호출
   useFetchGuard(fetchVipPosts, [activeSubMenu]);
 
-  // 🔴 전체 로딩 처리 (인증 로딩 + 데이터 로딩)
-  if (authLoading || loading) return (
+  // 3. 전체 로딩 가드 (인증 대기 + 초기 데이터 로드 대기)
+  if (authLoading || (loading && posts.length === 0)) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
@@ -69,7 +82,7 @@ const VipLounge: React.FC = () => {
                 key={menu.id} 
                 onClick={() => setActiveSubMenu(menu.id)} 
                 className={`w-full flex items-center justify-between px-8 py-5 rounded-[1.5rem] font-black transition-all border-2 ${
-                  activeSubMenu === menu.id ? 'bg-yellow-600 border-yellow-500 text-black' : 'bg-transparent border-white/5 text-gray-500 hover:border-yellow-600/30'
+                  activeSubMenu === menu.id ? 'bg-yellow-600 border-yellow-500 text-black shadow-[0_0_20px_rgba(202,138,4,0.3)]' : 'bg-transparent border-white/5 text-gray-500 hover:border-yellow-600/30'
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -92,17 +105,18 @@ const VipLounge: React.FC = () => {
             </div>
             <button 
               onClick={() => navigate('/community/create')} 
-              className="px-10 py-5 bg-white text-black font-black rounded-2xl italic hover:bg-yellow-500 transition-all shadow-xl uppercase text-xs"
+              className="px-10 py-5 bg-white text-black font-black rounded-2xl italic hover:bg-yellow-500 transition-all shadow-xl uppercase text-xs active:scale-95"
             >
               기밀 제보하기
             </button>
           </header>
 
+          {/* fetching 중일 때 투명도 조절로 로딩 체감 제공 */}
           <div className={`transition-opacity duration-300 ${fetching ? 'opacity-30' : 'opacity-100'}`}>
             <div className="bg-[#0f0f0f] rounded-[3.5rem] border border-yellow-600/10 overflow-hidden divide-y divide-white/5 shadow-2xl">
               {posts.length > 0 ? posts.map(post => (
                 <Link key={post.id} to={`/post/${post.id}`} className="group p-12 hover:bg-yellow-600/5 block transition-all">
-                  <h3 className="text-2xl md:text-3xl font-black text-white italic group-hover:text-yellow-500 mb-4 tracking-tight leading-tight">{post.title}</h3>
+                  <h3 className="text-2xl md:text-3xl font-black text-white italic group-hover:text-yellow-500 mb-4 tracking-tight leading-tight break-keep">{post.title}</h3>
                   <div className="flex items-center gap-6 text-[10px] text-gray-500 font-black italic uppercase tracking-widest">
                     <span>👁️ {post.views || 0} VIEWS</span>
                     <span className="text-yellow-600">Verified by {post.author?.nickname} Lv.{post.author?.level}</span>
