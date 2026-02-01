@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { CategoryType, Region } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
 
 const AdminStoreEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  
+  // 1. 전역 인증 상태 구독
+  const { loading: authLoading } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   
@@ -25,32 +31,39 @@ const AdminStoreEdit: React.FC = () => {
     is_hot: false
   });
 
-  useEffect(() => {
-    if (id) fetchStore();
-  }, [id]);
-
+  // 2. 데이터 호출 로직
   const fetchStore = async () => {
+    if (!id) return;
     setLoading(true);
-    const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
-    if (!error && data) {
-      setFormData({
-        name: data.name || '',
-        category: data.category || CategoryType.MASSAGE,
-        region: data.region || Region.HCMC,
-        address: data.address || '',
-        description: data.description || '',
-        image_url: data.image_url || '',
-        promo_images: data.promo_images || [],
-        rating: data.rating ?? 4.5,
-        tags: data.tags?.join(', ') || '',
-        benefits: data.benefits?.join(', ') || '',
-        kakao_url: data.kakao_url || '',
-        telegram_url: data.telegram_url || '',
-        is_hot: data.is_hot ?? false
-      });
+    try {
+      const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
+      if (!error && data) {
+        setFormData({
+          name: data.name || '',
+          category: data.category || CategoryType.MASSAGE,
+          region: data.region || Region.HCMC,
+          address: data.address || '',
+          description: data.description || '',
+          image_url: data.image_url || '',
+          promo_images: data.promo_images || [],
+          rating: data.rating ?? 4.5,
+          tags: data.tags?.join(', ') || '',
+          benefits: data.benefits?.join(', ') || '',
+          kakao_url: data.kakao_url || '',
+          telegram_url: data.telegram_url || '',
+          is_hot: data.is_hot ?? false
+        });
+      }
+    } catch (err) {
+      console.error('Store Load Error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  // 🔴 [데이터 가드 적용] 
+  // 관리자 인증이 완료된 것을 확인한 후, 기존 업소 데이터를 낚아옵니다.
+  useFetchGuard(fetchStore, [id]);
 
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -108,7 +121,12 @@ const AdminStoreEdit: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse">LOADING STORE DATA...</div>;
+  // 🔴 전체 로딩 가드 (인증 로딩 포함)
+  if (authLoading || loading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse font-black uppercase tracking-widest">
+      Loading Store Intelligence...
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
@@ -125,7 +143,7 @@ const AdminStoreEdit: React.FC = () => {
             <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between">
               <p className="text-xl font-black text-emerald-500 italic uppercase">🔥 Hot Store Setting</p>
               <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
-                className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-emerald-600' : 'bg-gray-800'}`}>
+                className={`w-20 h-10 rounded-full relative transition-all duration-300 ${formData.is_hot ? 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-800'}`}>
                 <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${formData.is_hot ? 'left-11' : 'left-1'}`} />
               </button>
             </div>
@@ -139,31 +157,36 @@ const AdminStoreEdit: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-4">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2">🏢 업소명</label>
-              <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500" />
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2 italic">🏢 업소명</label>
+              <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all" />
             </div>
             <div className="space-y-4">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2">📂 카테고리</label>
-              <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2 italic">📂 카테고리</label>
+              <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none font-bold">
                 {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
               </select>
             </div>
 
             <div className="md:col-span-2 space-y-4">
-              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2">🖼️ 갤러리 사진 관리</label>
-              <div className="p-6 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-6">
+              <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2 italic">🖼️ 갤러리 사진 관리</label>
+              <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner">
                 <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} 
-                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white cursor-pointer" />
+                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-sm text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white file:font-black file:uppercase cursor-pointer" />
                 
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6">
                   {formData.promo_images.map((url, idx) => (
                     <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
-                      className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all ${formData.image_url === url ? 'border-red-600 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+                      className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all shadow-xl ${formData.image_url === url ? 'border-red-600 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
                       <img src={url} className="w-full h-full object-cover" alt="gallery" />
                       <button type="button" onClick={(e) => {
                         e.stopPropagation();
                         setFormData({...formData, promo_images: formData.promo_images.filter(img => img !== url)});
-                      }} className="absolute top-2 right-2 bg-black/80 text-white w-6 h-6 rounded-full text-[10px]">✕</button>
+                      }} className="absolute top-2 right-2 bg-black/80 text-white w-7 h-7 rounded-full text-[10px] flex items-center justify-center hover:bg-red-600 transition-colors">✕</button>
+                      {formData.image_url === url && (
+                        <div className="absolute inset-0 bg-red-600/10 flex items-center justify-center">
+                          <span className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase">Main Image</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -171,10 +194,15 @@ const AdminStoreEdit: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex gap-4 pt-10">
-            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-8 bg-white/5 text-gray-400 font-black text-2xl rounded-[2.5rem] uppercase italic border border-white/5">취소</button>
-            <button type="submit" disabled={updating} className="flex-[2] py-8 bg-emerald-600 text-white font-black text-2xl rounded-[2.5rem] shadow-2xl uppercase italic">
-              {updating ? 'Updating...' : '수정 완료'}
+          <div className="space-y-4">
+             <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-2 italic">📝 상세 설명</label>
+             <textarea rows={8} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-[2rem] px-8 py-6 text-white outline-none focus:border-emerald-500 font-medium leading-relaxed resize-none" />
+          </div>
+
+          <div className="flex gap-6 pt-10">
+            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-7 bg-white/5 text-gray-500 font-black text-xl rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all">Cancel</button>
+            <button type="submit" disabled={updating} className="flex-[2] py-7 bg-emerald-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl uppercase italic hover:bg-emerald-500 active:scale-95 transition-all">
+              {updating ? 'Updating...' : 'Confirm Changes'}
             </button>
           </div>
         </form>
