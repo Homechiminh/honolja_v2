@@ -1,15 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
-import type { User } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
 
-interface AdminDashboardProps {
-  currentUser: User | null;
-}
-
-const AdminDashboard = ({ currentUser }: AdminDashboardProps) => {
+const AdminDashboard = () => { // 🔴 프롭 제거
   const navigate = useNavigate();
+  const { currentUser } = useAuth(); // 🔴 Context에서 직접 정보 추출
 
   // 관리자 권한 체크
+  // App.tsx의 가드가 1차로 막아주지만, 컴포넌트 내부에서 한 번 더 안전하게 체크합니다.
   if (!currentUser || currentUser.role !== UserRole.ADMIN) {
     navigate('/');
     return null;
@@ -47,7 +45,7 @@ const AdminDashboard = ({ currentUser }: AdminDashboardProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-6xl mx-auto">
         <header className="mb-16">
           <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter mb-4">
@@ -71,7 +69,7 @@ const AdminDashboard = ({ currentUser }: AdminDashboardProps) => {
                 <h3 className="text-2xl font-black text-white italic mb-4 uppercase tracking-tighter">{item.title}</h3>
                 <p className="text-gray-500 text-xs font-medium leading-relaxed opacity-80">{item.desc}</p>
                 
-                <div className="mt-auto pt-10 flex justify-between items-center">
+                <div className="mt-auto pt-10 flex justify-between items-center border-t border-white/5">
                   <span className="text-[10px] font-black text-white/10 group-hover:text-red-600 transition-colors uppercase tracking-[0.2em] italic">Access Module</span>
                   <span className="text-white/5 group-hover:text-red-600 transition-colors">→</span>
                 </div>
