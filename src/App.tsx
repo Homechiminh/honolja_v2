@@ -1,26 +1,42 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext'; // 🔴 중요: hooks가 아니라 contexts에서 가져옵니다.
+import { useAuth } from './contexts/AuthContext'; // 🔴 반드시 contexts에서 가져와야 함
 import { Region } from './types'; 
 import './index.css';
 
-// 레이아웃 & 페이지 임포트 (생략 - 기존과 동일)
+// 레이아웃
 import Header from './components/Header';
 import Footer from './components/Footer';
+
+// 페이지 임포트
 import Home from './pages/Home';
-import StoreList from './pages/StoreList';
-import StoreDetail from './pages/StoreDetail';
-import Community from './pages/Community';
+import DanangHome from './pages/DanangHome';
+import NhatrangHome from './pages/NhatrangHome';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import MyPage from './pages/MyPage';
-import VipLounge from './pages/VipLounge';
+import StoreList from './pages/StoreList';
+import StoreDetail from './pages/StoreDetail';
+import Booking from './pages/Booking';
+import Partnership from './pages/Partnership';
+import Policies from './pages/Policies';
+import Community from './pages/Community'; 
+import CouponShop from './pages/CouponShop';
+import VipLounge from './pages/VipLounge'; 
 import CreatePost from './pages/CreatePost';
+import PostDetail from './pages/PostDetail';
+import PostEdit from './pages/PostEdit';
+
+// 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
-// ... 나머지 관리자 페이지들
+import AdminStoreCreate from './pages/AdminStoreCreate';
+import AdminManageUsers from './pages/AdminManageUsers';
+import AdminManageStores from './pages/AdminManageStores';
+import AdminStoreEdit from './pages/AdminStoreEdit';
+import AdminManageCoupons from './pages/AdminManageCoupons';
 
 // 🔒 [가드 1] 관리자 전용
 const AdminRoute = ({ user, loading }: { user: any; loading: boolean }) => {
-  if (loading) return null; // 인증 확인 중에는 아무것도 안 보여줌
+  if (loading) return null; // 인증 확인 중에는 렌더링 중지
   return user?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -37,9 +53,10 @@ const LevelRoute = ({ user, loading, minLevel }: { user: any; loading: boolean; 
 };
 
 function App() {
-  const { currentUser, loading } = useAuth(); // 🔴 Context에서 뿜어주는 전역 상태 사용
+  // 🔴 Context에서 뿜어주는 전역 인증 상태를 구독함
+  const { currentUser, loading } = useAuth();
 
-  // 전역 로딩: 앱 첫 접속 시 인증 정보를 가져올 때까지의 스피너
+  // 첫 접속 시 유저 정보를 Supabase에서 가져오는 동안 보여줄 전체화면 로딩
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -55,34 +72,56 @@ function App() {
         
         <main className="flex-grow pt-[80px]">
           <Routes>
+            {/* --- 공용 구역 (로그인 불필요) --- */}
             <Route path="/" element={<Home />} />
+            
+            {/* 지역별 업소 리스트 */}
             <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
-            {/* ... 중략 ... */}
+            <Route path="/danang" element={<DanangHome />} />
+            <Route path="/danang/:category" element={<StoreList forcedRegion={Region.DANANG} />} />
+            <Route path="/nhatrang" element={<NhatrangHome />} />
+            <Route path="/nhatrang/:category" element={<StoreList forcedRegion={Region.NHA_TRANG} />} />
+            
+            {/* 기본 메뉴 */}
+            <Route path="/booking" element={<Booking />} />
+            <Route path="/partnership" element={<Partnership />} />
+            <Route path="/policies" element={<Policies />} />
             <Route path="/community" element={<Community currentUser={currentUser} />} />
+            <Route path="/store/:id" element={<StoreDetail currentUser={currentUser} />} />
+            <Route path="/post/:id" element={<PostDetail currentUser={currentUser} />} />
+            
+            {/* 인증 */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/store/:id" element={<StoreDetail currentUser={currentUser} />} />
 
-            {/* VIP 라운지 (레벨 3 이상) */}
-            <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
-              <Route path="/vip-lounge" element={<VipLounge />} />
-            </Route>
-
-            {/* 일반 회원 구역 */}
+            {/* --- 보호 구역 (로그인 필수) --- */}
             <Route element={<PrivateRoute user={currentUser} loading={loading} />}>
               <Route path="/mypage" element={<MyPage currentUser={currentUser} />} />
+              <Route path="/coupon-shop" element={<CouponShop currentUser={currentUser} />} />
               <Route path="/community/create" element={<CreatePost currentUser={currentUser} />} />
+              <Route path="/post/edit/:id" element={<PostEdit currentUser={currentUser} />} />
             </Route>
 
-            {/* 👑 관리자 보호 구역 */}
+            {/* --- VIP 구역 (Lv.3 베테랑 이상) --- */}
+            <Route element={<LevelRoute user={currentUser} loading={loading} minLevel={3} />}>
+              <Route path="/vip-lounge" element={<VipLounge currentUser={currentUser} />} />
+            </Route>
+
+            {/* --- 관리자 구역 (ADMIN 전용) --- */}
             <Route element={<AdminRoute user={currentUser} loading={loading} />}>
               <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
-              {/* ... 기타 관리자 라우트 ... */}
+              <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
+              <Route path="/admin/manage-users" element={<AdminManageUsers />} />
+              <Route path="/admin/manage-stores" element={<AdminManageStores />} />
+              <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
+              <Route path="/admin/manage-coupons" element={<AdminManageCoupons currentUser={currentUser} />} />
             </Route>
 
-            <Route path="*" element={<Home />} />
+            {/* 404 처리 (홈으로 리다이렉트) */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+        
         <Footer />
       </div>
     </Router>
