@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 전역 컨텍스트 임포트
+import { useAuth } from '../contexts/AuthContext'; // 
 
 const Community: React.FC = () => { // 🔴 프롭 제거
   const navigate = useNavigate();
