@@ -13,7 +13,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 1. 메인 메뉴 (커뮤니티 제외)
   const navItems = [
     { name: '마사지', path: '/stores/massage' },
     { name: '이발소', path: '/stores/barber' },
@@ -44,7 +43,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
     }`}>
       <div className="max-w-[1500px] mx-auto px-6 flex items-center justify-between">
         <div className="flex items-center gap-10">
-          {/* 로고 섹션 */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="bg-red-600 w-10 h-10 rounded-xl flex items-center justify-center">
               <span className="text-white font-black italic text-2xl">H</span>
@@ -52,7 +50,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
             <span className="text-2xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
           </Link>
 
-          {/* 중앙 네비게이션 */}
           <nav className="hidden xl:flex items-center gap-8">
             {navItems.map((item) => (
               <Link 
@@ -65,20 +62,19 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
                 {item.name}
               </Link>
             ))}
-            <Link to="/coupon-shop" className="text-[11px] font-black text-red-500 italic uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20">
+            {/* 🔵 쿠폰샵 버튼: 경로 및 가이드 확인 완료 */}
+            <Link to="/coupon-shop" className="text-[11px] font-black text-red-500 italic uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20 hover:bg-red-600 hover:text-white transition-all">
               COUPON SHOP
             </Link>
           </nav>
         </div>
 
         <div className="flex items-center gap-6">
-          {/* 다낭(파랑) / 나트랑(초록) 메뉴 복구 */}
           <div className="hidden xl:flex items-center gap-6">
             <Link to="/danang" className="text-[13px] font-black text-blue-500 hover:text-blue-400 uppercase italic">다낭놀자</Link>
             <Link to="/nhatrang" className="text-[13px] font-black text-emerald-500 hover:text-emerald-400 uppercase italic">나트랑놀자</Link>
           </div>
 
-          {/* 회원 섹션: 로그인 유무에 따라 변경 */}
           {currentUser ? (
             <div className="flex items-center gap-6">
               <Link to="/mypage" className="flex items-center gap-4 group">
@@ -88,7 +84,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
                   )}
                   <span className="text-sm font-black text-white italic">{currentUser.nickname}님</span>
                 </div>
-                {/* 🔴 프로필 이미지(아바타) 복구 */}
                 <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-red-600 font-black italic shadow-xl group-hover:border-red-600/50 transition-all overflow-hidden">
                   {currentUser.avatar_url ? (
                     <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" />
@@ -106,7 +101,6 @@ const Header: React.FC<HeaderProps> = ({ currentUser }) => {
             </div>
           ) : (
             <div className="flex items-center gap-6">
-              {/* 비로그인 상태: 한글 UI */}
               <Link to="/signup" className="text-[13px] font-black text-gray-400 hover:text-white uppercase italic">회원가입</Link>
               <Link to="/login" className="bg-red-600 text-white px-8 py-3 rounded-2xl text-[14px] font-black italic uppercase shadow-xl shadow-red-600/20 active:scale-95 transition-all">
                 로그인
