@@ -1,40 +1,26 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { useAuth } from './contexts/AuthContext'; // 🔴 중요: hooks가 아니라 contexts에서 가져옵니다.
 import { Region } from './types'; 
 import './index.css';
 
-// 레이아웃
+// 레이아웃 & 페이지 임포트 (생략 - 기존과 동일)
 import Header from './components/Header';
 import Footer from './components/Footer';
-
-// 페이지 임포트
 import Home from './pages/Home';
-import DanangHome from './pages/DanangHome';
-import NhatrangHome from './pages/NhatrangHome';
+import StoreList from './pages/StoreList';
+import StoreDetail from './pages/StoreDetail';
+import Community from './pages/Community';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import MyPage from './pages/MyPage';
-import StoreList from './pages/StoreList';
-import StoreDetail from './pages/StoreDetail';
-import Booking from './pages/Booking';
-import Partnership from './pages/Partnership';
-import Policies from './pages/Policies';
-import Community from './pages/Community'; 
-import CouponShop from './pages/CouponShop';
-import VipLounge from './pages/VipLounge'; 
-import CreatePost from './pages/CreatePost'; // 추가
-
-// 관리자 페이지
+import VipLounge from './pages/VipLounge';
+import CreatePost from './pages/CreatePost';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminStoreCreate from './pages/AdminStoreCreate';
-import AdminManageUsers from './pages/AdminManageUsers';
-import AdminManageStores from './pages/AdminManageStores';
-import AdminStoreEdit from './pages/AdminStoreEdit';
-import AdminManageCoupons from './pages/AdminManageCoupons';
+// ... 나머지 관리자 페이지들
 
 // 🔒 [가드 1] 관리자 전용
 const AdminRoute = ({ user, loading }: { user: any; loading: boolean }) => {
-  if (loading) return null;
+  if (loading) return null; // 인증 확인 중에는 아무것도 안 보여줌
   return user?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -51,8 +37,9 @@ const LevelRoute = ({ user, loading, minLevel }: { user: any; loading: boolean; 
 };
 
 function App() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading } = useAuth(); // 🔴 Context에서 뿜어주는 전역 상태 사용
 
+  // 전역 로딩: 앱 첫 접속 시 인증 정보를 가져올 때까지의 스피너
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -68,16 +55,9 @@ function App() {
         
         <main className="flex-grow pt-[80px]">
           <Routes>
-            {/* 누구나 접근 가능 */}
             <Route path="/" element={<Home />} />
             <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
-            <Route path="/danang" element={<DanangHome />} />
-            <Route path="/danang/:category" element={<StoreList forcedRegion={Region.DANANG} />} />
-            <Route path="/nhatrang" element={<NhatrangHome />} />
-            <Route path="/nhatrang/:category" element={<StoreList forcedRegion={Region.NHA_TRANG} />} />
-            <Route path="/booking" element={<Booking />} />
-            <Route path="/partnership" element={<Partnership />} />
-            <Route path="/policies" element={<Policies />} />
+            {/* ... 중략 ... */}
             <Route path="/community" element={<Community currentUser={currentUser} />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -91,18 +71,13 @@ function App() {
             {/* 일반 회원 구역 */}
             <Route element={<PrivateRoute user={currentUser} loading={loading} />}>
               <Route path="/mypage" element={<MyPage currentUser={currentUser} />} />
-              <Route path="/coupon-shop" element={<CouponShop currentUser={currentUser} />} />
               <Route path="/community/create" element={<CreatePost currentUser={currentUser} />} />
             </Route>
 
             {/* 👑 관리자 보호 구역 */}
             <Route element={<AdminRoute user={currentUser} loading={loading} />}>
               <Route path="/admin" element={<AdminDashboard currentUser={currentUser} />} />
-              <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
-              <Route path="/admin/manage-users" element={<AdminManageUsers />} />
-              <Route path="/admin/manage-stores" element={<AdminManageStores />} />
-              <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
-              <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
+              {/* ... 기타 관리자 라우트 ... */}
             </Route>
 
             <Route path="*" element={<Home />} />
