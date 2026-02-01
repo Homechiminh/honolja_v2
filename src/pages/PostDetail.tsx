@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import type { User } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
 
-const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+const PostDetail: React.FC = () => { // 🔴 프롭 제거
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  
+  // 1. 전역 인증 정보 가져오기
+  const { currentUser, loading: authLoading } = useAuth(); 
+
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -13,7 +17,7 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
   const [commenting, setCommenting] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
-  // 🔴 데이터 로드 및 조회수 증강 (탭 전환 대응)
+  // 🔴 데이터 로드 및 조회수 증강
   useEffect(() => {
     if (id) {
       fetchPostData();
@@ -21,12 +25,12 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
     }
   }, [id]);
 
-  // 🔴 로그인 정보가 들어오면 추천 상태 확인
+  // 🔴 인증 확인이 완료되고 유저 정보가 있을 때만 추천 상태 확인
   useEffect(() => {
-    if (currentUser && id) {
+    if (!authLoading && currentUser && id) {
       checkLikeStatus();
     }
-  }, [id, currentUser?.id]);
+  }, [id, currentUser?.id, authLoading]);
 
   const incrementViews = async () => {
     if (!id) return;
@@ -47,7 +51,6 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
     if (!id) return;
     setLoading(true);
     try {
-      // 게시글 및 작성자 정보
       const { data: postData, error: postErr } = await supabase
         .from('posts')
         .select('*, author:profiles(*)')
@@ -60,7 +63,6 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
       }
       setPost(postData);
 
-      // 댓글 리스트
       const { data: comms } = await supabase
         .from('comments')
         .select('*, author:profiles(*)')
@@ -85,18 +87,16 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
         .insert([{ post_id: id, user_id: currentUser.id }]);
       if (likeErr) throw likeErr;
 
-      // 작성자 포인트 보너스 +2P
       await supabase.from('profiles')
         .update({ points: (post.author.points || 0) + 2 })
         .eq('id', post.author_id);
       
-      // 게시글 추천수 +1
       await supabase.from('posts')
         .update({ likes: (post.likes || 0) + 1 })
         .eq('id', id);
 
       setIsLiked(true);
-      fetchPostData(); // UI 갱신
+      fetchPostData(); 
       alert('추천 완료! 작성자에게 2P가 지급되었습니다.');
     } catch (e) {
       alert('처리 중 오류가 발생했습니다.');
@@ -119,19 +119,16 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
     setCommenting(true);
     try {
-      // 1. 댓글 삽입
       await supabase.from('comments').insert([{ 
         post_id: id, 
         author_id: currentUser.id, 
         content: newComment 
       }]);
 
-      // 2. 작성자 포인트 지급 (+5P)
       await supabase.from('profiles')
         .update({ points: (currentUser.points || 0) + 5 })
         .eq('id', currentUser.id);
 
-      // 3. 포인트 내역 기록
       await supabase.from('point_history').insert([{ 
         user_id: currentUser.id, 
         amount: 5, 
@@ -139,7 +136,7 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
       }]);
 
       setNewComment('');
-      fetchPostData(); // 댓글 목록 및 포인트 갱신을 위해 재로드
+      fetchPostData(); 
     } catch (err) {
       alert('댓글 등록 실패');
     } finally {
@@ -147,6 +144,7 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
     }
   };
 
+  // 게시글 데이터 로딩 중일 때만 스피너 표시
   if (loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
@@ -158,14 +156,14 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* 게시글 본문 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <div className="flex justify-between items-start mb-8">
               <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">
                 #{post.category}
               </span>
-              {(currentUser?.id === post.author_id || currentUser?.role === 'ADMIN') && (
+              {/* 🔴 권한 체크 로직 (authLoading이 아닐 때만 정확히 판별) */}
+              {!authLoading && (currentUser?.id === post.author_id || currentUser?.role === 'ADMIN') && (
                 <div className="flex gap-4">
                   <Link to={`/post/edit/${id}`} className="text-gray-500 hover:text-white text-[10px] font-black uppercase italic transition-colors">Edit</Link>
                   <button onClick={handleDelete} className="text-red-600/50 hover:text-red-500 text-[10px] font-black uppercase italic transition-colors">Delete</button>
@@ -212,7 +210,6 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
           </article>
         </div>
 
-        {/* 댓글 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
             <span className="w-2 h-8 bg-red-600 rounded-full"></span> 
@@ -242,18 +239,17 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
             )}
           </div>
 
-          {/* 댓글 입력 폼 */}
           <form onSubmit={handleCommentSubmit} className="relative mt-12">
             <textarea 
               value={newComment} 
               onChange={(e) => setNewComment(e.target.value)} 
               placeholder={currentUser ? "댓글 작성 시 5P 적립!" : "로그인이 필요합니다."}
-              disabled={!currentUser}
+              disabled={authLoading || !currentUser}
               className="w-full bg-black border border-white/10 rounded-[2rem] px-8 py-6 text-white outline-none focus:border-red-600 min-h-[140px] transition-all resize-none placeholder:text-gray-700" 
             />
             <button 
               type="submit" 
-              disabled={commenting || !currentUser} 
+              disabled={commenting || authLoading || !currentUser} 
               className="absolute bottom-6 right-6 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20"
             >
               {commenting ? 'Posting...' : 'Post +5P'}
@@ -261,7 +257,6 @@ const PostDetail: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
           </form>
         </div>
 
-        {/* 하단 네비게이션 */}
         <div className="flex justify-center">
           <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-white font-black uppercase italic text-xs tracking-widest transition-colors">
             ← Back to Community
