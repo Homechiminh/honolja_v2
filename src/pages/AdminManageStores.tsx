@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import type { Store, User } from '../types';
+import type { Store } from '../types';
 
-const AdminManageStores: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+// 🔴 currentUser 프롭 제거 (TS6133 해결)
+const AdminManageStores: React.FC = () => {
   const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 1. 권한 확인 로직은 App.tsx의 AdminRoute가 처리하므로 컴포넌트 내부에서는 삭제 (안정성 확보)
-  
-  // 🔴 2. 전체 업소 목록 불러오기 로직 정비
   const fetchStores = async () => {
     setLoading(true);
     try {
@@ -20,7 +18,7 @@ const AdminManageStores: React.FC<{ currentUser: User | null }> = ({ currentUser
         .order('created_at', { ascending: false });
       
       if (!error && data) {
-        setUsers(data as Store[]); // 타입 안정성 유지
+        // 🔴 존재하지 않는 setUsers 호출 삭제 (TS2304 해결)
         setStores(data as Store[]);
       }
     } catch (err) {
@@ -34,7 +32,6 @@ const AdminManageStores: React.FC<{ currentUser: User | null }> = ({ currentUser
     fetchStores();
   }, []);
 
-  // 3. HOT 상태 즉시 변경 로직
   const toggleHotStatus = async (storeId: string, currentStatus: boolean) => {
     const { error } = await supabase
       .from('stores')
@@ -44,20 +41,15 @@ const AdminManageStores: React.FC<{ currentUser: User | null }> = ({ currentUser
     if (!error) fetchStores();
   };
 
-  // 4. 업소 삭제 로직
   const deleteStore = async (storeId: string) => {
-    if (!window.confirm('이 업소를 정말 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.')) return;
-    
+    if (!window.confirm('이 업소를 정말 삭제하시겠습니까?')) return;
     const { error } = await supabase.from('stores').delete().eq('id', storeId);
     if (!error) {
-      alert('성공적으로 삭제되었습니다.');
+      alert('삭제되었습니다.');
       fetchStores();
-    } else {
-      alert('삭제 중 오류가 발생했습니다.');
     }
   };
 
-  // 🔴 로딩 UI: 다른 관리자 페이지와 톤앤매너 통일
   if (loading && stores.length === 0) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase">
       Loading Store Inventory...
@@ -78,14 +70,14 @@ const AdminManageStores: React.FC<{ currentUser: User | null }> = ({ currentUser
           </div>
           <button 
             onClick={() => navigate('/admin/create-store')}
-            className="px-8 py-4 bg-red-600 text-white text-xs font-black rounded-xl uppercase italic tracking-tighter hover:bg-red-700 transition-all shadow-2xl"
+            className="px-8 py-4 bg-red-600 text-white text-xs font-black rounded-xl uppercase italic hover:bg-red-700 transition-all shadow-2xl"
           >
             + Add New Store
           </button>
         </header>
 
         <div className="bg-[#111] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl text-white">
-          <div className="overflow-x-auto"> {/* 모바일 대응 테이블 스크롤 */}
+          <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500">
@@ -134,13 +126,13 @@ const AdminManageStores: React.FC<{ currentUser: User | null }> = ({ currentUser
                       </td>
                       <td className="p-6 text-right">
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => navigate(`/store/${store.id}`)} className="p-2.5 bg-white/5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all border border-white/5" title="View Detail">
+                          <button onClick={() => navigate(`/store/${store.id}`)} className="p-2.5 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-all">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                           </button>
-                          <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="p-2.5 bg-emerald-600/10 rounded-lg text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-600/20" title="Edit Store">
+                          <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="p-2.5 bg-emerald-600/10 rounded-lg text-emerald-500 hover:bg-emerald-600 hover:text-white transition-all">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
-                          <button onClick={() => deleteStore(store.id)} className="p-2.5 bg-red-600/10 rounded-lg text-red-500 hover:bg-red-600 hover:text-white transition-all border border-red-600/20" title="Delete Store">
+                          <button onClick={() => deleteStore(store.id)} className="p-2.5 bg-red-600/10 rounded-lg text-red-500 hover:bg-red-600 hover:text-white transition-all">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
