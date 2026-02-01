@@ -1,31 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { UserRole, LEVEL_NAMES } from '../types';
-import type { User } from '../types'; // 🔴 타입 전용 임포트 준수
+import type { User } from '../types';
 
 const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
-  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
-  // 🔴 loading 상태 제거됨
+  const [loading, setLoading] = useState(true); // 🔴 데이터 로드 상태 추가 (UX용)
   const [inputAmounts, setInputAmounts] = useState<{ [key: string]: string }>({});
 
-  if (currentUser?.role !== UserRole.ADMIN) {
-    navigate('/');
-    return null;
-  }
-
+  // 🔴 권한 체크는 이미 App.tsx의 AdminRoute에서 처리하므로 삭제함
+  // 🔴 데이터 패칭 로직을 안정화함
   const fetchUsers = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (!error) setUsers(data as User[]);
-    // 🔴 setLoading(false) 제거됨
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) {
+        setUsers(data as User[]);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleUpdatePoints = async (userId: string, currentPoints: number, amount: number) => {
     if (isNaN(amount) || amount === 0) return;
@@ -41,21 +46,32 @@ const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser 
   };
 
   const updateLevel = async (userId: string, newLevel: number) => {
-    await supabase.from('profiles').update({ level: newLevel }).eq('id', userId);
-    fetchUsers();
+    const { error } = await supabase.from('profiles').update({ level: newLevel }).eq('id', userId);
+    if (!error) fetchUsers();
   };
 
   const toggleBlock = async (userId: string, currentStatus: boolean) => {
     if (!confirm('유저 상태를 변경하시겠습니까?')) return;
-    await supabase.from('profiles').update({ is_blocked: !currentStatus }).eq('id', userId);
-    fetchUsers();
+    const { error } = await supabase.from('profiles').update({ is_blocked: !currentStatus }).eq('id', userId);
+    if (!error) fetchUsers();
   };
 
+  // 🔴 로딩 중일 때 표시할 UI (다른 관리자 페이지와 통일)
+  if (loading && users.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-emerald-500 font-black italic animate-pulse tracking-widest uppercase">
+          Accessing User Database...
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white">
       <div className="max-w-7xl mx-auto">
         <header className="mb-12">
-          <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter">
             User <span className="text-emerald-500">Management</span>
           </h2>
           <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2 ml-1 italic">
@@ -64,7 +80,7 @@ const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser 
         </header>
 
         <div className="bg-[#111] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
-          <table className="w-full text-left text-white text-sm">
+          <table className="w-full text-left text-sm">
             <thead>
               <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500">
                 <th className="p-6">유저 정보</th>
@@ -78,7 +94,7 @@ const AdminManageUsers: React.FC<{ currentUser: User | null }> = ({ currentUser 
                 <tr key={user.id} className={`hover:bg-white/[0.02] transition-colors ${user.is_blocked ? 'opacity-30 grayscale' : ''}`}>
                   <td className="p-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black italic">
+                      <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black italic border border-white/5 text-emerald-500">
                         {user.nickname?.[0].toUpperCase()}
                       </div>
                       <div>
