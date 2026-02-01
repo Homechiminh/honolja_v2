@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { CategoryType, Region } from '../types';
-import type { Store } from '../types';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 임포트 추가
+import type { Store } from '../types'; // 🔴 CategoryType, Region 제거 (사용하지 않음)
+import { useAuth } from '../contexts/AuthContext';
+import { useFetchGuard } from '../hooks/useFetchGuard';
 
-const CreatePost: React.FC = () => { // 🔴 프롭 제거
+const CreatePost: React.FC = () => {
   const navigate = useNavigate();
   
   // 1. 전역 인증 정보 구독
@@ -71,7 +70,6 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
     try {
       const finalTitle = category === 'qna' ? `[질문] ${title}` : title;
       
-      // 1. 게시글 등록
       const { error: postError } = await supabase.from('posts').insert([{
         author_id: currentUser.id,
         title: finalTitle,
@@ -85,10 +83,8 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
 
       if (postError) throw postError;
 
-      // 2. 포인트 계산 (후기 100P / 일반 20P / 사진보너스 +10P)
       const totalEarned = (isReviewAction ? 100 : 20) + (imageUrls.length > 0 ? 10 : 0);
 
-      // 3. 프로필 정보 갱신 및 포인트 지급
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -100,14 +96,12 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
 
       if (profileError) throw profileError;
 
-      // 4. 포인트 히스토리 기록
       await supabase.from('point_history').insert([{
         user_id: currentUser.id,
         amount: totalEarned,
         reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성`
       }]);
 
-      // 5. 실시간 레벨업 체크
       if (profile) {
         let newLevel = profile.level;
         if (profile.points >= 1000 && profile.review_count >= 8) newLevel = 4;
@@ -131,11 +125,10 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
 
   const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700";
 
-  // 인증 정보 확인 중일 때의 로딩 처리
   if (authLoading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-red-600 font-black animate-pulse tracking-widest uppercase">
-        Initializing Creator Studio...
+      <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic">
+        Syncing Post Engine...
       </div>
     </div>
   );
@@ -150,7 +143,7 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">Category</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category Selection</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputStyle}>
                 <option value="free">자유게시판</option>
                 <option value="review">업소후기 (50자 이상)</option>
@@ -163,7 +156,7 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
 
             {category === 'vip' && (
               <div className="space-y-2 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2">VIP Sub-Category</label>
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">VIP Sub-Category</label>
                 <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
                   <option value="시크릿 꿀정보">시크릿 꿀정보</option>
                   <option value="업소후기">업소후기 (VIP 전용)</option>
@@ -175,7 +168,7 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
 
             {isReviewAction && (
               <div className="space-y-2 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2">Target Store Selection</label>
+                <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2 italic">Target Store</label>
                 <select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className={`${inputStyle} border-red-500/30`}>
                   <option value="">대상 업소를 선택하세요 (필수)</option>
                   {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -193,9 +186,7 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
 
           <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
             <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">Photo Attachment (+10P Bonus)</label>
-            <div className="relative group">
-              <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:italic file:mr-4" />
-            </div>
+            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:mr-4" />
             
             <div className="flex flex-wrap gap-4 mt-8">
               {imageUrls.map((url, i) => (
@@ -210,7 +201,7 @@ const CreatePost: React.FC = () => { // 🔴 프롭 제거
           <div className="flex gap-4 pt-4">
             <button type="button" onClick={() => navigate(-1)} className="flex-1 py-6 bg-white/5 text-gray-500 font-black rounded-[1.5rem] hover:bg-white/10 italic transition-all uppercase tracking-widest border border-white/5">CANCEL</button>
             <button type="submit" disabled={loading} className="flex-[2] py-6 bg-red-600 text-white font-black rounded-[1.5rem] shadow-2xl shadow-red-900/20 hover:bg-red-500 transition-all uppercase italic text-xl">
-              {loading ? 'PROCESSING...' : 'PUBLISH POST'}
+              {loading ? 'PUBLISHING...' : 'PUBLISH POST'}
             </button>
           </div>
         </form>
