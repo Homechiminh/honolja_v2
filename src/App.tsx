@@ -21,7 +21,7 @@ import Partnership from './pages/Partnership';
 import Policies from './pages/Policies';
 import Community from './pages/Community'; 
 import CouponShop from './pages/CouponShop';
-import VIPLounge from './pages/Viplounge'; // 🔴 추가
+import Viplounge from './pages/Viplounge'; // 🔴 대소문자 수정 (Viplounge)
 
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
@@ -51,6 +51,14 @@ const LevelRoute = ({ user, loading, minLevel }: { user: any; loading: boolean; 
 
 function App() {
   const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -91,7 +99,7 @@ function App() {
               <Route path="/admin/create-store" element={<AdminStoreCreate currentUser={currentUser} />} />
               <Route path="/admin/manage-users" element={<AdminManageUsers currentUser={currentUser} />} />
               <Route path="/admin/manage-stores" element={<AdminManageStores currentUser={currentUser} />} />
-              <Route path="/admin/edit-store/:id" element={<AdminStoreEdit currentUser={currentUser} />} />
+              <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
               <Route path="/admin/manage-coupons" element={<AdminManageCoupons currentUser={currentUser} />} />
             </Route>
 
