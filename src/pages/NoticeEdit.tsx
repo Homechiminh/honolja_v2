@@ -6,7 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser, loading: authLoading } = useAuth();
+  
+  // 🔴 currentUser 제거 (안 써서 에러 났던 부분 해결)
+  const { loading: authLoading } = useAuth(); 
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -27,10 +29,14 @@ const NoticeEdit: React.FC = () => {
       const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
       if (error) throw error;
       if (data) {
-        setFormData({ title: data.title, content: data.content, is_important: data.is_important });
+        setFormData({ 
+          title: data.title, 
+          content: data.content, 
+          is_important: data.is_important 
+        });
       }
     } catch (err) {
-      alert('아카이브를 불러올 수 없습니다.');
+      alert('데이터 아카이브를 불러올 수 없습니다.');
       navigate('/notice');
     } finally {
       setLoading(false);
@@ -52,11 +58,16 @@ const NoticeEdit: React.FC = () => {
     }
   };
 
+  // 🔴 authLoading과 페이지 자체 로딩을 모두 체크하여 엇박자 방지
   if (loading || authLoading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic">Syncing HQ Archives...</div>
+      <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic">
+        Syncing HQ Archives...
+      </div>
     </div>
   );
+
+  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all font-bold italic shadow-inner";
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
@@ -68,7 +79,7 @@ const NoticeEdit: React.FC = () => {
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-10">
-          <div className="bg-black/40 p-10 rounded-[2.5rem] border border-white/5 flex items-center justify-between">
+          <div className="bg-black/40 p-10 rounded-[2.5rem] border border-white/5 flex items-center justify-between shadow-inner">
             <p className="text-xl font-black text-red-600 italic uppercase">🔥 Priority Override</p>
             <button 
               type="button" 
@@ -80,14 +91,27 @@ const NoticeEdit: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            <input required value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-[#111] border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all text-3xl italic font-bold" />
-            <textarea required rows={15} value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})} className="w-full bg-[#111] border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all resize-none h-96 leading-relaxed font-medium italic shadow-inner" />
+            <input 
+              required 
+              value={formData.title} 
+              onChange={(e) => setFormData({...formData, title: e.target.value})} 
+              className={`${inputStyle} text-3xl py-7 tracking-tight`}
+              placeholder="Headline"
+            />
+            <textarea 
+              required 
+              rows={15} 
+              value={formData.content} 
+              onChange={(e) => setFormData({...formData, content: e.target.value})} 
+              className={`${inputStyle} resize-none h-96 leading-relaxed font-medium`}
+              placeholder="Notice Content"
+            />
           </div>
 
           <div className="flex gap-6">
-            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-7 bg-white/5 text-gray-500 font-black rounded-[1.5rem] uppercase italic">Cancel</button>
-            <button type="submit" disabled={updating} className="flex-[2] py-7 bg-red-600 text-white font-black text-xl rounded-[1.5rem] uppercase italic shadow-2xl shadow-red-900/40">
-              {updating ? 'Updating Data...' : 'Confirm Update'}
+            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-7 bg-white/5 text-gray-500 font-black rounded-[1.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all">Cancel</button>
+            <button type="submit" disabled={updating} className="flex-[2] py-7 bg-red-600 text-white font-black text-xl rounded-[1.5rem] uppercase italic shadow-2xl shadow-red-900/40 hover:bg-red-700 transition-all active:scale-95">
+              {updating ? 'Updating HQ...' : 'Confirm Update'}
             </button>
           </div>
         </form>
