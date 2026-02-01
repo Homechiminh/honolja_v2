@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import type { User, Store } from '../types';
+import { CategoryType, Region } from '../types';
+import type { Store } from '../types';
+import { useAuth } from '../contexts/AuthContext'; // 🔴 임포트 추가
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 임포트 추가
 
-const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+const CreatePost: React.FC = () => { // 🔴 프롭 제거
   const navigate = useNavigate();
+  
+  // 1. 전역 인증 정보 구독
+  const { currentUser, loading: authLoading } = useAuth();
+
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState<Store[]>([]); 
 
@@ -18,13 +25,15 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
   const isReviewAction = category === 'review' || (category === 'vip' && subCategory === '업소후기');
 
-  useEffect(() => {
-    const fetchStores = async () => {
-      const { data } = await supabase.from('stores').select('*').order('name').range(0, 99);
-      if (data) setStores(data as Store[]);
-    };
-    fetchStores();
-  }, []); 
+  // 🔴 [데이터 가드 적용] 인증이 완료된 후 업소 리스트를 가져옵니다.
+  useFetchGuard(async () => {
+    const { data } = await supabase
+      .from('stores')
+      .select('*')
+      .order('name')
+      .range(0, 99);
+    if (data) setStores(data as Store[]);
+  }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -61,6 +70,8 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
     setLoading(true);
     try {
       const finalTitle = category === 'qna' ? `[질문] ${title}` : title;
+      
+      // 1. 게시글 등록
       const { error: postError } = await supabase.from('posts').insert([{
         author_id: currentUser.id,
         title: finalTitle,
@@ -74,9 +85,10 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
       if (postError) throw postError;
 
-      // 포인트 및 레벨업 로직 (어제자 코드 복구)
+      // 2. 포인트 계산 (후기 100P / 일반 20P / 사진보너스 +10P)
       const totalEarned = (isReviewAction ? 100 : 20) + (imageUrls.length > 0 ? 10 : 0);
 
+      // 3. 프로필 정보 갱신 및 포인트 지급
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -88,12 +100,14 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
       if (profileError) throw profileError;
 
+      // 4. 포인트 히스토리 기록
       await supabase.from('point_history').insert([{
         user_id: currentUser.id,
         amount: totalEarned,
         reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성`
       }]);
 
+      // 5. 실시간 레벨업 체크
       if (profile) {
         let newLevel = profile.level;
         if (profile.points >= 1000 && profile.review_count >= 8) newLevel = 4;
@@ -115,10 +129,19 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
     }
   };
 
-  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all";
+  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700";
+
+  // 인증 정보 확인 중일 때의 로딩 처리
+  if (authLoading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-red-600 font-black animate-pulse tracking-widest uppercase">
+        Initializing Creator Studio...
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <h2 className="text-4xl font-black text-white italic mb-10 uppercase tracking-tighter">
           Create <span className="text-red-600">Post</span>
@@ -134,12 +157,12 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
                 <option value="qna">질문/답변</option>
                 <option value="food">맛집/관광</option>
                 <option value="business">부동산/비즈니스</option>
-                {currentUser && currentUser.level >= 3 && <option value="vip" className="text-yellow-500 font-bold">VIP 라운지</option>}
+                {(currentUser?.level || 0) >= 3 && <option value="vip" className="text-yellow-500 font-bold">VIP 라운지</option>}
               </select>
             </div>
 
             {category === 'vip' && (
-              <div className="space-y-2">
+              <div className="space-y-2 animate-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2">VIP Sub-Category</label>
                 <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
                   <option value="시크릿 꿀정보">시크릿 꿀정보</option>
@@ -151,7 +174,7 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
             )}
 
             {isReviewAction && (
-              <div className="space-y-2">
+              <div className="space-y-2 animate-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2">Target Store Selection</label>
                 <select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className={`${inputStyle} border-red-500/30`}>
                   <option value="">대상 업소를 선택하세요 (필수)</option>
@@ -168,22 +191,25 @@ const CreatePost: React.FC<{ currentUser: User | null }> = ({ currentUser }) => 
 
           <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요..." className={`${inputStyle} h-80 leading-relaxed resize-none`} />
 
-          <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5">
-            <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest">Photo Attachment</label>
-            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer" />
-            <div className="flex flex-wrap gap-4 mt-6">
+          <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
+            <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">Photo Attachment (+10P Bonus)</label>
+            <div className="relative group">
+              <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:italic file:mr-4" />
+            </div>
+            
+            <div className="flex flex-wrap gap-4 mt-8">
               {imageUrls.map((url, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group">
+                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
                   <img src={url} className="w-full h-full object-cover" alt="upload" />
-                  <button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity">삭제</button>
+                  <button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-xs italic">DELETE</button>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="flex gap-4 pt-4">
-            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-6 bg-white/5 text-gray-500 font-black rounded-[1.5rem] hover:bg-white/10 italic transition-all">CANCEL</button>
-            <button type="submit" disabled={loading} className="flex-[2] py-6 bg-red-600 text-white font-black rounded-[1.5rem] shadow-xl hover:bg-red-500 transition-all uppercase italic">
+            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-6 bg-white/5 text-gray-500 font-black rounded-[1.5rem] hover:bg-white/10 italic transition-all uppercase tracking-widest border border-white/5">CANCEL</button>
+            <button type="submit" disabled={loading} className="flex-[2] py-6 bg-red-600 text-white font-black rounded-[1.5rem] shadow-2xl shadow-red-900/20 hover:bg-red-500 transition-all uppercase italic text-xl">
               {loading ? 'PROCESSING...' : 'PUBLISH POST'}
             </button>
           </div>
