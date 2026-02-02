@@ -14,65 +14,33 @@ const MyPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'activity' | 'points' | 'coupons'>('activity');
   const [isEditing, setIsEditing] = useState(false);
   const [newNickname, setNewNickname] = useState(currentUser?.nickname || '');
-  const [loading, setLoading] = useState(false); // 버튼 액션(업로드/수정) 로딩
-  const [dataLoading, setDataLoading] = useState(true); // DB 데이터 호출 로딩
+  const [loading, setLoading] = useState(false); 
+  const [dataLoading, setDataLoading] = useState(true); 
   
   const [myPosts, setMyPosts] = useState<any[]>([]);
   const [pointHistory, setPointHistory] = useState<any[]>([]);
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
 
-  /**
-   * 🔴 [방탄 fetch] 내 활동 정보 통합 로드
-   * 어떤 구간에서 에러(406 등)가 발생해도 finally 블록이 스피너를 해제합니다.
-   */
+  // 내 활동 데이터 로드
   const fetchMyData = async () => {
     if (!currentUser?.id) return;
-    setDataLoading(true); // 데이터 로딩 시작
+    setDataLoading(true);
     try {
-      // 1. 내가 작성한 게시글
-      const { data: posts, error: postErr } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('author_id', currentUser.id)
-        .order('created_at', { ascending: false });
-      if (postErr) throw postErr;
+      const { data: posts } = await supabase.from('posts').select('*').eq('author_id', currentUser.id).order('created_at', { ascending: false });
       if (posts) setMyPosts(posts);
 
-      // 2. 포인트 적립/사용 내역
-      const { data: points, error: pointErr } = await supabase
-        .from('point_history')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-      if (pointErr) throw pointErr;
+      const { data: points } = await supabase.from('point_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
       if (points) setPointHistory(points);
 
-      // 3. 보유 쿠폰 내역 (미사용)
-      const { data: coupons, error: couponErr } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .eq('is_used', false)
-        .order('created_at', { ascending: false });
-      if (couponErr) throw couponErr;
+      const { data: coupons } = await supabase.from('coupons').select('*').eq('user_id', currentUser.id).eq('is_used', false).order('created_at', { ascending: false });
       if (coupons) setMyCoupons(coupons);
-
     } catch (err: any) {
-      console.error('Agent Data Sync Failed (406 등):', err.message);
-      // 에러 발생 시 리스트 초기화
-      setMyPosts([]);
-      setPointHistory([]);
-      setMyCoupons([]);
+      console.error('Data Sync Failed:', err.message);
     } finally {
-      // 🔴 핵심: 모든 요청 완료 또는 실패 후 로딩 해제
       setDataLoading(false);
     }
   };
 
-  /**
-   * 🔴 [데이터 가드 적용] 
-   * 인증이 확정된 후 내 데이터를 안전하게 낚아옵니다.
-   */
   useFetchGuard(fetchMyData, []);
 
   const handleLogout = async () => {
@@ -87,48 +55,35 @@ const MyPage: React.FC = () => {
     if (!file || !currentUser) return;
     setLoading(true);
     const filePath = `avatars/${currentUser.id}_${Date.now()}`;
-
     try {
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-      if (uploadError) throw uploadError;
-
+      await supabase.storage.from('avatars').upload(filePath, file);
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
-      
-      if (updateError) throw updateError;
-      
-      await refreshUser(); // 중앙 상태 즉시 갱신
+      await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
+      await refreshUser();
       alert('프로필 이미지가 변경되었습니다.');
     } catch (err: any) { 
-      alert(`이미지 업로드 실패: ${err.message}`); 
-    } finally { 
-      setLoading(false); 
-    }
+      alert(`업로드 실패: ${err.message}`); 
+    } finally { setLoading(false); }
   };
 
   const handleUpdateNickname = async () => {
     if (!currentUser || !newNickname.trim()) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('profiles').update({ nickname: newNickname }).eq('id', currentUser.id);
-      if (error) throw error;
-      
+      await supabase.from('profiles').update({ nickname: newNickname }).eq('id', currentUser.id);
       setIsEditing(false);
-      await refreshUser(); // 중앙 상태 즉시 갱신
-      alert('닉네임이 성공적으로 변경되었습니다.');
+      await refreshUser();
+      alert('닉네임이 변경되었습니다.');
     } catch (err: any) { 
-      alert(`닉네임 변경 실패: ${err.message}`); 
-    } finally { 
-      setLoading(false); 
-    }
+      alert(`변경 실패: ${err.message}`); 
+    } finally { setLoading(false); }
   };
 
-  // 🔴 인증 확인 중일 때 로딩 UI
   if (authLoading || !currentUser) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-red-600 font-black italic animate-pulse tracking-[0.3em] uppercase text-xl">
-          FETCHING AGENT DATA...
+        <div className="text-red-600 font-black italic animate-pulse tracking-widest uppercase text-xl">
+          데이터를 불러오는 중...
         </div>
       </div>
     );
@@ -154,7 +109,7 @@ const MyPage: React.FC = () => {
                 )}
               </div>
               <label className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-[3rem] backdrop-blur-sm">
-                <span className="text-[10px] font-black uppercase italic tracking-widest">Update Photo</span>
+                <span className="text-[10px] font-black uppercase italic tracking-widest">사진 변경</span>
                 <input type="file" className="hidden" onChange={handleAvatarUpload} disabled={loading} />
               </label>
             </div>
@@ -178,12 +133,12 @@ const MyPage: React.FC = () => {
                 )}
               </div>
               <div className="flex gap-4 justify-center md:justify-start mt-6">
-                <div className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Intelligence Points</p>
+                <div className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner text-center md:text-left">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">활동 포인트</p>
                   <p className="text-2xl font-black text-red-600 italic">{currentUser.points?.toLocaleString()}P</p>
                 </div>
-                <div className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">Verified Logs</p>
+                <div className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5 shadow-inner text-center md:text-left">
+                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">업소 후기</p>
                   <p className="text-2xl font-black text-emerald-500 italic">{currentUser.review_count || 0}건</p>
                 </div>
               </div>
@@ -191,16 +146,16 @@ const MyPage: React.FC = () => {
 
             {currentCriteria && (
               <div className="w-full md:w-64 bg-black/40 p-8 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-md">
-                <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 tracking-widest italic border-b border-white/5 pb-2">Next Upgrade: {LEVEL_NAMES[currentUser.level + 1]}</p>
+                <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 tracking-widest italic border-b border-white/5 pb-2">다음 등급: {LEVEL_NAMES[currentUser.level + 1]}</p>
                 <div className="space-y-6">
                   <div>
-                    <div className="flex justify-between text-[9px] mb-2 font-black uppercase tracking-tighter italic"><span>Points Progress</span><span className="text-red-500">{currentUser.points}/{currentCriteria.points}</span></div>
+                    <div className="flex justify-between text-[9px] mb-2 font-black uppercase tracking-tighter italic"><span>포인트 달성도</span><span className="text-red-500">{currentUser.points}/{currentCriteria.points}</span></div>
                     <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5 shadow-inner">
                       <div className="bg-red-600 h-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(100, (currentUser.points/currentCriteria.points)*100)}%` }}></div>
                     </div>
                   </div>
                   <div>
-                    <div className="flex justify-between text-[9px] mb-2 font-black uppercase tracking-tighter italic"><span>Logs Required</span><span className="text-emerald-500">{currentUser.review_count || 0}/{currentCriteria.reviews}</span></div>
+                    <div className="flex justify-between text-[9px] mb-2 font-black uppercase tracking-tighter italic"><span>후기 달성도</span><span className="text-emerald-500">{currentUser.review_count || 0}/{currentCriteria.reviews}</span></div>
                     <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5 shadow-inner">
                       <div className="bg-emerald-600 h-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(100, ((currentUser.review_count || 0)/currentCriteria.reviews)*100)}%` }}></div>
                     </div>
@@ -216,7 +171,7 @@ const MyPage: React.FC = () => {
           <div className="flex bg-white/[0.02] p-2 gap-2">
             {(['activity', 'points', 'coupons'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-5 rounded-2xl font-black uppercase italic transition-all ${activeTab === tab ? 'bg-red-600 text-white shadow-2xl scale-[1.02]' : 'text-gray-600 hover:text-gray-300'}`}>
-                {tab === 'activity' ? '📝 Action Logs' : tab === 'points' ? '📋 Transaction' : '🎟️ Vault'}
+                {tab === 'activity' ? '📝 작성한 글' : tab === 'points' ? '📋 활동 내역' : '🎟️ 쿠폰함'}
               </button>
             ))}
           </div>
@@ -225,7 +180,7 @@ const MyPage: React.FC = () => {
             {dataLoading ? (
               <div className="flex flex-col items-center justify-center h-[300px] text-gray-800 font-black italic animate-pulse space-y-4">
                 <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="tracking-[0.3em] text-[10px]">DECRYPTING AGENT LOGS...</span>
+                <span className="tracking-[0.3em] text-[10px]">정보 불러오는 중...</span>
               </div>
             ) : (
               <div className="animate-in fade-in duration-500">
@@ -241,7 +196,7 @@ const MyPage: React.FC = () => {
                       </Link>
                     )) : (
                       <div className="py-32 text-center bg-black/20 rounded-[2.5rem] border border-dashed border-white/5 opacity-40">
-                        <p className="text-gray-700 font-black italic uppercase tracking-widest text-lg">No Intelligence Records Found</p>
+                        <p className="text-gray-700 font-black italic uppercase tracking-widest text-lg">기록된 게시글이 없습니다.</p>
                       </div>
                     )}
                   </div>
@@ -261,7 +216,7 @@ const MyPage: React.FC = () => {
                       </div>
                     )) : (
                       <div className="py-32 text-center bg-black/20 rounded-[2.5rem] border border-dashed border-white/5 opacity-40">
-                        <p className="text-gray-700 font-black italic uppercase tracking-widest text-lg">Clean Transaction Record</p>
+                        <p className="text-gray-700 font-black italic uppercase tracking-widest text-lg">포인트 내역이 없습니다.</p>
                       </div>
                     )}
                   </div>
@@ -275,13 +230,13 @@ const MyPage: React.FC = () => {
                         <h4 className="text-3xl font-black text-white italic mb-4 tracking-tighter uppercase leading-none">{coupon.title}</h4>
                         <p className="text-gray-500 text-sm font-bold leading-relaxed mb-10 italic">{coupon.content}</p>
                         <div className="pt-8 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-[9px] text-gray-600 font-black italic uppercase tracking-[0.2em]">Expires {new Date(coupon.expired_at).toLocaleDateString()}</span>
-                            <button className="bg-red-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase italic shadow-xl hover:bg-red-500 active:scale-95 transition-all">Redeem Now</button>
+                            <span className="text-[9px] text-gray-600 font-black italic uppercase tracking-[0.2em]">만료일: {new Date(coupon.expired_at).toLocaleDateString()}</span>
+                            <button className="bg-red-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase italic shadow-xl hover:bg-red-500 active:scale-95 transition-all">사용하기</button>
                         </div>
                       </div>
                     )) : (
                       <div className="col-span-2 py-32 text-center bg-black/20 rounded-[3rem] border border-dashed border-white/10 opacity-40">
-                        <p className="text-gray-700 font-black italic uppercase tracking-widest text-lg">The Vault is Empty</p>
+                        <p className="text-gray-700 font-black italic uppercase tracking-widest text-lg">보유하신 쿠폰이 없습니다.</p>
                       </div>
                     )}
                   </div>
@@ -293,12 +248,12 @@ const MyPage: React.FC = () => {
 
         {/* 하단 액션 버튼 */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 px-10">
-          <Link to="/" className="text-gray-600 hover:text-white text-[10px] font-black uppercase italic tracking-[0.3em] transition-all border-b border-transparent hover:border-white">← Return to Exploration</Link>
+          <Link to="/" className="text-gray-600 hover:text-white text-[10px] font-black uppercase italic tracking-[0.3em] transition-all border-b border-transparent hover:border-white">← 메인으로 돌아가기</Link>
           <div className="flex gap-4">
             {currentUser.role === UserRole.ADMIN && (
-              <button onClick={() => navigate('/admin')} className="px-10 py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase border border-white/10 italic hover:bg-white/10 transition-all tracking-[0.2em] shadow-xl">Admin Terminal</button>
+              <button onClick={() => navigate('/admin')} className="px-10 py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase border border-white/10 italic hover:bg-white/10 transition-all tracking-[0.2em] shadow-xl">관리자 메뉴</button>
             )}
-            <button onClick={handleLogout} className="px-10 py-5 bg-red-600 rounded-2xl text-[10px] font-black uppercase italic shadow-2xl shadow-red-900/40 hover:bg-red-700 active:scale-95 transition-all tracking-[0.2em]">Terminate Session</button>
+            <button onClick={handleLogout} className="px-10 py-5 bg-red-600 rounded-2xl text-[10px] font-black uppercase italic shadow-2xl shadow-red-900/40 hover:bg-red-700 active:scale-95 transition-all tracking-[0.2em]">로그아웃</button>
           </div>
         </div>
       </div>
