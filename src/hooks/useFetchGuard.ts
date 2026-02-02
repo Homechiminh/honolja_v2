@@ -1,30 +1,24 @@
-import { useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-
 export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
   const { loading: authLoading, currentUser } = useAuth();
-  const retryCount = useRef(0);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    // 인증 확인 중이면 대기
+    // 1. 인증 로딩 중이면 대기
     if (authLoading) return;
 
+    // 2. 인증 로딩이 끝났다면 실행
     const execute = async () => {
       try {
-        // 🔴 브라우저 세션 안착을 위한 미세 딜레이 (300ms)
-        await new Promise(res => setTimeout(res, 300));
         await fetchFn();
-        retryCount.current = 0;
+        hasFetched.current = true;
       } catch (err: any) {
-        // 406 에러 발생 시 1회 자동 재시도
-        if (err.status === 406 && retryCount.current < 1) {
-          retryCount.current++;
-          console.warn("🔄 406 Detected - Auto retrying after auth sync...");
-          setTimeout(execute, 800);
+        // 406 에러 발생 시 0.5초 뒤 자동 재시도
+        if (err.status === 406) {
+          setTimeout(fetchFn, 500);
         }
       }
     };
 
     execute();
-  }, [authLoading, currentUser?.id, ...deps]); // 🔴 currentUser?.id를 감지에 추가
+  }, [authLoading, currentUser?.id, ...deps]); // 🔴 유저 정보가 뒤늦게 오면 자동으로 재실행
 };
