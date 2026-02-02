@@ -8,7 +8,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // 🔴 [강제 탈출구] Supabase 응답이 늦어도 2.5초 뒤엔 무조건 화면을 엽니다.
     const failSafe = setTimeout(() => {
       if (!initialized) {
         console.warn("⚠️ Auth initialization timed out. Forcing UI to open.");
@@ -22,13 +21,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           const { data: profile } = await supabase
             .from('profiles').select('*').eq('id', session.user.id).single();
-          setCurrentUser(profile);
+          setCurrentUser(profile || session.user); // 프로필 없으면 유저 정보라도 넣음
         }
       } catch (err) {
         console.error("Auth Init Error:", err);
       } finally {
         setInitialized(true);
-        clearTimeout(failSafe); // 성공 시 타이머 해제
+        clearTimeout(failSafe);
       }
     };
 
@@ -38,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles').select('*').eq('id', session.user.id).single();
-        setCurrentUser(profile);
+        setCurrentUser(profile || session.user);
       } else {
         setCurrentUser(null);
       }
