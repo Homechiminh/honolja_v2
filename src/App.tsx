@@ -24,10 +24,10 @@ import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import PostEdit from './pages/PostEdit';
 
-// 🔴 공지사항 관련 페이지 임포트 추가
+// 🔴 공지사항 관련 페이지 (파일명 수정 반영)
 import Notice from './pages/Notice';
 import NoticeEdit from './pages/NoticeEdit';
-import AdminNoticeCreate from './pages/AdminNoticeCreate';
+import NoticeCreate from './pages/NoticeCreate'; // AdminNoticeCreate -> NoticeCreate로 변경
 
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
@@ -67,7 +67,6 @@ const LevelRoute = ({ minLevel }: { minLevel: number }) => {
 function App() {
   const { loading } = useAuth();
 
-  // 앱 최상단 로딩 가드: 인증 동기화 대기
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -97,7 +96,6 @@ function App() {
             <Route path="/policies" element={<Policies />} />
             
             <Route path="/community" element={<Community />} />
-            {/* 🔴 공지사항 목록은 누구나 볼 수 있도록 설정 */}
             <Route path="/notice" element={<Notice />} />
 
             <Route path="/store/:id" element={<StoreDetail />} />
@@ -106,7 +104,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* --- 보호 구역 (로그인 필수) --- */}
+            {/* --- 보호 구역 --- */}
             <Route element={<PrivateRoute />}>
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/coupon-shop" element={<CouponShop />} />
@@ -114,12 +112,12 @@ function App() {
               <Route path="/post/edit/:id" element={<PostEdit />} />
             </Route>
 
-            {/* --- VIP 구역 (Lv.3 이상) --- */}
+            {/* --- VIP 구역 --- */}
             <Route element={<LevelRoute minLevel={3} />}>
               <Route path="/vip-lounge" element={<VipLounge />} />
             </Route>
 
-            {/* --- 관리자 구역 (ADMIN 전용) --- */}
+            {/* --- 관리자 구역 --- */}
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/create-store" element={<AdminStoreCreate />} />
@@ -128,12 +126,11 @@ function App() {
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
               <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
               
-              {/* 🔴 공지사항 관리 (생성/수정) 추가 */}
-              <Route path="/notice/create" element={<AdminNoticeCreate />} />
+              {/* 🔴 컴포넌트 이름 NoticeCreate로 수정 */}
+              <Route path="/notice/create" element={<NoticeCreate />} />
               <Route path="/notice/edit/:id" element={<NoticeEdit />} />
             </Route>
 
-            {/* 잘못된 경로는 홈으로 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
