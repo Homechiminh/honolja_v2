@@ -50,9 +50,21 @@ const NoticeDetail: React.FC = () => {
         </div>
 
         <div className="flex justify-between items-center px-4">
-          <button onClick={() => navigate('/notice')} className="text-gray-700 hover:text-white font-black uppercase italic text-xs tracking-[0.3em] transition-all">← Return to Headquarters</button>
+          {/* 🔴 문구 수정: Return to Headquarters -> 목록으로 돌아가기 */}
+          <button 
+            onClick={() => navigate('/notice')} 
+            className="text-gray-700 hover:text-white font-black uppercase italic text-xs tracking-[0.3em] transition-all"
+          >
+            ← 목록으로 돌아가기
+          </button>
+          
           {currentUser?.role === 'ADMIN' && (
-            <button onClick={() => navigate(`/notice/edit/${id}`)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-red-500 font-black text-[10px] uppercase italic transition-all">Edit Record</button>
+            <button 
+              onClick={() => navigate(`/notice/edit/${id}`)} 
+              className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-red-500 font-black text-[10px] uppercase italic transition-all"
+            >
+              Edit Record
+            </button>
           )}
         </div>
       </div>
