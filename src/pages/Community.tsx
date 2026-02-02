@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 데이터 가드 훅 임포트
+import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 const Community: React.FC = () => {
   const navigate = useNavigate();
@@ -26,9 +26,12 @@ const Community: React.FC = () => {
     { id: 'business', name: '부동산/비즈니스', icon: '🏢' },
   ];
 
-  // 2. 데이터 호출 로직
+  /**
+   * 🔴 [방탄 fetch] 커뮤니티 데이터 동기화
+   * 에러가 발생해도 finally 블록이 로딩 스피너를 확실히 해제합니다.
+   */
   const fetchPosts = async () => {
-    setLoading(true);
+    setLoading(true); // 로딩 시작
     try {
       let query = supabase
         .from('posts')
@@ -44,18 +47,29 @@ const Community: React.FC = () => {
       }
 
       const { data, error } = await query;
-      if (!error && data) {
+
+      if (error) {
+        // 🔴 서버 거절(406) 등의 에러 발생 시 catch로 던짐
+        throw error;
+      }
+
+      if (data) {
         setPosts(data);
       }
-    } catch (err) {
-      console.error('Community fetch error:', err);
+    } catch (err: any) {
+      console.error('Community Archive Sync Failed (406 등):', err.message);
+      // 에러 발생 시 리스트를 비워 잘못된 정보 노출 방지
+      setPosts([]);
     } finally {
+      // 🔴 핵심: 성공/실패 여부와 상관없이 무조건 로딩 상태 해제
       setLoading(false);
     }
   };
 
-  // 🔴 3. [데이터 가드 적용] 
-  // 카테고리가 바뀌거나 정렬 기준이 바뀔 때, 인증 정보를 먼저 확인한 후 데이터를 낚아옵니다.
+  /**
+   * 🔴 [데이터 가드 적용] 
+   * 인증 확인이 끝난 최적의 타이밍에 데이터를 호출하며, 필터나 정렬 변경 시 재실행됩니다.
+   */
   useFetchGuard(fetchPosts, [activeCategory, sortBy]);
 
   const handleCreatePost = () => {
@@ -67,7 +81,7 @@ const Community: React.FC = () => {
     navigate('/community/create');
   };
 
-  // 🔴 4. 전체 로딩 가드
+  // 🔴 인증 정보 확인 중일 때의 블랙아웃 방지
   if (authLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -78,9 +92,8 @@ const Community: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
         
-        {/* 사이드바 섹션 */}
+        {/* 사이드바 섹션 - 디자인 유지 */}
         <aside className="lg:w-80 space-y-6">
-          {/* VIP 라운지 배너 (가드 적용) */}
           <div className={`p-6 rounded-[2.5rem] border transition-all duration-500 ${
             (currentUser?.level || 0) >= 3 
             ? 'bg-yellow-600 border-yellow-500 shadow-2xl shadow-yellow-600/20' 
@@ -103,7 +116,6 @@ const Community: React.FC = () => {
             </button>
           </div>
 
-          {/* 카테고리 메뉴 */}
           <div className="bg-[#111] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
             <nav className="space-y-2">
               {categories.map((cat) => (
@@ -124,7 +136,7 @@ const Community: React.FC = () => {
           </div>
         </aside>
 
-        {/* 메인 피드 섹션 */}
+        {/* 메인 피드 섹션 - 디자인 유지 */}
         <main className="flex-1">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
             <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter leading-none">
@@ -160,7 +172,6 @@ const Community: React.FC = () => {
             </div>
           </header>
 
-          {/* 게시글 리스트 */}
           <div className="space-y-6">
             {loading ? (
               <div className="py-20 text-center">
@@ -168,7 +179,7 @@ const Community: React.FC = () => {
                 <p className="text-gray-600 font-black italic uppercase tracking-[0.2em] text-xs">Syncing Database...</p>
               </div>
             ) : posts.length === 0 ? (
-              <div className="py-32 text-center bg-[#0a0a0a] rounded-[3.5rem] border border-dashed border-white/5">
+              <div className="py-32 text-center bg-[#0a0a0a] rounded-[3.5rem] border border-dashed border-white/5 animate-in fade-in duration-500">
                 <p className="text-gray-700 font-black italic uppercase tracking-widest text-xl">No Intelligence Data Found</p>
               </div>
             ) : (
@@ -176,7 +187,7 @@ const Community: React.FC = () => {
                 <Link 
                   key={post.id} 
                   to={`/post/${post.id}`} 
-                  className="block bg-[#111] p-8 md:p-10 rounded-[2.5rem] border border-white/5 hover:border-red-600/50 transition-all group shadow-2xl hover:-translate-y-1 duration-300"
+                  className="block bg-[#111] p-8 md:p-10 rounded-[2.5rem] border border-white/5 hover:border-red-600/50 transition-all group shadow-2xl hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-2"
                 >
                   <div className="flex justify-between items-start gap-6">
                     <div className="flex-1">
