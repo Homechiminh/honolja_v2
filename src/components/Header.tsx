@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); 
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // 모바일 메뉴 상태
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -19,8 +19,6 @@ const Header: React.FC = () => {
     { name: '바/클럽', path: '/stores/barclub' },
     { name: '숙소/풀빌라', path: '/stores/villa' },
     { name: '투어/차량', path: '/booking' },
-    { name: '쿠폰샵', path: '/coupon-shop' },
-    { name: '커뮤니티', path: '/community' },
   ];
 
   useEffect(() => {
@@ -29,6 +27,7 @@ const Header: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 페이지 이동 시 메뉴 닫기
   useEffect(() => {
     setIsMenuOpen(false);
     document.body.style.overflow = 'unset';
@@ -56,56 +55,84 @@ const Header: React.FC = () => {
     }`}>
       <div className="max-w-[1500px] mx-auto px-6 flex items-center justify-between">
         
-        {/* 로고 영역 */}
-        <Link to="/" className="flex items-center gap-2 group relative z-[110]">
-          <div className="bg-red-600 w-9 h-9 rounded-xl flex items-center justify-center shadow-xl shadow-red-600/20 group-hover:scale-105 transition-transform">
-            <span className="text-white font-black italic text-xl">H</span>
-          </div>
-          <span className="text-xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
-        </Link>
+        {/* [PC & 모바일 공통] 로고 영역 */}
+        <div className="flex items-center gap-10">
+          <Link to="/" className="flex items-center gap-2 group relative z-[110]">
+            <div className="bg-red-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-xl shadow-red-600/20 group-hover:scale-105 transition-transform">
+              <span className="text-white font-black italic text-2xl">H</span>
+            </div>
+            <span className="text-2xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
+          </Link>
 
-        {/* PC 네비게이션 (xl 이상) */}
-        <nav className="hidden xl:flex items-center gap-8">
-          {navItems.map((item) => (
-            <Link 
-              key={item.name} 
-              to={item.path} 
-              className={`text-[13px] font-black transition-all hover:text-white uppercase italic tracking-tighter ${
-                isActive(item.path) ? 'text-red-600 underline underline-offset-8 decoration-2' : 'text-gray-300'
-              }`}
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-
-        {/* PC 우측 구역 (xl 이상) */}
-        <div className="hidden xl:flex items-center gap-6">
-          {!authLoading && (
-            currentUser ? (
-              <Link to="/mypage" className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
-                {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" /> : <span className="text-red-600 font-black italic">{currentUser.nickname?.[0]}</span>}
+          {/* [PC 전용] 네비게이션 (xl 이상 노출) */}
+          <nav className="hidden xl:flex items-center gap-8">
+            {navItems.map((item) => (
+              <Link 
+                key={item.name} 
+                to={item.path} 
+                className={`text-[14px] font-black transition-all hover:text-white uppercase italic tracking-tighter ${
+                  isActive(item.path) ? 'text-red-600 underline underline-offset-8 decoration-2' : 'text-gray-200'
+                }`}
+              >
+                {item.name}
               </Link>
-            ) : (
-              <Link to="/login" className="bg-red-600 text-white px-7 py-2.5 rounded-xl text-xs font-black italic uppercase shadow-xl active:scale-95 transition-all">로그인</Link>
-            )
+            ))}
+            <Link to="/coupon-shop" className="text-[11px] font-black text-red-500 italic uppercase ml-4 bg-red-600/10 px-4 py-1.5 rounded-full border border-red-600/20 hover:bg-red-600 hover:text-white transition-all shadow-lg">
+              COUPON SHOP
+            </Link>
+          </nav>
+        </div>
+
+        {/* [PC 전용] 우측 버튼 구역 (xl 이상 노출) */}
+        <div className="hidden xl:flex items-center gap-6">
+          <div className="flex items-center gap-6 border-r border-white/10 pr-6 mr-2">
+            <Link to="/danang" className="text-[13px] font-black text-blue-500 hover:text-blue-400 uppercase italic">다낭놀자</Link>
+            <Link to="/nhatrang" className="text-[13px] font-black text-emerald-500 hover:text-emerald-400 uppercase italic">나트랑놀자</Link>
+          </div>
+
+          {authLoading ? (
+            <div className="w-32 h-10"></div>
+          ) : currentUser ? (
+            <div className="flex items-center gap-6 animate-in fade-in duration-300">
+              <Link to="/mypage" className="flex items-center gap-4 group">
+                <div className="flex flex-col items-end hidden md:flex">
+                  {currentUser.role === 'ADMIN' && (
+                    <span className="text-[9px] text-red-500 font-black tracking-widest uppercase italic mb-0.5">ADMINISTRATOR</span>
+                  )}
+                  <span className="text-sm font-black text-white italic tracking-tight">{currentUser.nickname}님</span>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-red-600 font-black italic shadow-2xl group-hover:border-red-600/50 transition-all overflow-hidden relative">
+                  {currentUser.avatar_url ? (
+                    <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl">{currentUser.nickname?.[0].toUpperCase()}</span>
+                  )}
+                </div>
+              </Link>
+              <button onClick={handleLogout} className="px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-lg active:scale-95">로그아웃</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-6 animate-in fade-in duration-300">
+              <Link to="/signup" className="text-[13px] font-black text-gray-400 hover:text-white uppercase italic tracking-tighter">회원가입</Link>
+              <Link to="/login" className="bg-red-600 text-white px-8 py-3 rounded-2xl text-[14px] font-black italic uppercase shadow-xl shadow-red-600/20 active:scale-95 transition-all">로그인</Link>
+            </div>
           )}
         </div>
 
-        {/* 🔴 모바일 햄버거 버튼 (xl 미만) */}
-        <button onClick={toggleMenu} className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5">
-          <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'w-7 rotate-45 translate-y-2' : 'w-7'}`}></span>
-          <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'w-7'}`}></span>
-          <span className={`h-0.5 bg-red-600 transition-all duration-300 ${isMenuOpen ? 'w-7 -rotate-45 -translate-y-2' : 'w-4'}`}></span>
+        {/* [모바일 전용] 햄버거 버튼 (xl 미만 노출) */}
+        <button 
+          onClick={toggleMenu}
+          className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5"
+        >
+          <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'w-8 rotate-45 translate-y-2' : 'w-8'}`}></span>
+          <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'w-8'}`}></span>
+          <span className={`h-0.5 bg-red-600 transition-all duration-300 ${isMenuOpen ? 'w-8 -rotate-45 -translate-y-2' : 'w-5'}`}></span>
         </button>
       </div>
 
-      {/* 🔴 모바일 사이드 슬라이드바 (60% 슬림 버전) */}
+      {/* [모바일 전용] 사이드 슬라이드바 (65% 슬림 버전) */}
       <div className={`fixed inset-0 z-[105] xl:hidden transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}>
-        {/* 배경 딤드 처리 (본문 40% 노출) */}
         <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu}></div>
-
-        {/* 메뉴바 (폭 60%, 최대 280px로 제한하여 슬림하게) */}
         <div className={`absolute top-0 right-0 h-full w-[65%] max-w-[280px] bg-[#0a0a0a] border-l border-white/5 shadow-[-10px_0_30px_rgba(0,0,0,0.8)] transition-transform duration-400 ease-in-out p-8 flex flex-col ${
           isMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}>
@@ -115,16 +142,14 @@ const Header: React.FC = () => {
                 {item.name}
               </Link>
             ))}
+            <Link to="/community" className={`text-xl font-black italic uppercase tracking-tighter ${isActive('/community') ? 'text-red-600' : 'text-gray-300'}`}>커뮤니티</Link>
+            <Link to="/coupon-shop" className={`text-xl font-black italic uppercase tracking-tighter ${isActive('/coupon-shop') ? 'text-red-600' : 'text-gray-300'}`}>쿠폰샵</Link>
           </div>
-
           <div className="h-px bg-white/5 w-full my-8"></div>
-
           <div className="flex flex-col gap-3">
             <Link to="/danang" className="text-sm font-black text-blue-500 italic uppercase">다낭놀자</Link>
             <Link to="/nhatrang" className="text-sm font-black text-emerald-500 italic uppercase">나트랑놀자</Link>
           </div>
-
-          {/* 하단 유저 구역 */}
           <div className="mt-auto pt-6 border-t border-white/5">
             {currentUser ? (
               <div className="space-y-4">
