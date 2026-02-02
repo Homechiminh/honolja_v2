@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
-import { useAuth } from '../contexts/AuthContext'; 
+import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const { currentUser, loading: authLoading } = useAuth();
 
   const navItems = [
@@ -21,19 +21,17 @@ const Header: React.FC = () => {
     { name: '투어/차량', path: '/booking' },
   ];
 
-  // 스크롤 감지
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 🔴 페이지 이동 시 메뉴만 닫기 (스크롤 잠금 로직 삭제)
+  // 페이지 이동 시 메뉴 닫기 (스크롤 잠금 로직 없음)
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location]);
 
-  // 🔴 스크롤 방지 로직(overflow: hidden)을 완전히 제거했습니다.
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -53,7 +51,7 @@ const Header: React.FC = () => {
       isScrolled ? 'py-3 bg-black/95 backdrop-blur-md border-white/10' : 'py-6 bg-transparent border-transparent'
     }`}>
       <div className="max-w-[1500px] mx-auto px-6 flex items-center justify-between">
-        
+
         {/* 로고 영역 (PC & 모바일 공통) */}
         <div className="flex items-center gap-10">
           <Link to="/" className="flex items-center gap-2 group relative z-[110]">
@@ -66,9 +64,9 @@ const Header: React.FC = () => {
           {/* PC 네비게이션 */}
           <nav className="hidden xl:flex items-center gap-8">
             {navItems.map((item) => (
-              <Link 
-                key={item.name} 
-                to={item.path} 
+              <Link
+                key={item.name}
+                to={item.path}
                 className={`text-[14px] font-black transition-all hover:text-white uppercase italic tracking-tighter ${
                   isActive(item.path) ? 'text-red-600 underline underline-offset-8 decoration-2' : 'text-gray-200'
                 }`}
@@ -114,7 +112,7 @@ const Header: React.FC = () => {
           )}
         </div>
 
-        {/* 🔴 모바일 햄버거 버튼 */}
+        {/* 모바일 햄버거 버튼 */}
         <button onClick={toggleMenu} className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5">
           <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'w-8 rotate-45 translate-y-2' : 'w-8'}`}></span>
           <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'w-8'}`}></span>
@@ -122,7 +120,7 @@ const Header: React.FC = () => {
         </button>
       </div>
 
-      {/* 🔴 모바일 사이드바 (본문 스크롤 연동 버전) */}
+      {/* 모바일 사이드바 (본문 스크롤 연동 버전) */}
       <div className={`fixed inset-0 z-[105] xl:hidden transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}>
         {/* 배경 딤드 (본문 보임 & 스크롤 가능) */}
         <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu}></div>
@@ -148,6 +146,7 @@ const Header: React.FC = () => {
             <Link to="/nhatrang" className="text-sm font-black text-emerald-500 italic uppercase">나트랑놀자</Link>
           </div>
 
+          {/* 하단 로그인/회원가입 구역 (클릭 가능하도록 수정) */}
           <div className="mt-auto">
             {currentUser ? (
               <div className="space-y-4">
