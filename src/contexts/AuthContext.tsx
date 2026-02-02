@@ -1,25 +1,35 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../supabase';
+
+const AuthContext = createContext<any>(null);
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [initialized, setInitialized] = useState(false); // 🔴 앱 시작 준비 완료 여부
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // 1. 초기 세션 로드 (딱 한 번)
-    const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        setCurrentUser(data);
+    const initialize = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles').select('*').eq('id', session.user.id).single();
+          setCurrentUser(profile);
+        }
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+      } finally {
+        setInitialized(true);
       }
-      setInitialized(true); // 🔴 세션 확인이 끝나야만 앱을 염
     };
 
-    initSession();
+    initialize();
 
-    // 2. 실시간 상태 변경 리스너
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        setCurrentUser(data);
+        const { data: profile } = await supabase
+          .from('profiles').select('*').eq('id', session.user.id).single();
+        setCurrentUser(profile);
       } else {
         setCurrentUser(null);
       }
@@ -29,12 +39,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  // 🔴 준비가 안 됐으면 아무것도 렌더링하지 않음 (이게 근본 가드입니다)
-  if (!initialized) return null; 
+  // 초기 로딩 중에는 하위 컴포넌트(App의 Routes 등)를 렌더링하지 않음
+  if (!initialized) return null;
 
   return (
     <AuthContext.Provider value={{ currentUser, initialized }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+// 🔴 이 부분이 빠져서 모든 페이지에서 에러가 났던 것입니다.
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 };
