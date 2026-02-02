@@ -17,14 +17,14 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🔴 [수정] HOT 업장 리스트: 'villa'를 제외한 카테고리 중 HOT인 업소 상위 5개
+  // 🔴 [HOT 업장] 'villa'를 제외한 HOT 업소 상위 5개
   const hotServiceStores = useMemo(() => {
     return stores
       .filter((s: any) => s.is_hot && s.category !== 'villa')
       .slice(0, 5);
   }, [stores]);
 
-  // 🔴 [수정] PREMIUM STAYS: 'villa' 카테고리 중 HOT인 숙소 상위 2개 (가로 배치용)
+  // 🔴 [PREMIUM STAYS] 'villa' 중 HOT 숙소 상위 2개
   const premiumHotStays = useMemo(() => {
     return stores
       .filter((s: any) => s.category === 'villa' && s.is_hot)
@@ -69,7 +69,7 @@ const Home: React.FC = () => {
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
-      {/* 레벨 제한 모달 (기존 동일) */}
+      {/* 레벨 제한 모달 */}
       {showLevelModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
@@ -81,12 +81,24 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [섹션 1] Hero 섹션 (기존 동일) */}
+      {/* [섹션 1] Hero 섹션 - 🔴 텍스트 최적화 및 초록색 문구 복구 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">호치민에서 <span className="text-red-600">놀자!</span></h2>
-        <div className="space-y-4 mb-16 z-10 px-4 font-sans">
-          <p className="text-2xl md:text-4xl font-black tracking-tight uppercase">남성들을 위한 호치민의 모든 것</p>
-          <p className="text-blue-500 font-black text-lg md:text-2xl italic">실시간 정보 + 검증된 업장 + <br className="md:hidden" /> 그 이상의 즐거움(α)</p>
+        
+        <div className="space-y-4 mb-16 z-10 px-4 font-sans flex flex-col items-center">
+          {/* 🔴 모바일에서 텍스트가 잘리지 않도록 크기(text-[17px])와 한 줄 유지(whitespace-nowrap) 적용 */}
+          <p className="text-[17px] sm:text-2xl md:text-4xl font-black tracking-tight uppercase whitespace-nowrap leading-tight">
+            남성들을 위한 호치민의 모든 것
+          </p>
+          
+          <p className="text-blue-500 font-black text-lg md:text-2xl italic leading-snug">
+            실시간 정보 + 검증된 업장 + <br className="md:hidden" /> 그 이상의 즐거움(α)
+          </p>
+
+          {/* 🔴 초록색(emerald) 예약 문구 복구 */}
+          <p className="text-emerald-400 font-bold text-sm md:text-lg opacity-90 mt-2 italic">
+            풀빌라 · 아파트 예약까지 한번에!
+          </p>
         </div>
 
         <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2 font-sans">
@@ -99,7 +111,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 2] HOT 인기 업소 - 🔴 숙소 제외 일반 업장 5개 */}
+      {/* [섹션 2] HOT 인기 업소 - 🔴 빌라 제외 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20">
         <div className="flex items-center justify-between mb-12 font-sans">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -113,7 +125,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 3] SNS & 커뮤니티 섹션 (기존 동일) */}
+      {/* [섹션 3] SNS & 커뮤니티 (기존 동일) */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center">
@@ -160,7 +172,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS - 🔴 HOT 숙소 무작위 2개 (가로 2열 배치) */}
+      {/* [섹션 4] PREMIUM STAYS - 🔴 HOT 숙소 2개 가로 배치 */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -171,7 +183,6 @@ const Home: React.FC = () => {
             <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-600/20 hover:bg-red-500 transition-all">예약문의</Link>
           </div>
           
-          {/* 🔴 가로로 넓게 채우기 위해 grid-cols-2 적용 및 간격 확대 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
             {storesLoading ? [1, 2].map(i => <div key={i} className="aspect-video bg-white/5 rounded-[2rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
