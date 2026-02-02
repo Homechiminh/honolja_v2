@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 가드 훅 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
