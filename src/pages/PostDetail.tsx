@@ -66,19 +66,19 @@ const PostDetail: React.FC = () => {
     }
   };
 
-  // 🔴 댓글 삭제 함수 추가
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm("정말로 이 댓글을 삭제하시겠습니까?")) return;
     try {
       const { error } = await supabase.from('comments').delete().eq('id', commentId);
       if (error) throw error;
       alert('댓글이 삭제되었습니다.');
-      fetchPostData(); // 목록 갱신
+      fetchPostData(); 
     } catch (err: any) {
       alert(`삭제 실패: ${err.message}`);
     }
   };
 
+  // 포인트 지급 판독기 (UI에는 안보이지만 내부 로직은 유지)
   const checkPointEligibility = async (contentStr: string) => {
     if (!currentUser || !post) return false;
     if (currentUser.id === post.author_id) return false;
@@ -111,7 +111,6 @@ const PostDetail: React.FC = () => {
       setNewComment('');
       setReplyToId(null);
       fetchPostData(); 
-      if (isEligible) alert('댓글 등록 완료! 포인트가 지급되었습니다.');
     } catch (err: any) {
       alert(`댓글 등록 실패: ${err.message}`);
     } finally {
@@ -126,15 +125,15 @@ const PostDetail: React.FC = () => {
 
   if (!initialized || loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse uppercase">Accessing Intelligence...</div>
+      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">Accessing Intelligence...</div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
         
-        {/* 게시글 상단 영역 생략 (동일) */}
+        {/* 게시글 영역 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-600/20">#{post.category.toUpperCase()}</span>
@@ -163,7 +162,7 @@ const PostDetail: React.FC = () => {
           </article>
         </div>
 
-        {/* 댓글 섹션 */}
+        {/* 댓글 영역 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
             <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> 
@@ -186,7 +185,6 @@ const PostDetail: React.FC = () => {
                         <span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span>
                         <button onClick={() => setReplyToId(comm.id)} className="text-[10px] font-black text-red-600 uppercase hover:underline">Reply</button>
                         
-                        {/* 🔴 삭제 버튼 추가: 본인이거나 관리자일 때만 노출 */}
                         {(currentUser?.id === comm.author_id || currentUser?.role === 'ADMIN') && (
                           <button onClick={() => handleDeleteComment(comm.id)} className="text-[10px] font-black text-gray-600 uppercase hover:text-red-600 transition-colors">Delete</button>
                         )}
@@ -196,7 +194,6 @@ const PostDetail: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 대댓글 영역 */}
                 <div className="ml-16 space-y-8 border-l-2 border-white/5 pl-8">
                   {comm.replies.map((reply: any) => (
                     <div key={reply.id} className="flex gap-4 items-start group">
@@ -210,8 +207,6 @@ const PostDetail: React.FC = () => {
                           </span>
                           <div className="flex items-center gap-3">
                             <span className="text-[8px] text-gray-700 font-bold italic">{new Date(reply.created_at).toLocaleString()}</span>
-                            
-                            {/* 🔴 대댓글 삭제 버튼 추가 */}
                             {(currentUser?.id === reply.author_id || currentUser?.role === 'ADMIN') && (
                               <button onClick={() => handleDeleteComment(reply.id)} className="text-[8px] font-black text-gray-700 uppercase hover:text-red-600 transition-colors">Delete</button>
                             )}
@@ -221,13 +216,13 @@ const PostDetail: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                  {/* 대댓글 입력창 생략 (기존 동일) */}
+
                   {replyToId === comm.id && (
                     <div className="mt-4 animate-in slide-in-from-top-2">
                       <textarea 
                         value={newComment} 
                         onChange={(e) => setNewComment(e.target.value)} 
-                        placeholder="답글을 남겨주세요 (10자 이상 포인트 지급)" 
+                        placeholder="답글을 남겨주세요." 
                         className="w-full bg-black border border-red-600/30 rounded-2xl px-5 py-4 text-white text-sm outline-none focus:border-red-600 transition-all resize-none italic font-bold"
                       />
                       <div className="flex justify-end gap-2 mt-2">
@@ -241,13 +236,13 @@ const PostDetail: React.FC = () => {
             ))}
           </div>
 
-          {/* 일반 댓글 입력창 생략 (기존 동일) */}
+          {/* 🔴 문구 수정: 포인트 적립 안내 삭제 및 버튼 텍스트 변경 */}
           {!replyToId && (
             <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-12">
               <textarea 
                 value={newComment} 
                 onChange={(e) => setNewComment(e.target.value)} 
-                placeholder={currentUser ? "댓글 작성 시 5P 적립 (자신 글 제외/10자 이상/일 5회)" : "로그인이 필요한 구역입니다."} 
+                placeholder={currentUser ? "댓글을 남겨보세요." : "로그인이 필요한 구역입니다."} 
                 disabled={!currentUser} 
                 className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-red-600 min-h-[160px] transition-all resize-none italic font-bold" 
               />
@@ -256,7 +251,7 @@ const PostDetail: React.FC = () => {
                 disabled={commenting || !currentUser} 
                 className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20 active:scale-95 italic"
               >
-                {commenting ? '전송중...' : '등록 +5P'}
+                {commenting ? '전송중...' : '등록'}
               </button>
             </form>
           )}
