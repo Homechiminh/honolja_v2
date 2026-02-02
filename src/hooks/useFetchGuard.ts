@@ -1,48 +1,33 @@
-// 🔴 1. 리액트 기본 도구들을 가져옵니다. (useEffect, useRef 누락 해결)
 import { useEffect, useRef } from 'react';
-// 🔴 2. 우리가 만든 인증 도구를 가져옵니다. (useAuth 누락 해결)
 import { useAuth } from '../contexts/AuthContext';
 
 export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
-  const { loading: authLoading, currentUser } = useAuth();
+  const { loading: authLoading } = useAuth();
   const retryCount = useRef(0);
 
   useEffect(() => {
-    // 인증 확인 중이면 대기
+    // 🔴 근본 해결 2: 인증 로딩 중에는 아예 데이터를 부르지 않음
     if (authLoading) return;
 
-    let isMounted = true;
-
-    const executeWithRetry = async () => {
+    const safeFetch = async () => {
       try {
-        // 브라우저 세션 안착을 위한 미세 딜레이 (300ms)
-        await new Promise(res => setTimeout(res, 300));
-        
-        if (!isMounted) return;
+        // 0.2초의 아주 미세한 여유 (브라우저 쿠키 안착 시간)
+        await new Promise(res => setTimeout(res, 200));
         await fetchFn();
-        
-        retryCount.current = 0; // 성공 시 횟수 초기화
+        retryCount.current = 0; // 성공 시 카운트 리셋
       } catch (err: any) {
-        if (!isMounted) return;
-
-        // 406 또는 세션 불일치 에러 시 딱 한 번 자동 재시도
-        const isAuthError = err.status === 406 || err.code === 'PGRST106';
-        
-        if (isAuthError && retryCount.current < 1) {
+        // 🔴 근본 해결 3: 406 에러 발생 시 여기서 중앙 집중적으로 재시도
+        if (err.status === 406 && retryCount.current < 1) {
           retryCount.current++;
-          console.warn("🔄 Auth Sync Issue Detected. Auto retrying...");
-          setTimeout(executeWithRetry, 800);
+          console.warn("🔄 Auth delay detected. Central system retrying...");
+          setTimeout(safeFetch, 600); // 0.6초 뒤 재시도
         } else {
-          console.error("❌ Fetch failed after retry strategy:", err);
+          // 재시도까지 실패하거나 다른 에러일 경우에만 콘솔 출력
+          console.error("Critical Fetch Error:", err);
         }
       }
     };
 
-    executeWithRetry();
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, currentUser?.id, ...deps]); 
+    safeFetch();
+  }, [authLoading, ...deps]);
 };
