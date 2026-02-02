@@ -54,7 +54,6 @@ const Signup: React.FC = () => {
     } catch (err: any) {
       alert(err.message);
     } finally {
-      // 🔴 무한 뺑뺑이 방지 핵심
       setIsLoading(false);
     }
   };
@@ -87,7 +86,6 @@ const Signup: React.FC = () => {
               disabled={isLoading}
               className="w-full flex items-center justify-center space-x-4 bg-white text-black py-5 rounded-2xl font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50"
             >
-              {/* 🔴 SVG 오타 수정됨 */}
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -113,8 +111,8 @@ const Signup: React.FC = () => {
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                 <div className="space-y-4">
-                  <input type="text" placeholder="Nickname" value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} className={inputStyle} required />
-                  <input type="email" placeholder="Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputStyle} required />
+                  <input id="signup-nickname" name="nickname" type="text" placeholder="Nickname" value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} className={inputStyle} required />
+                  <input id="signup-email" name="email" type="email" placeholder="Email" autoComplete="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputStyle} required />
                 </div>
                 <button 
                   type="button" 
@@ -128,7 +126,7 @@ const Signup: React.FC = () => {
 
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                <input type="password" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className={inputStyle} required minLength={6} />
+                <input id="signup-password" name="password" type="password" placeholder="Password" autoComplete="new-password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className={inputStyle} required minLength={6} />
                 <div className="flex space-x-4">
                   <button type="button" onClick={() => setStep(1)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
                   <button 
