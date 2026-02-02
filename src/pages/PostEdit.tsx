@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 신규 가드 훅 임포트
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 import type { Store } from '../types';
 
 const PostEdit: React.FC = () => {
@@ -25,36 +25,40 @@ const PostEdit: React.FC = () => {
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-  // 데이터 호출 및 권한 검증 로직
+  /**
+   * 🔴 [방탄 fetch] 데이터 호출 및 권한 검증 로직
+   * 어떤 네트워크 에러(406 등)가 발생해도 finally에서 로딩을 해제합니다.
+   */
   const fetchInitialData = async () => {
     if (!id) return;
     setLoading(true);
     try {
-      // 1. 업소 리스트 로드
-      const { data: storeData } = await supabase.from('stores').select('*').order('name');
+      // 1. 업소 리스트 로드 (후기용)
+      const { data: storeData, error: storeError } = await supabase.from('stores').select('*').order('name');
+      if (storeError) throw storeError;
       if (storeData) setStores(storeData as Store[]);
 
       // 2. 기존 게시글 데이터 로드
-      const { data: post, error } = await supabase
+      const { data: post, error: postError } = await supabase
         .from('posts')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error || !post) {
-        alert('게시글을 찾을 수 없습니다.');
+      if (postError || !post) {
+        alert('게시글을 찾을 수 없거나 삭제되었습니다.');
         navigate('/community');
         return;
       }
 
-      // 🔴 권한 체크: 인증이 완료된 확실한 유저 정보와 대조합니다.
+      // 3. 권한 체크: 작성자 본인이거나 관리자인지 확인
       if (post.author_id !== currentUser?.id && currentUser?.role !== 'ADMIN') {
         alert('수정 권한이 없습니다.');
         navigate('/community');
         return;
       }
 
-      // 데이터 매핑
+      // 4. 데이터 매핑
       setCategory(post.category);
       setSubCategory(post.sub_category || '시크릿 꿀정보');
       setTitle(post.title);
@@ -62,15 +66,17 @@ const PostEdit: React.FC = () => {
       setSelectedStoreId(post.store_id || '');
       setImageUrls(post.image_urls || []);
 
-    } catch (err) {
-      console.error('Initial data fetch error:', err);
+    } catch (err: any) {
+      console.error('Post Data Sync Error (406 등):', err.message);
+      // 에러가 심각할 경우 리스트로 튕겨줌
+      // navigate('/community'); 
     } finally {
+      // 🔴 핵심: 성공/실패/권한부족 등 어떤 상황에서도 스피너 정지
       setLoading(false);
     }
   };
 
-  // 🔴 [데이터 가드 적용] 
-  // 기존의 복잡한 useEffect 대신 이 한 줄이 인증 대기 및 데이터 호출을 처리합니다.
+  // 🔴 [데이터 가드 적용] 인증 완료 후 데이터 호출 트리거
   useFetchGuard(fetchInitialData, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,13 +112,13 @@ const PostEdit: React.FC = () => {
     }
   };
 
-  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700";
+  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700 font-medium";
 
   // 🔴 전체 로딩 처리 (인증 확인 포함)
   if (authLoading || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
-        Decrypting Post Data...
+      <div className="text-white font-black italic animate-pulse tracking-widest uppercase text-xl">
+        Decrypting Post Intelligence...
       </div>
     </div>
   );
@@ -120,11 +126,11 @@ const PostEdit: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
-        <h2 className="text-4xl font-black text-white italic mb-10 uppercase tracking-tighter">
+        <h2 className="text-4xl font-black text-white italic mb-10 uppercase tracking-tighter leading-none">
           Edit <span className="text-red-600">Post</span>
         </h2>
         
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-700">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category</label>
@@ -159,7 +165,7 @@ const PostEdit: React.FC = () => {
                   required 
                   value={selectedStoreId} 
                   onChange={(e) => setSelectedStoreId(e.target.value)} 
-                  className={`${inputStyle} border-emerald-500/30 text-emerald-500`}
+                  className={`${inputStyle} border-emerald-500/30 text-emerald-500 font-bold`}
                 >
                   <option value="">업소를 선택하세요</option>
                   {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -173,20 +179,20 @@ const PostEdit: React.FC = () => {
               value={title} 
               onChange={(e) => setTitle(e.target.value)} 
               placeholder="제목을 입력하세요" 
-              className={`${inputStyle} font-bold text-xl`} 
+              className={`${inputStyle} font-black text-xl italic`} 
             />
             <textarea 
               value={content} 
               onChange={(e) => setContent(e.target.value)} 
               rows={12} 
               placeholder="내용을 입력하세요..."
-              className={`${inputStyle} resize-none h-80 leading-relaxed`} 
+              className={`${inputStyle} resize-none h-80 leading-relaxed font-medium italic`} 
             />
           </div>
 
           {imageUrls.length > 0 && (
             <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
-              <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 italic tracking-widest">Attached Images</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 italic tracking-widest">Attached Intelligence (Images)</label>
               <div className="flex flex-wrap gap-4">
                 {imageUrls.map((url, i) => (
                   <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
@@ -194,9 +200,9 @@ const PostEdit: React.FC = () => {
                     <button 
                       type="button" 
                       onClick={() => setImageUrls(imageUrls.filter(u => u !== url))}
-                      className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px] italic"
+                      className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px] italic"
                     >
-                      DELETE
+                      REMOVE
                     </button>
                   </div>
                 ))}
@@ -215,9 +221,9 @@ const PostEdit: React.FC = () => {
             <button 
               type="submit" 
               disabled={updating} 
-              className="flex-[2] py-6 bg-red-600 text-white font-black text-xl rounded-2xl uppercase shadow-2xl shadow-red-900/20 hover:bg-red-500 transition-all active:scale-95 italic"
+              className="flex-[2] py-6 bg-red-600 text-white font-black text-xl rounded-2xl uppercase shadow-2xl shadow-red-900/40 hover:bg-red-500 transition-all active:scale-95 italic"
             >
-              {updating ? 'Updating...' : 'Update Post'}
+              {updating ? 'Updating...' : 'Update Records'}
             </button>
           </div>
         </form>
