@@ -7,7 +7,7 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const CreatePost: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, loading: authLoading, refreshUser } = useAuth();
+  const { currentUser, initialized } = useAuth();
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState<Store[]>([]); 
 
@@ -54,8 +54,8 @@ const CreatePost: React.FC = () => {
     if (!title.trim() || !content.trim()) return alert('제목과 내용을 입력해주세요.');
     
     if (isReviewAction) {
-      if (content.length < 50) return alert('🚨 업소 후기는 최소 50자 이상 작성해야 등록이 가능합니다.');
-      if (!selectedStoreId) return alert('🚨 후기를 작성할 업소를 선택해 주세요.');
+      if (content.length < 50) return alert('🚨 업소 후기 최소 50자 이상 필수!');
+      if (!selectedStoreId) return alert('🚨 대상 업소를 선택해주세요.');
     }
 
     setLoading(true);
@@ -99,28 +99,26 @@ const CreatePost: React.FC = () => {
         if (newLevel > profile.level) await supabase.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
       }
 
-      // 🔴 이제 refreshUser가 존재하므로 안전하게 실행됩니다.
-      if (refreshUser) {
-        await refreshUser(); 
-      }
-      
       alert(`등록 완료! ${totalEarned}P가 적립되었습니다.`);
-      navigate(category === 'vip' ? '/vip-lounge' : '/community');
+
+      // 🔴 핵심: navigate 대신 window.location.href를 써서 최신 정보를 강제 로드합니다.
+      const targetPath = category === 'vip' ? '/vip-lounge' : '/community';
+      window.location.href = targetPath; 
 
     } catch (err: any) { 
       alert(`등록 실패: ${err.message}`); 
-    } finally { 
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
-  if (authLoading) return null;
+  if (!initialized) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <h2 className="text-3xl font-black text-white italic mb-10 uppercase tracking-tighter">Create <span className="text-red-600">Post</span></h2>
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* ... 상단 입력 필드들 기존 코드 동일 ... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category</label>
@@ -134,7 +132,7 @@ const CreatePost: React.FC = () => {
               </select>
             </div>
             {category === 'vip' && (
-              <div className="space-y-2"><label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">VIP Sub-Category</label><select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="w-full bg-[#111] border border-yellow-500/30 rounded-2xl px-6 py-4 text-yellow-500 outline-none"><option value="시크릿 꿀정보">시크릿 꿀정보</option><option value="업소후기">업소후기 (VIP 전용 + 10P 보너스)</option><option value="실시간 현황">실시간 현황</option><option value="블랙리스트">블랙리스트</option></select></div>
+              <div className="space-y-2"><label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">Sub-Category</label><select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="w-full bg-[#111] border border-yellow-500/30 rounded-2xl px-6 py-4 text-yellow-500 outline-none"><option value="시크릿 꿀정보">시크릿 꿀정보</option><option value="업소후기">업소후기 (VIP 전용 + 10P 보너스)</option><option value="실시간 현황">실시간 현황</option><option value="블랙리스트">블랙리스트</option></select></div>
             )}
             {isReviewAction && (
               <div className="space-y-2"><label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2 italic">Target Store</label><select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className="w-full bg-[#111] border border-red-500/30 rounded-2xl px-6 py-4 text-white outline-none"><option value="">업소를 선택하세요 (필수)</option>{stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
@@ -144,7 +142,7 @@ const CreatePost: React.FC = () => {
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white md:col-span-2 font-bold" />
             <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="외부 링크 (선택)" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white" />
           </div>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요 (업소 후기는 50자 이상 필수)" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white h-80 leading-relaxed resize-none" />
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요..." className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white h-80 leading-relaxed resize-none" />
           
           <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
             <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">Photo Attachment (Optional: +10P Bonus)</label>
