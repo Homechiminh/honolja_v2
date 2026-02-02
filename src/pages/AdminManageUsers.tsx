@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // 🔴 useEffect 추가
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { LEVEL_NAMES, UserRole } from '../types'; 
@@ -9,8 +9,8 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 const AdminManageUsers: React.FC = () => {
   const navigate = useNavigate();
   
-  // 1. 전역 인증 상태 구독
-  const { currentUser, loading: authLoading } = useAuth();
+  // 1. 전역 인증 상태 구독 (initialized 추가)
+  const { currentUser, initialized } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,48 +18,38 @@ const AdminManageUsers: React.FC = () => {
 
   /**
    * 🔴 [방탄 fetch] 유저 데이터베이스 동기화
-   * 어떤 네트워크 에러(406 등)가 발생해도 finally 블록이 로딩 스피너를 해제합니다.
    */
   const fetchUsers = async () => {
-    setLoading(true); // 로딩 시작
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) {
-        // 🔴 서버 거절 또는 권한 에러 발생 시 catch로 던짐
-        throw error;
-      }
-
-      if (data) {
-        setUsers(data as User[]);
-      }
+      if (error) throw error;
+      if (data) setUsers(data as User[]);
     } catch (err: any) {
-      console.error('User Archive Sync Failed (406 등):', err.message);
-      // 에러 발생 시 리스트 초기화로 ghost 데이터 방지
+      console.error('User Archive Sync Failed:', err.message);
       setUsers([]);
     } finally {
-      // 🔴 핵심: 성공하든 실패하든 무조건 로딩 상태 해제
       setLoading(false);
     }
   };
 
-  /**
-   * 🔴 [데이터 가드 적용] 
-   * 관리자 인증 정보가 확정된 후 최적의 타이밍에 유저 데이터를 호출합니다.
-   */
   useFetchGuard(fetchUsers, []);
 
-  // 2. 관리자 권한 최종 보안 가드
-  if (!authLoading && currentUser?.role !== UserRole.ADMIN) {
-    navigate('/', { replace: true });
-    return null;
-  }
+  // 2. 관리자 권한 최종 보안 가드 (새로고침 튕김 방지 핵심)
+  useEffect(() => {
+    if (initialized) {
+      if (!currentUser || currentUser.role !== UserRole.ADMIN) {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [initialized, currentUser, navigate]);
 
   /**
-   * 🔴 액션 함수들도 방탄 구조 적용 (성공 시 fetchUsers 재호출)
+   * 🔴 포인트 업데이트 함수
    */
   const handleUpdatePoints = async (userId: string, currentPoints: number, amount: number) => {
     if (isNaN(amount) || amount === 0) return;
@@ -72,39 +62,46 @@ const AdminManageUsers: React.FC = () => {
       if (error) throw error;
       
       setInputAmounts({ ...inputAmounts, [userId]: '' });
-      await fetchUsers(); // 데이터 즉시 갱신
+      await fetchUsers(); 
     } catch (err) {
-      alert('포인트 업데이트 실패');
+      alert('포인트 업데이트에 실패했습니다.');
     }
   };
 
+  /**
+   * 🔴 등급 변경 함수
+   */
   const updateLevel = async (userId: string, newLevel: number) => {
     try {
       const { error } = await supabase.from('profiles').update({ level: newLevel }).eq('id', userId);
       if (error) throw error;
       await fetchUsers();
     } catch (err) {
-      alert('등급 변경 실패');
+      alert('등급 변경에 실패했습니다.');
     }
   };
 
+  /**
+   * 🔴 유저 차단 토글
+   */
   const toggleBlock = async (userId: string, currentStatus: boolean) => {
-    if (!confirm('유저 상태를 변경하시겠습니까?')) return;
+    const actionText = currentStatus ? '차단 해제' : '계정 차단';
+    if (!confirm(`이 유저를 ${actionText} 하시겠습니까?`)) return;
     try {
       const { error } = await supabase.from('profiles').update({ is_blocked: !currentStatus }).eq('id', userId);
       if (error) throw error;
       await fetchUsers();
     } catch (err) {
-      alert('상태 변경 실패');
+      alert('상태 변경에 실패했습니다.');
     }
   };
 
-  // 🔴 전체 로딩 가드 (인증 대기 + 초기 데이터 대기)
-  if (authLoading || (loading && users.length === 0)) {
+  // 🔴 세션 확인 및 초기 로딩 가드
+  if (!initialized || (loading && users.length === 0)) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-emerald-500 font-black italic animate-pulse tracking-widest uppercase text-xl">
-          Accessing User Database...
+          회원 데이터베이스 분석 중...
         </div>
       </div>
     );
@@ -115,10 +112,10 @@ const AdminManageUsers: React.FC = () => {
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
         <header className="mb-12">
           <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">
-            User <span className="text-emerald-500">Management</span>
+            회원 <span className="text-emerald-500">관리 센터</span>
           </h2>
           <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-4 ml-1 italic">
-            여행자 {'>'} 방랑자 {'>'} 베테랑 {'>'} VIP 시스템 관제 및 정밀 분석
+            전체 유저 권한 제어 및 등급/포인트 정밀 조정 시스템
           </p>
         </header>
 
@@ -126,10 +123,10 @@ const AdminManageUsers: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500 italic tracking-widest">
-                <th className="p-6">유저 정보</th>
-                <th className="p-6 text-center">등급 설정</th>
-                <th className="p-6">포인트 (정밀 & 직접입력)</th>
-                <th className="p-6 text-right">계정 상태</th>
+                <th className="p-6">회원 정보</th>
+                <th className="p-6 text-center">등급 변경</th>
+                <th className="p-6">포인트 제어</th>
+                <th className="p-6 text-right">상태 제어</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -168,7 +165,7 @@ const AdminManageUsers: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <input type="number" placeholder="금액" value={inputAmounts[user.id] || ''} onChange={(e) => setInputAmounts({...inputAmounts, [user.id]: e.target.value})} className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] w-20 outline-none placeholder:text-gray-800 font-bold shadow-inner" />
+                        <input type="number" placeholder="금액" value={inputAmounts[user.id] || ''} onChange={(e) => setInputAmounts({...inputAmounts, [user.id]: e.target.value})} className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] w-20 outline-none placeholder:text-gray-800 font-bold shadow-inner text-white" />
                         <button onClick={() => handleUpdatePoints(user.id, user.points, parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-emerald-600 text-[10px] font-black rounded-lg uppercase italic hover:bg-emerald-500 transition-colors shadow-lg">지급</button>
                         <button onClick={() => handleUpdatePoints(user.id, user.points, -parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-red-600 text-[10px] font-black rounded-lg uppercase italic hover:bg-red-500 transition-colors shadow-lg">차감</button>
                       </div>
@@ -176,7 +173,7 @@ const AdminManageUsers: React.FC = () => {
                   </td>
                   <td className="p-6 text-right">
                     <button onClick={() => toggleBlock(user.id, user.is_blocked)} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${user.is_blocked ? 'bg-white text-black shadow-xl scale-105' : 'bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white'}`}>
-                      {user.is_blocked ? 'Unblock Account' : 'Block Access'}
+                      {user.is_blocked ? '차단 해제' : '접속 차단'}
                     </button>
                   </td>
                 </tr>
@@ -185,7 +182,7 @@ const AdminManageUsers: React.FC = () => {
           </table>
           {users.length === 0 && !loading && (
             <div className="py-32 text-center">
-              <p className="text-gray-700 font-black italic uppercase tracking-widest">No User Profiles Identified in Sector.</p>
+              <p className="text-gray-700 font-black italic uppercase tracking-widest">등록된 회원 정보가 없습니다.</p>
             </div>
           )}
         </div>
