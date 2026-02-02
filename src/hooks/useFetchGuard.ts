@@ -6,7 +6,7 @@ export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
   const lastFetchedUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    // 1. 시스템 자체가 초기화되지 않았다면 대기
+
     if (!initialized) return;
 
     const execute = async () => {
