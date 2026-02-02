@@ -8,6 +8,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    // 🔴 [근본 해결: 긴급 탈출구] 
+    // Supabase가 너무 늦으면 3초 뒤에 강제로 앱을 엽니다. (검은 화면 방지)
+    const failSafe = setTimeout(() => {
+      if (!initialized) {
+        console.warn("⚠️ Auth Timeout: Forcing app start after 3s delay.");
+        setInitialized(true);
+      }
+    }, 3000);
+
     const initialize = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -20,13 +29,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Auth Init Error:", err);
       } finally {
         setInitialized(true);
+        clearTimeout(failSafe);
       }
     };
 
     initialize();
 
-    // 🔴 'event' 앞에 '_'를 붙여 '_event'로 수정합니다. 
-    // TypeScript에게 "이 변수는 문법상 필요해서 뒀지만 사용하지는 않을 거야"라고 알려주는 관례입니다.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const { data: profile } = await supabase
@@ -36,13 +44,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(null);
       }
       setInitialized(true);
+      clearTimeout(failSafe);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(failSafe);
+    };
   }, []);
 
-  // 🛡️ 근본 해결: initialized가 true가 될 때까지 앱의 렌더링을 막습니다.
-  // 이 가드가 있어야 Supabase가 세션을 다 읽어오기 전에 페이지가 멋대로 데이터를 요청(406 에러)하는 걸 막습니다.
+  // 🔴 이 가드가 검은 화면의 원인이었지만, 
+  // 위에서 3초 타임아웃을 걸었으므로 이제 무한 로딩은 없습니다.
   if (!initialized) return null;
 
   return (
