@@ -7,52 +7,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshUser = async () => {
+  // 세션 정보로 프로필을 가져오는 공통 함수
+  const fetchProfile = async (userId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        setCurrentUser(profile);
-      } else {
-        setCurrentUser(null);
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (!error && data) return data;
     } catch (err) {
-      console.error("Session Sync Error:", err);
-      setCurrentUser(null);
-    } finally {
-      setLoading(false);
+      return null;
     }
+    return null;
   };
 
   useEffect(() => {
-    // 🔴 타임아웃 시간을 5초로 확장
+    // 🔴 1. 타임아웃을 10초로 대폭 늘립니다. (스크린샷의 타임아웃 방지)
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.warn("⚠️ Auth initial check timed out (5s). Forcing UI...");
+        console.warn("⚠️ Auth Engine: Critical slow response. Releasing UI at 10s.");
         setLoading(false);
       }
-    }, 5000);
+    }, 10000);
 
-    // 초기 세션 확인
-    refreshUser();
+    const initializeAuth = async () => {
+      try {
+        // 초기 세션 즉시 확인
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          setCurrentUser(profile);
+        }
+      } catch (err) {
+        console.error("Initial Auth Error:", err);
+      } finally {
+        // 🔴 여기서 바로 로딩을 끄지 않고, 이벤트를 기다립니다.
+      }
+    };
 
-    // 인증 상태 변경 감지 리스너
+    initializeAuth();
+
+    // 🔴 2. 상태 변경 감지 강화 (엇박자 해결 핵심)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event);
+      console.log(`📡 Auth System Event: ${event}`);
+      
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        const profile = await fetchProfile(session.user.id);
         setCurrentUser(profile);
       } else {
         setCurrentUser(null);
       }
+      
+      // 🔴 INITIAL_SESSION이나 SIGNED_IN이 오면 확실히 로딩 해제
       setLoading(false);
       clearTimeout(timeoutId);
     });
@@ -64,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, loading, refreshUser }}>
+    <AuthContext.Provider value={{ currentUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
