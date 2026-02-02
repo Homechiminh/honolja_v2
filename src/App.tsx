@@ -66,7 +66,6 @@ const LevelRoute = ({ minLevel }: { minLevel: number }) => {
 };
 
 function App() {
-  // 🔴 더 이상 앱 최상단에서 loading을 조건으로 'return'하지 않습니다.
   // 이로써 유저는 접속 즉시 서비스의 골격(Header, Footer)을 보게 됩니다.
 
   return (
