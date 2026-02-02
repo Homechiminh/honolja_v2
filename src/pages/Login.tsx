@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // 🔴 useNavigate 삭제
+import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
 import { useAuth } from '../contexts/AuthContext'; 
 
 const Login: React.FC = () => {
-  // const navigate = useNavigate(); 🔴 이 줄을 통째로 삭제하세요.
   const { currentUser, initialized } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // 이미 로그인된 유저가 접근 시 홈으로 강제 리프레시 이동
   useEffect(() => {
     if (initialized && currentUser) {
       window.location.href = '/';
@@ -19,6 +19,7 @@ const Login: React.FC = () => {
   }, [currentUser, initialized]);
 
   const handleGoogleLogin = async () => {
+    if (isLoading) return;
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -45,6 +46,7 @@ const Login: React.FC = () => {
 
       if (data.user) {
         console.log("✅ 로그인 성공! 홈으로 강제 이동합니다.");
+        // 리액트 상태 동기화 문제를 물리적으로 해결하기 위해 새로고침 이동 사용
         window.location.href = '/'; 
       }
       
@@ -55,17 +57,19 @@ const Login: React.FC = () => {
     }
   };
 
+  // 인증 시스템 초기화 전에는 아무것도 렌더링하지 않음 (깜빡임 방지)
   if (!initialized) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans selection:bg-red-600/30">
-      {/* ... (나머지 UI 코드는 이전과 동일) ... */}
+      {/* 배경 장식 레이어 */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[160px]"></div>
       </div>
 
       <div className="max-w-md w-full relative z-10 animate-in fade-in duration-700">
+        {/* 로고 섹션 */}
         <div className="text-center mb-12">
           <Link to="/" className="inline-flex items-center space-x-3 mb-8 group">
             <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
@@ -76,7 +80,9 @@ const Login: React.FC = () => {
           <h2 className="text-white text-2xl font-black italic tracking-tighter uppercase leading-none">Welcome Back !</h2>
         </div>
 
+        {/* 로그인 카드 */}
         <div className="bg-[#111] p-8 md:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
+          {/* 구글 로그인 버튼 */}
           <div className="mb-8">
             <button 
               onClick={handleGoogleLogin}
@@ -93,25 +99,56 @@ const Login: React.FC = () => {
             </button>
           </div>
 
+          {/* 구분선 */}
+          <div className="relative my-10 text-center">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+            <span className="relative bg-[#111] px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest italic">Or login with email</span>
+          </div>
+
+          {/* 이메일 로그인 폼 */}
           <form className="space-y-6" onSubmit={handleFormSubmit}>
             <div className="space-y-4">
-              <input id="login-email" name="email" type="email" placeholder="Email Address" required autoComplete="email"
-                value={email} onChange={e => setEmail(e.target.value)} 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all" 
+              <input 
+                id="login-email" 
+                name="email" 
+                type="email" 
+                placeholder="Email Address" 
+                required 
+                autoComplete="email"
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700" 
               />
-              <input id="login-password" name="password" type="password" placeholder="Password" required autoComplete="current-password"
-                value={password} onChange={e => setPassword(e.target.value)} 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all" 
+              <input 
+                id="login-password" 
+                name="password" 
+                type="password" 
+                placeholder="Password" 
+                required 
+                autoComplete="current-password"
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700" 
               />
             </div>
             
-            <button type="submit" disabled={isLoading} 
-              className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 uppercase"
+            <button 
+              type="submit" 
+              disabled={isLoading} 
+              className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 uppercase shadow-xl shadow-red-900/20"
             >
               {isLoading ? 'VERIFYING...' : `Login to ${BRAND_NAME}`}
             </button>
           </form>
         </div>
+
+        {/* 하단 링크 */}
+        <p className="text-center mt-8 text-slate-500 text-sm font-bold uppercase tracking-widest">
+          아직 회원이 아니신가요? 
+          <Link to="/signup" className="text-red-500 font-black ml-2 hover:text-red-400 transition-colors border-b-2 border-transparent hover:border-red-400 pb-0.5">
+            회원가입하기
+          </Link>
+        </p>
       </div>
     </div>
   );
