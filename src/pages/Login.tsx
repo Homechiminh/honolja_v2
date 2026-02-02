@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useAuth } from '../contexts/AuthContext'; 
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   
-  // 🔴 전역 인증 정보 구독
+  // 1. 전역 인증 정보 구독
   const { currentUser, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🔴 가드 로직: 이미 로그인된 유저는 로그인 페이지를 볼 수 없게 홈으로 리다이렉트
+  /**
+   * 🔴 [보안 가드] 이미 로그인된 유저는 홈으로 리다이렉트
+   * authLoading이 끝난 시점에 currentUser가 있다면 로그인 페이지에 머물 수 없게 합니다.
+   */
   useEffect(() => {
     if (!authLoading && currentUser) {
       navigate('/', { replace: true });
@@ -32,42 +35,58 @@ const Login: React.FC = () => {
         }
       });
       if (error) throw error;
+      // OAuth는 페이지 이동이 일어나므로 보통 여기서 정지하지만, 
+      // 에러 대비를 위해 catch/finally를 구성합니다.
     } catch (err: any) {
+      console.error("Google Auth Error:", err.message);
       alert(err.message);
-      setIsLoading(false);
+      setIsLoading(false); // 구글 창이 안 뜰 경우 로딩 해제
     }
   };
 
-  // 2. 이메일 로그인 로직
+  /**
+   * 🔴 [방탄 Logic] 이메일 로그인
+   * 에러가 발생해도 finally 블록이 버튼의 'Verifying...' 상태를 해제합니다.
+   */
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
     
-    setIsLoading(true);
+    setIsLoading(true); // 로딩 시작
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
       
-      // 로그인 성공 시 중앙 컨텍스트의 상태가 바뀌며 
-      // 위의 useEffect 가드에 의해 자동으로 홈으로 이동하게 됩니다.
+      if (error) {
+        // 🔴 잘못된 비밀번호 등의 에러 발생 시 catch로 던짐
+        throw error;
+      }
+      
+      // 성공 시에는 상단의 useEffect 가드가 감지하여 자동으로 홈으로 이동시킵니다.
     } catch (err: any) {
+      console.error("Login Submission Error:", err.message);
       alert(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호를 확인해주세요.' : err.message);
-      setIsLoading(false); // 에러 시 버튼 로딩 해제
+    } finally {
+      // 🔴 핵심: 성공하든 실패하든 버튼의 무한 로딩 방지
+      setIsLoading(false);
     }
   };
 
-  // 인증 확인 중일 때 깜빡임 방지 (화면 렌더링 생략)
+  /**
+   * 🔴 인증 확인 중일 때 깜빡임 방지
+   * 유저가 로그인 상태인지 확인하는 0.1~0.5초 동안 로그인 폼을 보여주지 않고 null을 반환하여 
+   * '로그인 창이 보였다가 홈으로 튕기는' 현상을 막습니다.
+   */
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans">
-      {/* 배경 장식 */}
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans selection:bg-red-600/30">
+      {/* 배경 장식 - 디자인 유지 */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[160px]"></div>
       </div>
 
-      <div className="max-w-md w-full relative z-10">
+      <div className="max-w-md w-full relative z-10 animate-in fade-in duration-700">
         <div className="text-center mb-12">
           <Link to="/" className="inline-flex items-center space-x-3 mb-8 group">
             <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
