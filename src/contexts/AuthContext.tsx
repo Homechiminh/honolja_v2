@@ -1,54 +1,40 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../supabase';
-
-const AuthContext = createContext<any>(null);
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false); // 🔴 앱 시작 준비 완료 여부
 
   useEffect(() => {
-    // 🔴 근본 해결 1: 세션을 '완벽하게' 동기화하는 비동기 함수
-    const initialize = async () => {
-      try {
-        // 현재 브라우저에 저장된 세션을 즉시 가져옴
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles').select('*').eq('id', session.user.id).single();
-          setCurrentUser(profile);
-        }
-      } catch (err) {
-        console.error("Auth Init Error:", err);
-      } finally {
-        // 모든 확인이 끝난 후에만 로딩을 해제
-        setLoading(false);
+    // 1. 초기 세션 로드 (딱 한 번)
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        setCurrentUser(data);
       }
+      setInitialized(true); // 🔴 세션 확인이 끝나야만 앱을 염
     };
 
-    initialize();
+    initSession();
 
-    // 상태 변경 리스너 (로그인/로그아웃 실시간 대응)
+    // 2. 실시간 상태 변경 리스너
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles').select('*').eq('id', session.user.id).single();
-        setCurrentUser(profile);
+        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        setCurrentUser(data);
       } else {
         setCurrentUser(null);
       }
-      setLoading(false);
+      setInitialized(true);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // 🔴 준비가 안 됐으면 아무것도 렌더링하지 않음 (이게 근본 가드입니다)
+  if (!initialized) return null; 
+
   return (
-    <AuthContext.Provider value={{ currentUser, loading }}>
+    <AuthContext.Provider value={{ currentUser, initialized }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);
