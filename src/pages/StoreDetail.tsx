@@ -1,23 +1,58 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useStoreDetail } from '../hooks/useStoreDetail'; 
-import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { supabase } from '../supabase';
+import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 import { SNS_LINKS } from '../constants';
-import { UserRole } from '../types';
+import { UserRole, Region } from '../types';
+import type { Store } from '../types';
 
-// 🔴 StoreDetailProps 인터페이스 제거 (프롭 의존성 제거)
-
-const StoreDetail: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
+const StoreDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 전역 인증 정보 가져오기 (엔진 교체)
+  // 1. 전역 인증 정보 구독
   const { currentUser, loading: authLoading } = useAuth(); 
 
-  // 2. 실시간 업소 데이터 가져오기
-  const { store, loading: storeLoading } = useStoreDetail(id);
+  // 2. 내부 상태 관리 (useStoreDetail 훅 대신 직접 관리하여 로딩 안정성 확보)
+  const [store, setStore] = useState<Store | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const isAdmin = currentUser?.role === UserRole.ADMIN;
+
+  /**
+   * 🔴 [방탄 fetch] 업소 상세 데이터 로드
+   * 어떤 에러(406 등)가 발생해도 무조건 setLoading(false)를 실행합니다.
+   */
+  const fetchStoreDetail = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        // 🔴 서버 거절 또는 데이터 없음 에러 시 catch로 던짐
+        throw error;
+      }
+
+      if (data) {
+        setStore(data as Store);
+      }
+    } catch (err: any) {
+      console.error("Store Sync Failed (406 등):", err.message);
+      setStore(null);
+    } finally {
+      // 🔴 핵심: 성공하든 실패하든 로딩 스피너 종료
+      setLoading(false);
+    }
+  };
+
+  // 3. [데이터 가드 적용] 인증 확인 후 실행
+  useFetchGuard(fetchStoreDetail, [id]);
 
   const handleDelete = () => {
     if (window.confirm('관리자 권한으로 이 업소를 삭제하시겠습니까?')) {
@@ -25,7 +60,7 @@ const StoreDetail: React.FC = () => { // 🔴 프롭 없이 독립적으로 작�
     }
   };
 
-  // 이미지 스프라이트 설정
+  // 이미지 스프라이트 설정 (디자인 로직 유지)
   const spriteConfig = useMemo(() => {
     if (!store) return { cols: 1, rows: 1, size: 'cover' };
     if (store.image_url?.includes('supabase.co')) {
@@ -53,13 +88,14 @@ const StoreDetail: React.FC = () => { // 🔴 프롭 없이 독립적으로 작�
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
-  // 🔴 전역 인증 로딩 또는 데이터 로딩 중일 때 로딩 바 표시 (동기화 보장)
-  if (authLoading || storeLoading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse tracking-widest uppercase font-black">
-      Syncing Store Intelligence...
+  // 🔴 전역 인증 로딩 또는 데이터 로딩 중일 때 (블랙아웃 방지)
+  if (authLoading || loading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse tracking-widest uppercase font-black">
+      Syncing Intelligence...
     </div>
   );
 
+  // 데이터가 정말 없는 경우
   if (!store) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="text-center">
@@ -111,7 +147,7 @@ const StoreDetail: React.FC = () => { // 🔴 프롭 없이 독립적으로 작�
               <div className="flex items-center justify-center md:justify-start space-x-6 text-white font-black italic">
                  <div className="flex items-center space-x-2">
                    <span className="text-yellow-500 text-3xl">★</span>
-                   <span className="text-3xl tracking-tighter">{store.rating}</span>
+                   <span className="text-3xl tracking-tighter">{(store.rating ?? 4.5).toFixed(1)}</span>
                  </div>
               </div>
             </div>
@@ -201,7 +237,7 @@ const StoreDetail: React.FC = () => { // 🔴 프롭 없이 독립적으로 작�
 
           {/* Sidebar - 고정 예약창 */}
           <div className="space-y-6">
-             <div className="sticky top-32 bg-white rounded-[3.5rem] p-12 text-black shadow-[0_30px_60px_-15px_rgba(255,255,255,0.1)]">
+             <div className="sticky top-32 bg-white rounded-[3.5rem] p-12 text-black shadow-2xl">
                 <span className="text-red-600 font-black text-[11px] uppercase tracking-[0.2em] block mb-3 italic">Exclusive Reservation</span>
                 <h4 className="text-3xl font-black mb-8 tracking-tighter italic uppercase leading-none">실시간 예약 및<br/>VIP 컨설팅</h4>
                 
