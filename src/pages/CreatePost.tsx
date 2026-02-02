@@ -19,7 +19,6 @@ const CreatePost: React.FC = () => {
   const [linkUrl, setLinkUrl] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-  // 업소 후기 작성 여부
   const isReviewAction = category === 'review' || (category === 'vip' && subCategory === '업소후기');
 
   const fetchStores = async () => {
@@ -54,13 +53,13 @@ const CreatePost: React.FC = () => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (!title.trim() || !content.trim()) return alert('제목과 내용을 입력해주세요.');
     
-    // 🔴 [수정된 업소후기 검증] 50자 이상 필수 (사진은 옵션)
+    // 🔴 50자 제한 필수 (사진은 이제 옵션)
     if (isReviewAction) {
       if (content.length < 50) {
-        return alert('🚨 업소 후기는 최소 50자 이상 정성스럽게 작성해야 등록이 가능합니다.');
+        return alert('🚨 업소 후기는 최소 50자 이상 작성해야 등록이 가능합니다.');
       }
       if (!selectedStoreId) {
-        return alert('🚨 후기를 작성할 대상 업소를 선택해 주세요.');
+        return alert('🚨 후기를 작성할 업소를 선택해 주세요.');
       }
     }
 
@@ -80,36 +79,27 @@ const CreatePost: React.FC = () => {
 
       if (postError) throw postError;
 
-      // 🔴 보상 계산: 후기 100P / 일반 20P + (사진 보너스 10P)
-      const baseEarned = isReviewAction ? 100 : 20;
+      // 보상: 사진 포함 시 10P 보너스
       const photoBonus = imageUrls.length > 0 ? 10 : 0;
-      const totalEarned = baseEarned + photoBonus;
+      const totalEarned = (isReviewAction ? 100 : 20) + photoBonus;
 
       const { data: profile } = await supabase.from('profiles').update({
         points: (currentUser.points || 0) + totalEarned,
         review_count: (currentUser.review_count || 0) + (isReviewAction ? 1 : 0)
       }).eq('id', currentUser.id).select().single();
 
-      await supabase.from('point_history').insert([{ 
-        user_id: currentUser.id, 
-        amount: totalEarned, 
-        reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성 ${photoBonus > 0 ? '(사진 보너스 포함)' : ''}` 
-      }]);
+      await supabase.from('point_history').insert([{ user_id: currentUser.id, amount: totalEarned, reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성 ${photoBonus > 0 ? '(사진 보너스)' : ''}` }]);
 
-      // 등급업 로직
       if (profile) {
         let newLevel = profile.level;
         if (profile.points >= 1000 && profile.review_count >= 8) newLevel = 4;
         else if (profile.points >= 300 && profile.review_count >= 3) newLevel = 3;
         else if (profile.points >= 100 && profile.review_count >= 1) newLevel = 2;
-        if (newLevel > profile.level) {
-          await supabase.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
-          alert(`🎊 등급이 LV.${newLevel}로 상승했습니다!`);
-        }
+        if (newLevel > profile.level) await supabase.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
       }
 
       await refreshUser(); 
-      alert(`등록 완료! ${totalEarned}P가 적립되었습니다. ${photoBonus > 0 ? '(사진 보너스 +10P 포함)' : ''}`);
+      alert(`등록 완료! ${totalEarned}P가 적립되었습니다.`);
       navigate(category === 'vip' ? '/vip-lounge' : '/community');
     } catch (err: any) { alert(`등록 실패: ${err.message}`); }
     finally { setLoading(false); }
@@ -124,18 +114,19 @@ const CreatePost: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category Selection</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white outline-none">
                 <option value="free">자유게시판</option>
-                <option value="review">업소후기 (50자 이상 필수)</option>
+                {/* 🔴 선택란 문구 수정 */}
+                <option value="review">업소후기 (50자 필수 + 사진 10P 보너스)</option>
                 <option value="qna">질문/답변</option>
                 <option value="food">맛집/관광</option>
                 <option value="business">부동산/비즈니스</option>
-                {(currentUser?.level || 0) >= 3 && <option value="vip" className="text-yellow-500 font-bold">VIP 전용</option>}
+                {(currentUser?.level || 0) >= 3 && <option value="vip" className="text-yellow-500 font-bold">VIP 라운지</option>}
               </select>
             </div>
             {category === 'vip' && (
-              <div className="space-y-2"><label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">Sub-Category</label><select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="w-full bg-[#111] border border-yellow-500/30 rounded-2xl px-6 py-4 text-yellow-500 outline-none"><option value="시크릿 꿀정보">시크릿 꿀정보</option><option value="업소후기">업소후기 (VIP 전용)</option><option value="실시간 현황">실시간 현황</option><option value="블랙리스트">블랙리스트</option></select></div>
+              <div className="space-y-2"><label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">VIP Sub-Category</label><select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="w-full bg-[#111] border border-yellow-500/30 rounded-2xl px-6 py-4 text-yellow-500 outline-none"><option value="시크릿 꿀정보">시크릿 꿀정보</option><option value="업소후기">업소후기 (VIP 전용 + 10P 보너스)</option><option value="실시간 현황">실시간 현황</option><option value="블랙리스트">블랙리스트</option></select></div>
             )}
             {isReviewAction && (
               <div className="space-y-2"><label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2 italic">Target Store</label><select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className="w-full bg-[#111] border border-red-500/30 rounded-2xl px-6 py-4 text-white outline-none"><option value="">업소를 선택하세요 (필수)</option>{stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
@@ -149,10 +140,15 @@ const CreatePost: React.FC = () => {
           
           <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
             <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">Photo Attachment (Optional: +10P Bonus)</label>
-            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 cursor-pointer" />
+            {/* 🔴 파일 선택 버튼 빨간색 롤백 */}
+            <input 
+              type="file" multiple accept="image/*" 
+              onChange={handleImageUpload} 
+              className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:mr-4 hover:file:bg-red-700 transition-all" 
+            />
             <div className="flex flex-wrap gap-4 mt-8">
               {imageUrls.map((url, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group"><img src={url} className="w-full h-full object-cover" /><button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px]">DELETE</button></div>
+                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg"><img src={url} className="w-full h-full object-cover" /><button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px]">DELETE</button></div>
               ))}
             </div>
           </div>
