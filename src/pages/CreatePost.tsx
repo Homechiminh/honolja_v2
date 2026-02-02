@@ -12,7 +12,6 @@ const CreatePost: React.FC = () => {
   const { currentUser, loading: authLoading, refreshUser } = useAuth();
 
   const [loading, setLoading] = useState(false);
-  const [dataLoading, setDataLoading] = useState(true);
   const [stores, setStores] = useState<Store[]>([]); 
 
   // 폼 상태 관리
@@ -27,11 +26,9 @@ const CreatePost: React.FC = () => {
   const isReviewAction = category === 'review' || (category === 'vip' && subCategory === '업소후기');
 
   /**
-   * 🔴 [방탄 fetch] 업소 리스트 로드 (후기 작성용)
-   * 에러가 나도 finally에서 dataLoading을 꺼주어 폼 입력을 방해하지 않습니다.
+   * 🔴 [방탄 fetch] 업소 리스트 로드 (TS6133 해결: 사용하지 않는 dataLoading 삭제)
    */
   const fetchStores = async () => {
-    setDataLoading(true);
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -44,8 +41,6 @@ const CreatePost: React.FC = () => {
     } catch (err: any) {
       console.error("Store Archive Sync Failed (406 등):", err.message);
       setStores([]);
-    } finally {
-      setDataLoading(false);
     }
   };
 
@@ -54,7 +49,7 @@ const CreatePost: React.FC = () => {
    */
   useFetchGuard(fetchStores, []);
 
-  // 이미지 업로드 로직 (방탄 구조 유지)
+  // 이미지 업로드 로직 (디자인 유지)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -71,7 +66,7 @@ const CreatePost: React.FC = () => {
       }
       setImageUrls(prev => [...prev, ...newUrls]);
     } catch (err: any) { 
-      alert(`이미지 업로드 실패: ${err.message}`); 
+      alert(`업로드 실패: ${err.message}`); 
     } finally { 
       setLoading(false); 
     }
@@ -90,11 +85,10 @@ const CreatePost: React.FC = () => {
       if (!selectedStoreId) return alert('업소를 선택해 주세요.');
     }
 
-    setLoading(true); // 발행 중 로딩 시작
+    setLoading(true);
     try {
       const finalTitle = category === 'qna' ? `[질문] ${title}` : title;
       
-      // 1단계: 게시글 데이터베이스 삽입
       const { error: postError } = await supabase.from('posts').insert([{
         author_id: currentUser.id,
         title: finalTitle,
@@ -108,10 +102,8 @@ const CreatePost: React.FC = () => {
 
       if (postError) throw postError;
 
-      // 2단계: 보상 포인트 계산
       const totalEarned = (isReviewAction ? 100 : 20) + (imageUrls.length > 0 ? 10 : 0);
 
-      // 3단계: 프로필 업데이트 (포인트 및 리뷰수)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -123,14 +115,12 @@ const CreatePost: React.FC = () => {
 
       if (profileError) throw profileError;
 
-      // 4단계: 포인트 히스토리 기록
       await supabase.from('point_history').insert([{
         user_id: currentUser.id,
         amount: totalEarned,
         reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성`
       }]);
 
-      // 5단계: 등급 상승 체크 로직
       if (profile) {
         let newLevel = profile.level;
         if (profile.points >= 1000 && profile.review_count >= 8) newLevel = 4;
@@ -143,7 +133,7 @@ const CreatePost: React.FC = () => {
         }
       }
 
-      await refreshUser(); // 전역 정보 즉시 동기화
+      await refreshUser(); 
       alert(`등록 완료! ${totalEarned}P 적립되었습니다.`);
       navigate(category === 'vip' ? '/vip-lounge' : '/community');
 
@@ -151,16 +141,16 @@ const CreatePost: React.FC = () => {
       console.error("Post Submission Error:", err.message);
       alert(`등록 실패: ${err.message}`); 
     } finally { 
-      setLoading(false); // 어떤 에러가 나도 버튼 잠금 해제
+      setLoading(false); 
     }
   };
 
-  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-800 font-medium italic shadow-inner";
+  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700";
 
   // 🔴 전체 인증 로딩 가드
   if (authLoading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="text-red-600 font-black animate-pulse tracking-[0.3em] uppercase text-xl italic">
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic">
         Syncing Post Engine...
       </div>
     </div>
@@ -168,30 +158,28 @@ const CreatePost: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600/50 to-transparent"></div>
-        
-        <h2 className="text-4xl font-black text-white italic mb-12 uppercase tracking-tighter leading-none">
+      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
+        <h2 className="text-4xl font-black text-white italic mb-10 uppercase tracking-tighter">
           Create <span className="text-red-600">Post</span>
         </h2>
         
-        <form onSubmit={handleSubmit} className="space-y-10 animate-in fade-in duration-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 italic">Intelligence Sector</label>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category Selection</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputStyle}>
-                <option value="free">자유게시판 (20P)</option>
-                <option value="review">업소후기 (100P / 50자↑)</option>
-                <option value="qna">질문/답변 (20P)</option>
-                <option value="food">맛집/관광 (20P)</option>
-                <option value="business">부동산/비즈니스 (20P)</option>
-                {(currentUser?.level || 0) >= 3 && <option value="vip" className="text-yellow-500 font-bold">VIP 전용</option>}
+                <option value="free">자유게시판</option>
+                <option value="review">업소후기 (50자 이상)</option>
+                <option value="qna">질문/답변</option>
+                <option value="food">맛집/관광</option>
+                <option value="business">부동산/비즈니스</option>
+                {(currentUser?.level || 0) >= 3 && <option value="vip" className="text-yellow-500 font-bold">VIP 라운지</option>}
               </select>
             </div>
 
             {category === 'vip' && (
-              <div className="space-y-3 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em] ml-2 italic">VIP Security Level</label>
+              <div className="space-y-2 animate-in slide-in-from-top-2">
+                <label className="text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 italic">VIP Sub-Category</label>
                 <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className={`${inputStyle} border-yellow-500/30 text-yellow-500`}>
                   <option value="시크릿 꿀정보">시크릿 꿀정보</option>
                   <option value="업소후기">업소후기 (VIP 전용)</option>
@@ -202,9 +190,9 @@ const CreatePost: React.FC = () => {
             )}
 
             {isReviewAction && (
-              <div className="space-y-3 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] ml-2 italic">Target Asset Selection</label>
-                <select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className={`${inputStyle} border-red-500/30 font-bold`}>
+              <div className="space-y-2 animate-in slide-in-from-top-2">
+                <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2 italic">Target Store</label>
+                <select required value={selectedStoreId} onChange={(e) => setSelectedStoreId(e.target.value)} className={`${inputStyle} border-red-500/30`}>
                   <option value="">대상 업소를 선택하세요 (필수)</option>
                   {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -212,32 +200,31 @@ const CreatePost: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Headline" className={`${inputStyle} md:col-span-2 font-black text-xl`} />
-            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="External Link (Optional)" className={inputStyle} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목을 입력하세요" className={`${inputStyle} md:col-span-2 font-bold`} />
+            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="외부 링크 (선택사항)" className={inputStyle} />
           </div>
 
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="Type intelligence report here..." className={`${inputStyle} h-80 leading-relaxed resize-none font-medium italic`} />
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요..." className={`${inputStyle} h-80 leading-relaxed resize-none`} />
 
-          {/* 이미지 업로드 섹션 */}
-          <div className="p-10 bg-black/40 rounded-[3rem] border border-white/5 shadow-inner group">
-            <label className="text-[10px] font-black text-gray-500 uppercase block mb-6 tracking-widest italic border-l-2 border-red-600 pl-3">Intelligence Media (+10P Bonus)</label>
-            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-600 file:bg-red-600 file:text-white file:rounded-xl file:px-6 file:py-3 file:border-none cursor-pointer file:font-black file:uppercase file:mr-6 file:hover:bg-red-500 file:transition-all" />
+          <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
+            <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">Photo Attachment (+10P Bonus)</label>
+            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:mr-4" />
             
-            <div className="flex flex-wrap gap-4 mt-10">
+            <div className="flex flex-wrap gap-4 mt-8">
               {imageUrls.map((url, i) => (
-                <div key={i} className="relative w-28 h-28 rounded-3xl overflow-hidden border border-white/10 group shadow-2xl">
-                  <img src={url} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" alt="upload" />
-                  <button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-xs italic">TERMINATE</button>
+                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
+                  <img src={url} className="w-full h-full object-cover" alt="upload" />
+                  <button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-xs italic">DELETE</button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex gap-6 pt-6">
-            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-7 bg-white/5 text-gray-600 font-black rounded-[2rem] hover:bg-white/10 italic transition-all uppercase tracking-widest border border-white/5 shadow-xl">Discard</button>
-            <button type="submit" disabled={loading} className="flex-[2] py-7 bg-red-600 text-white font-black rounded-[2rem] shadow-2xl shadow-red-900/30 hover:bg-red-500 transition-all uppercase italic text-2xl active:scale-95">
-              {loading ? 'Transmitting Intelligence...' : 'Publish Record'}
+          <div className="flex gap-4 pt-4">
+            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-6 bg-white/5 text-gray-500 font-black rounded-[1.5rem] hover:bg-white/10 italic transition-all uppercase tracking-widest border border-white/5">CANCEL</button>
+            <button type="submit" disabled={loading} className="flex-[2] py-6 bg-red-600 text-white font-black rounded-[1.5rem] shadow-2xl shadow-red-900/20 hover:bg-red-500 transition-all uppercase italic text-xl">
+              {loading ? 'PUBLISHING...' : 'PUBLISH POST'}
             </button>
           </div>
         </form>
