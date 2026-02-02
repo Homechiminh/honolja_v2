@@ -3,31 +3,30 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
   const { initialized, currentUser } = useAuth();
-  const lastFetchedUserId = useRef<string | null>(null);
+  const retryCount = useRef(0);
 
   useEffect(() => {
-
+    // 아직 시스템 초기화 전이면 대기
     if (!initialized) return;
 
     const execute = async () => {
       try {
+        // 브라우저가 토큰을 안착시킬 미세한 딜레이
+        await new Promise(res => setTimeout(res, 200));
         await fetchFn();
-        // 성공 시 현재 유저 ID 기록 (무한 루프 방지)
-        lastFetchedUserId.current = currentUser?.id || 'guest';
+        retryCount.current = 0; 
       } catch (err: any) {
-        // 🔴 근본 해결: 406 에러(인증 지연) 발생 시
-        if (err.status === 406) {
-          console.warn("⚠️ [406] Auth lag detected. Waiting for session sync...");
-          // 여기서 아무것도 안 해도, 아래 의존성 배열의 [currentUser] 덕분에
-          // 로그인이 완료되는 순간 useEffect가 다시 돌아갑니다.
+        // 406 에러 발생 시 중앙 시스템이 1회 자동 재시도
+        if (err.status === 406 && retryCount.current < 1) {
+          retryCount.current++;
+          setTimeout(execute, 600);
         }
       }
     };
 
     execute();
     
-    // 🔴 핵심: currentUser.id를 의존성에 넣습니다.
-    // 탭을 바꿨거나, 뒤늦게 로그인이 풀렸거나, 다시 잡히는 모든 순간에 
-    // 데이터 호출을 자동으로 '재동기화'합니다.
+    // 🔴 근본 해결: currentUser.id를 의존성에 추가!
+    // 탭 전환이나 지연 로딩으로 유저 세션이 잡히는 '그 순간' 데이터를 즉시 다시 부릅니다.
   }, [initialized, currentUser?.id, ...deps]); 
 };
