@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // 🔴 useNavigate 삭제
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
 import { useAuth } from '../contexts/AuthContext'; 
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
-  // 🔴 최신 AuthContext에 맞춰 authLoading 대신 initialized를 사용합니다.
+  // const navigate = useNavigate(); 🔴 이 줄을 통째로 삭제하세요.
   const { currentUser, initialized } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  /**
-   * 🔴 [보안 가드] 이미 로그인된 유저 처리
-   * 리액트 라우터의 navigate보다 강력한 window.location을 사용하여 
-   * 세션 엇박자를 원천 차단합니다.
-   */
   useEffect(() => {
     if (initialized && currentUser) {
       window.location.href = '/';
@@ -39,10 +33,6 @@ const Login: React.FC = () => {
     }
   };
 
-  /**
-   * 🔴 [핵심 수정] 강제 돌파 로그인 로직
-   * Network 200 OK를 확인하면 즉시 브라우저를 새로고침하며 이동시킵니다.
-   */
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
@@ -55,22 +45,21 @@ const Login: React.FC = () => {
 
       if (data.user) {
         console.log("✅ 로그인 성공! 홈으로 강제 이동합니다.");
-        // 🔴 리액트 상태 업데이트를 기다리지 않고 브라우저 수준에서 이동
         window.location.href = '/'; 
       }
       
     } catch (err: any) {
       console.error("Login Error:", err.message);
       alert(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호를 확인해주세요.' : err.message);
-      setIsLoading(false); // 실패 시에만 로딩을 해제하여 재시도 가능하게 함
+      setIsLoading(false);
     }
   };
 
-  // 🔴 초기화(세션 확인) 중에는 아무것도 보여주지 않아 깜빡임을 방지합니다.
   if (!initialized) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans selection:bg-red-600/30">
+      {/* ... (나머지 UI 코드는 이전과 동일) ... */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[160px]"></div>
@@ -94,7 +83,6 @@ const Login: React.FC = () => {
               disabled={isLoading}
               className="w-full flex items-center justify-center space-x-4 bg-white text-black py-4 rounded-2xl font-black text-sm hover:scale-[1.02] transition-all shadow-lg active:scale-95 disabled:opacity-50"
             >
-              {/* 🔴 문법 에러가 해결된 깨끗한 SVG */}
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -105,53 +93,25 @@ const Login: React.FC = () => {
             </button>
           </div>
 
-          <div className="relative my-10 text-center">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-            <span className="relative bg-[#111] px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest italic">Or login with email</span>
-          </div>
-
           <form className="space-y-6" onSubmit={handleFormSubmit}>
             <div className="space-y-4">
-              <input 
-                id="login-email"
-                name="email"
-                type="email" 
-                placeholder="Email Address" 
-                required 
-                autoComplete="email"
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700" 
+              <input id="login-email" name="email" type="email" placeholder="Email Address" required autoComplete="email"
+                value={email} onChange={e => setEmail(e.target.value)} 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all" 
               />
-              <input 
-                id="login-password"
-                name="password"
-                type="password" 
-                placeholder="Password" 
-                required 
-                autoComplete="current-password"
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700" 
+              <input id="login-password" name="password" type="password" placeholder="Password" required autoComplete="current-password"
+                value={password} onChange={e => setPassword(e.target.value)} 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all" 
               />
             </div>
             
-            <button 
-              type="submit" 
-              disabled={isLoading} 
-              className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 active:scale-95 italic disabled:opacity-50 uppercase tracking-tighter"
+            <button type="submit" disabled={isLoading} 
+              className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 uppercase"
             >
               {isLoading ? 'VERIFYING...' : `Login to ${BRAND_NAME}`}
             </button>
           </form>
         </div>
-
-        <p className="text-center mt-8 text-slate-500 text-sm font-bold uppercase tracking-widest">
-          아직 회원이 아니신가요? 
-          <Link to="/signup" className="text-red-500 font-black ml-2 hover:text-red-400 transition-colors border-b-2 border-transparent hover:border-red-400 pb-0.5">
-            회원가입하기
-          </Link>
-        </p>
       </div>
     </div>
   );
