@@ -1,31 +1,35 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useAuth } from '../contexts/AuthContext'; 
 
-const AdminDashboard: React.FC = () => { // 🔴 Prop 제거 완료
+const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   
   // 1. 전역 인증 정보 및 로딩 상태 구독
   const { currentUser, loading: authLoading } = useAuth(); 
 
-  // 2. 권한 체크 및 보안 가드
-  // authLoading이 true일 때는 로딩바를 보여주고, 
-  // 로딩이 끝났는데 관리자가 아니라면 즉시 홈으로 추방합니다.
+  // 2. 관리자 권한 최종 보안 가드
+  // 인증 로딩이 끝난 시점에서 관리자가 아니라면 즉시 퇴출합니다.
+  useEffect(() => {
+    if (!authLoading && (!currentUser || currentUser.role !== UserRole.ADMIN)) {
+      navigate('/', { replace: true });
+    }
+  }, [authLoading, currentUser, navigate]);
+
+  // 🔴 전체 로딩 처리 (인증 확인 중일 때) - 디자인 일관성 유지
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic">
+        <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic text-xl">
           Syncing System Intelligence...
         </div>
       </div>
     );
   }
 
-  if (!currentUser || currentUser.role !== UserRole.ADMIN) {
-    navigate('/', { replace: true });
-    return null;
-  }
+  // 관리자가 아닐 경우 렌더링 방지 (useEffect의 navigate가 실행될 때까지 빈 화면)
+  if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   const menuItems = [
     {
@@ -80,12 +84,12 @@ const AdminDashboard: React.FC = () => { // 🔴 Prop 제거 완료
                 <div className={`${item.color} w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-8 shadow-2xl group-hover:scale-110 transition-transform`}>
                   {item.icon}
                 </div>
-                <h3 className="text-2xl font-black text-white italic mb-4 uppercase tracking-tighter">{item.title}</h3>
+                <h3 className="text-2xl font-black text-white italic mb-4 uppercase tracking-tighter leading-tight">{item.title}</h3>
                 <p className="text-gray-500 text-xs font-medium leading-relaxed opacity-80">{item.desc}</p>
                 
                 <div className="mt-auto pt-10 flex justify-between items-center border-t border-white/5">
                   <span className="text-[10px] font-black text-white/10 group-hover:text-red-600 transition-colors uppercase tracking-[0.2em] italic">Access Module</span>
-                  <span className="text-white/5 group-hover:text-red-600 transition-colors">→</span>
+                  <span className="text-white/5 group-hover:text-red-600 transition-colors text-xl">→</span>
                 </div>
               </div>
             </Link>
