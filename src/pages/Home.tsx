@@ -9,21 +9,18 @@ import StoreCard from '../components/StoreCard';
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, initialized } = useAuth();
-  
-  // 1. 업소 데이터 로드
   const { stores, loading: storesLoading } = useStores('all');
   
-  // 🔴 에러 원인 해결: 필터링 변수 재선언
-  const hotStores = stores.filter((s: any) => s.is_hot).slice(0, 5);
-  const villaStores = stores.filter((s: any) => s.category === 'villa').slice(0, 4);
-
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
   const [latestVipPosts, setLatestVipPosts] = useState<any[]>([]);
   const [latestNotices, setLatestNotices] = useState<any[]>([]);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 5초 자동 광고 슬라이드
+  // 🔴 필터링 변수 선언 (에러 방지)
+  const hotStores = stores.filter((s: any) => s.is_hot).slice(0, 5);
+  const villaStores = stores.filter((s: any) => s.category === 'villa').slice(0, 4);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -114,17 +111,22 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 3] 커뮤니티 & SNS */}
+      {/* [섹션 3] 커뮤니티 & SNS - 디자인 보강 및 잘림 방지 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-2 flex lg:flex-col gap-4">
-          <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl">
-            <span className="text-[10px] font-black text-white/50 uppercase block mb-1 whitespace-nowrap z-10 relative">그룹챗 입장</span>
-            <h4 className="text-xl md:text-2xl font-black italic text-white leading-tight whitespace-nowrap z-10 relative tracking-tighter">호놀자 텔레그램</h4>
+          {/* 텔레그램 버튼 - H 배경 복구 및 글자 크기 최적화 */}
+          <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
+            <span className="text-[10px] font-black text-white/60 uppercase block mb-1 whitespace-nowrap z-10 relative">그룹챗 입장</span>
+            <h4 className="text-lg md:text-xl font-black italic text-white leading-tight whitespace-nowrap z-10 relative tracking-tighter">호놀자 텔레그램</h4>
+            {/* 🔴 배경 "H" 복구 */}
             <span className="absolute -bottom-4 -right-2 text-9xl font-black text-white/10 italic select-none pointer-events-none group-hover:scale-110 transition-transform duration-500">H</span>
           </a>
-          <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl">
+          
+          {/* 카카오톡 버튼 - H 배경 복구 및 글자 크기 최적화 */}
+          <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center min-h-[140px]">
             <span className="text-[10px] font-black text-black/40 uppercase block mb-1 whitespace-nowrap z-10 relative">단톡방 입장</span>
-            <h4 className="text-xl md:text-2xl font-black italic leading-tight whitespace-nowrap z-10 relative tracking-tighter">호놀자 카카오톡</h4>
+            <h4 className="text-lg md:text-xl font-black italic leading-tight whitespace-nowrap z-10 relative tracking-tighter">호놀자 카카오톡</h4>
+            {/* 🔴 배경 "H" 복구 */}
             <span className="absolute -bottom-4 -right-2 text-9xl font-black text-black/5 italic select-none pointer-events-none group-hover:scale-110 transition-transform duration-500">H</span>
           </a>
         </div>
@@ -142,14 +144,16 @@ const Home: React.FC = () => {
             </div>
           </div>
 
+          {/* VIP 라운지 - [LV.3 전용] 문구 삭제 */}
           <div>
             <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4><button onClick={handleVIPClick} className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">Access</button></div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestVipPosts.map(post => (
                 <div key={post.id} onClick={handleVIPClick} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group">
                   <div className="min-w-0 pr-4">
+                    {/* 🔴 [LV.3 전용] 텍스트 제거 */}
                     <p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p>
-                    <span className="text-[10px] text-gray-600 font-bold tracking-tighter italic">Veteran Only Content</span>
+                    <span className="text-[10px] text-gray-600 font-bold tracking-tighter italic">Veteran Only Access</span>
                   </div>
                   <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic uppercase">VIP</span>
                 </div>
@@ -168,7 +172,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS */}
+      {/* [섹션 4] PREMIUM STAYS - 멘트 수정 반영 */}
       <section className="max-w-[1400px] mx-auto px-6 py-24">
         <div className="bg-[#080808] rounded-[3rem] p-12 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative z-10 px-4">
@@ -184,7 +188,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [배너 슬라이더] */}
+      {/* [배너 슬라이더] 1열 교체 형식 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24">
         <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] h-[220px] shadow-2xl">
           <div 
