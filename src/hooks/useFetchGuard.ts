@@ -3,38 +3,35 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
   const { loading: authLoading } = useAuth();
-  const retryCount = useRef(0); // 페이지 이탈 전까지 재시도 횟수 추적
+  const retryCount = useRef(0); 
 
   useEffect(() => {
-    // 1. 인증 정보가 아직 로딩 중이라면 절대 실행하지 않고 대기
+    // 1. 인증 로딩이 true일 때는 절대 실행하지 않음 (이전과 동일)
     if (authLoading) return;
 
-    let isMounted = true; // 언마운트된 컴포넌트에서 상태 업데이트 방지
+    let isMounted = true; 
 
     const executeWithRetry = async () => {
       try {
-        // 🔴 핵심 1: 0.1초의 미세한 딜레이를 줍니다. 
-        // 브라우저가 구글 로그인 리다이렉트 후 쿠키와 세션을 정리할 시간을 벌어줍니다.
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // 🔴 핵심 수정: 0.1초는 너무 짧습니다. 0.3초(300ms)로 늘립니다.
+        // 현재 발생하는 'Auth Timeout' 상황에서 브라우저가 세션을 안착시키는 최소한의 시간입니다.
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         if (!isMounted) return;
         await fetchFn();
         
-        // 성공 시 재시도 카운트 초기화
         retryCount.current = 0; 
       } catch (err: any) {
         if (!isMounted) return;
 
-        /**
-         * 🔴 핵심 2: 406(Not Acceptable) 또는 세션 불일치 에러 발생 시
-         * 유저에게 에러를 보여주지 않고 0.5초 뒤에 '딱 한 번만 더' 시도합니다.
-         */
+        // 406, PGRST106(세션 불일치), JWT 관련 에러 체크
         const isAuthError = err.status === 406 || err.code === 'PGRST106' || err.message?.includes('JWT');
         
         if (isAuthError && retryCount.current < 1) {
           retryCount.current++;
-          console.warn("⚠️ Auth sync delay detected. Retrying in 500ms...");
-          setTimeout(executeWithRetry, 500);
+          // 🔴 재시도 대기도 0.5초에서 0.8초로 늘려 확실하게 한 번 더 시도합니다.
+          console.warn("⚠️ Auth sync delay detected. Retrying with longer delay (800ms)...");
+          setTimeout(executeWithRetry, 800);
         } else {
           console.error("❌ Fetch failed after retry strategy:", err);
         }
