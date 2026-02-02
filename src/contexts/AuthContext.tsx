@@ -1,52 +1,33 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../supabase';
+import { useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
-const AuthContext = createContext<any>(null);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [initialized, setInitialized] = useState(false);
+export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
+  const { initialized, currentUser } = useAuth();
+  const retryCount = useRef(0);
 
   useEffect(() => {
-    // 🔴 1. 즉시 실행하여 현재 브라우저 세션 확인
-    const checkSession = async () => {
+    // 1. 아직 시스템 초기화 전이면 대기
+    if (!initialized) return;
+
+    const execute = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-          setCurrentUser(data);
+        // 브라우저가 토큰을 안착시킬 미세한 딜레이(0.2초)
+        await new Promise(res => setTimeout(res, 200));
+        await fetchFn();
+        retryCount.current = 0; 
+      } catch (err: any) {
+        // 🔴 406 에러 발생 시 중앙 시스템이 1회 자동 재시도
+        if (err.status === 406 && retryCount.current < 1) {
+          retryCount.current++;
+          console.warn("🔄 Auth lag detected. Retrying...");
+          setTimeout(execute, 600);
         }
-      } finally {
-        setInitialized(true); 
       }
     };
-    checkSession();
 
-    // 🔴 2. 지연되는 SIGNED_IN 이벤트를 낚아채서 유저 정보 업데이트
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log(`📡 Auth Event: ${_event}`); 
-      if (session?.user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        setCurrentUser(data);
-      } else {
-        setCurrentUser(null);
-      }
-      setInitialized(true); 
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ currentUser, initialized }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-// 🔴 빌드 에러(TS2305)를 해결하는 핵심 내보내기
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
-  return context;
+    execute();
+    
+    // 🔴 근본 해결: currentUser?.id를 의존성에 추가!
+    // 탭 전환이나 지연 로딩으로 유저 세션이 잡히는 '그 순간' 데이터를 즉시 다시 부릅니다.
+  }, [initialized, currentUser?.id, ...deps]); 
 };
