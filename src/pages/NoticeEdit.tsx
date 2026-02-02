@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; // 🔴 가드 훅 임포트
 
 const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 🔴 currentUser 제거 (안 써서 에러 났던 부분 해결)
+  // 1. 전역 인증 정보 가져오기
   const { loading: authLoading } = useAuth(); 
   
   const [loading, setLoading] = useState(true);
@@ -18,16 +19,25 @@ const NoticeEdit: React.FC = () => {
     is_important: false
   });
 
-  useEffect(() => {
-    if (id && !authLoading) {
-      fetchNotice();
-    }
-  }, [id, authLoading]);
-
+  /**
+   * 🔴 [방탄 fetch] 기존 공지사항 데이터 로드
+   * 에러가 발생해도 finally 블록을 통해 로딩 스피너를 확실히 해제합니다.
+   */
   const fetchNotice = async () => {
+    if (!id) return;
+    setLoading(true); // 로딩 시작
     try {
-      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        // 🔴 406 에러 또는 데이터 없음 발생 시 catch로 던짐
+        throw error;
+      }
+
       if (data) {
         setFormData({ 
           title: data.title, 
@@ -35,20 +45,35 @@ const NoticeEdit: React.FC = () => {
           is_important: data.is_important 
         });
       }
-    } catch (err) {
-      alert('데이터 아카이브를 불러올 수 없습니다.');
+    } catch (err: any) {
+      console.error('HQ Archive Sync Error (406 등):', err.message);
+      alert('데이터 아카이브를 불러올 수 없습니다. 권한 혹은 네트워크를 확인하세요.');
       navigate('/notice');
     } finally {
+      // 🔴 핵심: 어떤 상황에서도 로딩 상태 해제
       setLoading(false);
     }
   };
 
+  /**
+   * 🔴 [데이터 가드 적용] 
+   * 인증 로딩이 끝난 직후에만 fetchNotice를 실행하여 엇박자를 원천 차단합니다.
+   */
+  useFetchGuard(fetchNotice, [id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim() || !formData.content.trim()) return;
+
     setUpdating(true);
     try {
-      const { error } = await supabase.from('notices').update(formData).eq('id', id);
+      const { error } = await supabase
+        .from('notices')
+        .update(formData)
+        .eq('id', id);
+
       if (error) throw error;
+
       alert('아카이브 수정이 완료되었습니다.');
       navigate('/notice');
     } catch (err) {
@@ -58,44 +83,46 @@ const NoticeEdit: React.FC = () => {
     }
   };
 
-  // 🔴 authLoading과 페이지 자체 로딩을 모두 체크하여 엇박자 방지
-  if (loading || authLoading) return (
+  // 🔴 전체 로딩 처리 (인증 확인 + 데이터 로딩 동기화)
+  if (authLoading || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic">
+      <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic text-xl">
         Syncing HQ Archives...
       </div>
     </div>
   );
 
-  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all font-bold italic shadow-inner";
+  const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all font-bold italic shadow-inner placeholder:text-gray-800";
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <header className="mb-12 border-l-8 border-red-600 pl-8">
-          <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
+          <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none">
             Modify <span className="text-red-600">Bulletin</span>
           </h2>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-10">
+        <form onSubmit={handleSubmit} className="space-y-10 animate-in fade-in duration-700">
+          {/* 중요 공지 토글 섹션 */}
           <div className="bg-black/40 p-10 rounded-[2.5rem] border border-white/5 flex items-center justify-between shadow-inner">
-            <p className="text-xl font-black text-red-600 italic uppercase">🔥 Priority Override</p>
+            <p className="text-xl font-black text-red-600 italic uppercase tracking-tight">🔥 Priority Override</p>
             <button 
               type="button" 
               onClick={() => setFormData({...formData, is_important: !formData.is_important})}
               className={`w-20 h-10 rounded-full relative transition-all duration-500 ${formData.is_important ? 'bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}
             >
-              <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_important ? 'left-11' : 'left-1'}`} />
+              <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_important ? 'left-11 shadow-lg' : 'left-1'}`} />
             </button>
           </div>
 
+          {/* 입력 섹션 */}
           <div className="space-y-6">
             <input 
               required 
               value={formData.title} 
               onChange={(e) => setFormData({...formData, title: e.target.value})} 
-              className={`${inputStyle} text-3xl py-7 tracking-tight`}
+              className={`${inputStyle} text-3xl py-7 tracking-tighter`}
               placeholder="Headline"
             />
             <textarea 
@@ -103,14 +130,25 @@ const NoticeEdit: React.FC = () => {
               rows={15} 
               value={formData.content} 
               onChange={(e) => setFormData({...formData, content: e.target.value})} 
-              className={`${inputStyle} resize-none h-96 leading-relaxed font-medium`}
+              className={`${inputStyle} resize-none h-96 leading-relaxed font-medium italic`}
               placeholder="Notice Content"
             />
           </div>
 
+          {/* 버튼 섹션 */}
           <div className="flex gap-6">
-            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-7 bg-white/5 text-gray-500 font-black rounded-[1.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all">Cancel</button>
-            <button type="submit" disabled={updating} className="flex-[2] py-7 bg-red-600 text-white font-black text-xl rounded-[1.5rem] uppercase italic shadow-2xl shadow-red-900/40 hover:bg-red-700 transition-all active:scale-95">
+            <button 
+              type="button" 
+              onClick={() => navigate(-1)} 
+              className="flex-1 py-7 bg-white/5 text-gray-500 font-black rounded-[1.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={updating} 
+              className="flex-[2] py-7 bg-red-600 text-white font-black text-xl rounded-[1.5rem] uppercase italic shadow-2xl shadow-red-900/40 hover:bg-red-700 transition-all active:scale-95"
+            >
               {updating ? 'Updating HQ...' : 'Confirm Update'}
             </button>
           </div>
