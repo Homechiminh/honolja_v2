@@ -4,7 +4,7 @@ import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
 import { SNS_LINKS } from '../constants';
-import { UserRole, Region } from '../types';
+import { UserRole } from '../types'; // 🔴 Region 제거 (TS6133 해결)
 import type { Store } from '../types';
 
 const StoreDetail: React.FC = () => {
@@ -14,7 +14,7 @@ const StoreDetail: React.FC = () => {
   // 1. 전역 인증 정보 구독
   const { currentUser, loading: authLoading } = useAuth(); 
 
-  // 2. 내부 상태 관리 (useStoreDetail 훅 대신 직접 관리하여 로딩 안정성 확보)
+  // 2. 내부 상태 관리
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +22,6 @@ const StoreDetail: React.FC = () => {
 
   /**
    * 🔴 [방탄 fetch] 업소 상세 데이터 로드
-   * 어떤 에러(406 등)가 발생해도 무조건 setLoading(false)를 실행합니다.
    */
   const fetchStoreDetail = async () => {
     if (!id) return;
@@ -34,10 +33,7 @@ const StoreDetail: React.FC = () => {
         .eq('id', id)
         .single();
 
-      if (error) {
-        // 🔴 서버 거절 또는 데이터 없음 에러 시 catch로 던짐
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setStore(data as Store);
@@ -46,7 +42,6 @@ const StoreDetail: React.FC = () => {
       console.error("Store Sync Failed (406 등):", err.message);
       setStore(null);
     } finally {
-      // 🔴 핵심: 성공하든 실패하든 로딩 스피너 종료
       setLoading(false);
     }
   };
@@ -60,7 +55,7 @@ const StoreDetail: React.FC = () => {
     }
   };
 
-  // 이미지 스프라이트 설정 (디자인 로직 유지)
+  // 이미지 스프라이트 설정
   const spriteConfig = useMemo(() => {
     if (!store) return { cols: 1, rows: 1, size: 'cover' };
     if (store.image_url?.includes('supabase.co')) {
@@ -88,14 +83,12 @@ const StoreDetail: React.FC = () => {
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
-  // 🔴 전역 인증 로딩 또는 데이터 로딩 중일 때 (블랙아웃 방지)
   if (authLoading || loading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse tracking-widest uppercase font-black">
       Syncing Intelligence...
     </div>
   );
 
-  // 데이터가 정말 없는 경우
   if (!store) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="text-center">
