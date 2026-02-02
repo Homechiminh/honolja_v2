@@ -5,20 +5,20 @@ import { useAuth } from '../contexts/AuthContext';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  
-  // 1. 전역 인증 정보 및 로딩 상태 구독
-  const { currentUser, loading: authLoading } = useAuth(); 
+  // 🔴 핵심: initialized를 가져와서 세션 복구 완료 여부를 확인합니다.
+  const { currentUser, initialized } = useAuth(); 
 
-  // 2. 관리자 권한 최종 보안 가드
-  // 인증 로딩이 끝난 시점에서 관리자가 아니라면 즉시 퇴출합니다.
   useEffect(() => {
-    if (!authLoading && (!currentUser || currentUser.role !== UserRole.ADMIN)) {
-      navigate('/', { replace: true });
+    // 🔴 중요: 세션 초기화(initialized)가 완료된 후에만 권한을 체크하여 홈으로 튕기는 것을 방지합니다.
+    if (initialized) {
+      if (!currentUser || currentUser.role !== UserRole.ADMIN) {
+        navigate('/', { replace: true });
+      }
     }
-  }, [authLoading, currentUser, navigate]);
+  }, [initialized, currentUser, navigate]);
 
-  // 🔴 전체 로딩 처리 (인증 확인 중일 때) - 디자인 일관성 유지
-  if (authLoading) {
+  // 세션 확인 중일 때는 대기 화면 노출
+  if (!initialized) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic text-xl">
@@ -28,7 +28,7 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  // 관리자가 아닐 경우 렌더링 방지 (useEffect의 navigate가 실행될 때까지 빈 화면)
+  // 관리자가 아닐 경우 렌더링 차단
   if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   const menuItems = [
@@ -86,7 +86,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <h3 className="text-2xl font-black text-white italic mb-4 uppercase tracking-tighter leading-tight">{item.title}</h3>
                 <p className="text-gray-500 text-xs font-medium leading-relaxed opacity-80">{item.desc}</p>
-                
                 <div className="mt-auto pt-10 flex justify-between items-center border-t border-white/5">
                   <span className="text-[10px] font-black text-white/10 group-hover:text-red-600 transition-colors uppercase tracking-[0.2em] italic">Access Module</span>
                   <span className="text-white/5 group-hover:text-red-600 transition-colors text-xl">→</span>
