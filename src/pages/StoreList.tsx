@@ -25,17 +25,21 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
 
   const currentRegion = forcedRegion || Region.HCMC;
 
-  // 1. 카테고리나 지역 변경 시 페이지 리셋
   useEffect(() => {
     setCurrentPage(1);
   }, [category, currentRegion]);
 
   /**
-   * 🔴 [방탄 fetch] 데이터 호출 로직
-   * 406 에러나 네트워크 지연이 발생해도 무조건 로딩을 종료합니다.
+   * 🔴 카테고리 명칭 변환 함수
    */
+  const getCategoryDisplay = (cat: string | undefined) => {
+    if (!cat || cat === 'all') return 'PREMIUM LIST';
+    if (cat === 'villa') return '숙소 / 풀빌라'; // 🔴 Villa -> 숙소/풀빌라 변경
+    return cat.replace('_', ' ').toUpperCase();
+  };
+
   const fetchStores = async () => {
-    setLoading(true); // 1. 스피너 가동
+    setLoading(true);
     try {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -45,41 +49,38 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
+      // 🔴 필터링 로직 수정
       if (category && category !== 'all') {
         query = query.eq('category', category);
+      } else if (category === 'all') {
+        // 🔴 전체보기(all)일 때: 숙소, 차량, 가이드 등 제외하고 '업장'만 노출
+        // DB 카테고리 명칭에 맞게 'villa', 'car', 'guide' 등을 제외 리스트에 넣으세요.
+        query = query.not('category', 'in', '("villa", "car", "guide")');
       }
 
-      // 쿼리 실행
       const { data, error, count } = await query
         .order('is_hot', { ascending: false }) 
         .order('created_at', { ascending: false })
         .range(from, to);
 
-      if (error) {
-        // 🔴 서버 거절(406) 등의 에러 발생 시 즉시 catch로 던짐
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setStores(data as Store[]);
         if (count !== null) setTotalCount(count);
       }
     } catch (err: any) {
-      console.error('Store Archive Sync Error (406 등):', err.message);
-      // 에러 시 기존 데이터를 비워주어 잘못된 정보 노출 방지
+      console.error('Store Sync Error:', err.message);
       setStores([]); 
     } finally {
-      // 🔴 2. [필살기] 성공/실패 여부와 상관없이 무조건 스피너 정지
       setLoading(false);
     }
   };
 
-  // 🔴 데이터 가드 적용 (인증 완료 후 최적의 타이밍에 호출)
   useFetchGuard(fetchStores, [category, currentRegion, currentPage]);
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  // 3. 전역 인증 확인 중일 때 (블랙아웃 방지)
   if (authLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -93,16 +94,15 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
           <h2 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none">
             {currentRegion} 
             <span className="text-red-600 ml-4">
-              {category ? category.replace('_', ' ').toUpperCase() : 'PREMIUM LIST'}
+              {getCategoryDisplay(category)}
             </span>
           </h2>
           <p className="text-gray-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-4 italic">
-            {currentRegion} 지역의 엄선된 최고의 업소들을 만나보세요.
+            {currentRegion} 지역의 검증된 프리미엄 정보입니다.
           </p>
         </header>
 
         {loading ? (
-          // 리스트 전용 로딩 UI (디자인 일관성 유지)
           <div className="py-40 text-center">
             <div className="inline-block w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-gray-600 font-black italic uppercase tracking-widest text-xs">Syncing Store Database...</p>
@@ -120,7 +120,6 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
               ))}
             </div>
 
-            {/* 페이지네이션 UI */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-3 mt-20">
                 <button
