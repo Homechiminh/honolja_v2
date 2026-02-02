@@ -78,9 +78,10 @@ const PostDetail: React.FC = () => {
     }
   };
 
-  // 포인트 지급 판독기 (UI에는 안보이지만 내부 로직은 유지)
+  // 포인트 지급 판독 로직 (내부 유지)
   const checkPointEligibility = async (contentStr: string) => {
     if (!currentUser || !post) return false;
+    // 본인 글 댓글 시 포인트 미지급 (image_2c186c.png 대응)
     if (currentUser.id === post.author_id) return false;
     if (contentStr.trim().length < 10) return false;
     const today = new Date().toISOString().split('T')[0];
@@ -125,7 +126,7 @@ const PostDetail: React.FC = () => {
 
   if (!initialized || loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">Accessing Intelligence...</div>
+      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">데이터를 불러오는 중...</div>
     </div>
   );
 
@@ -133,7 +134,7 @@ const PostDetail: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
         
-        {/* 게시글 영역 */}
+        {/* 게시글 본문 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-600/20">#{post.category.toUpperCase()}</span>
@@ -145,28 +146,29 @@ const PostDetail: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white font-black italic text-lg">{post.author?.nickname}</p>
-                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">Lv.{post.author?.level} Agent</p>
+                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">Lv.{post.author?.level} 인증 회원</p>
                 </div>
               </div>
               <button onClick={handleLike} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}>
                 <span className="text-2xl">{isLiked ? '❤️' : '🤍'}</span>
-                <span className="text-[9px] font-black uppercase italic tracking-tighter">Recommended {post.likes || 0}</span>
+                <span className="text-[9px] font-black uppercase italic tracking-tighter text-center">추천 {post.likes || 0}</span>
               </button>
             </div>
           </header>
           <article className="p-10 md:p-16 text-gray-300 text-lg md:text-xl leading-relaxed whitespace-pre-wrap font-medium italic">
             {post.image_urls?.map((url: string, i: number) => (
-              <img key={i} src={url} alt="post-img" className="w-full rounded-3xl mb-8 border border-white/5 shadow-2xl" />
+              <img key={i} src={url} alt="첨부이미지" className="w-full rounded-3xl mb-8 border border-white/5 shadow-2xl" />
             ))}
             {post.content}
           </article>
         </div>
 
-        {/* 댓글 영역 */}
+        {/* 댓글 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
+          {/* 🔴 "LOGS"를 "댓글"로 수정 */}
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
             <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> 
-            LOGS <span className="text-red-600">({comments.length})</span>
+            댓글 <span className="text-red-600">({comments.length})</span>
           </h3>
           
           <div className="space-y-12 mb-16">
@@ -174,7 +176,7 @@ const PostDetail: React.FC = () => {
               <div key={comm.id} className="space-y-6">
                 <div className="flex gap-6 items-start group">
                   <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0 shadow-lg">
-                    <img src={comm.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avt" />
+                    <img src={comm.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avatar" />
                   </div>
                   <div className="flex-1 space-y-2">
                     <div className="flex justify-between items-center">
@@ -183,10 +185,11 @@ const PostDetail: React.FC = () => {
                       </span>
                       <div className="flex items-center gap-4">
                         <span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span>
-                        <button onClick={() => setReplyToId(comm.id)} className="text-[10px] font-black text-red-600 uppercase hover:underline">Reply</button>
+                        {/* 🔴 영문 버튼 한글화 */}
+                        <button onClick={() => setReplyToId(comm.id)} className="text-[10px] font-black text-red-600 uppercase hover:underline italic">답글</button>
                         
                         {(currentUser?.id === comm.author_id || currentUser?.role === 'ADMIN') && (
-                          <button onClick={() => handleDeleteComment(comm.id)} className="text-[10px] font-black text-gray-600 uppercase hover:text-red-600 transition-colors">Delete</button>
+                          <button onClick={() => handleDeleteComment(comm.id)} className="text-[10px] font-black text-gray-600 uppercase hover:text-red-600 transition-colors italic">삭제</button>
                         )}
                       </div>
                     </div>
@@ -194,11 +197,12 @@ const PostDetail: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 대댓글 영역 */}
                 <div className="ml-16 space-y-8 border-l-2 border-white/5 pl-8">
                   {comm.replies.map((reply: any) => (
                     <div key={reply.id} className="flex gap-4 items-start group">
                       <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 overflow-hidden shrink-0">
-                        <img src={reply.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author?.nickname}`} alt="avt" />
+                        <img src={reply.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author?.nickname}`} alt="avatar" />
                       </div>
                       <div className="flex-1 space-y-1">
                         <div className="flex justify-between items-center">
@@ -208,7 +212,7 @@ const PostDetail: React.FC = () => {
                           <div className="flex items-center gap-3">
                             <span className="text-[8px] text-gray-700 font-bold italic">{new Date(reply.created_at).toLocaleString()}</span>
                             {(currentUser?.id === reply.author_id || currentUser?.role === 'ADMIN') && (
-                              <button onClick={() => handleDeleteComment(reply.id)} className="text-[8px] font-black text-gray-700 uppercase hover:text-red-600 transition-colors">Delete</button>
+                              <button onClick={() => handleDeleteComment(reply.id)} className="text-[8px] font-black text-gray-700 uppercase hover:text-red-600 transition-colors italic">삭제</button>
                             )}
                           </div>
                         </div>
@@ -217,17 +221,18 @@ const PostDetail: React.FC = () => {
                     </div>
                   ))}
 
+                  {/* 대댓글 입력창 */}
                   {replyToId === comm.id && (
                     <div className="mt-4 animate-in slide-in-from-top-2">
                       <textarea 
                         value={newComment} 
                         onChange={(e) => setNewComment(e.target.value)} 
-                        placeholder="답글을 남겨주세요." 
+                        placeholder="답글을 남겨보세요." 
                         className="w-full bg-black border border-red-600/30 rounded-2xl px-5 py-4 text-white text-sm outline-none focus:border-red-600 transition-all resize-none italic font-bold"
                       />
                       <div className="flex justify-end gap-2 mt-2">
-                        <button onClick={() => {setReplyToId(null); setNewComment('');}} className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase italic">Cancel</button>
-                        <button onClick={(e) => handleCommentSubmit(e, comm.id)} className="bg-red-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] italic">Post Reply</button>
+                        <button onClick={() => {setReplyToId(null); setNewComment('');}} className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase italic">취소</button>
+                        <button onClick={(e) => handleCommentSubmit(e, comm.id)} className="bg-red-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] italic">답글 등록</button>
                       </div>
                     </div>
                   )}
@@ -236,7 +241,7 @@ const PostDetail: React.FC = () => {
             ))}
           </div>
 
-          {/* 🔴 문구 수정: 포인트 적립 안내 삭제 및 버튼 텍스트 변경 */}
+          {/* 🔴 포인트 안내 삭제 및 문구 한글화 */}
           {!replyToId && (
             <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-12">
               <textarea 
@@ -257,9 +262,10 @@ const PostDetail: React.FC = () => {
           )}
         </div>
 
+        {/* 🔴 "Return to..."를 "게시판으로 돌아가기"로 수정 */}
         <div className="flex justify-center">
           <button onClick={() => navigate(-1)} className="text-gray-700 hover:text-white font-black uppercase italic text-xs tracking-[0.3em] transition-all border-b border-transparent hover:border-white">
-            ← Return to Community Archive
+            ← 게시판으로 돌아가기
           </button>
         </div>
       </div>
