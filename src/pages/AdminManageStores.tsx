@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // 🔴 useEffect 추가됨
 import { useNavigate } from 'react-router-dom'; 
 import { supabase } from '../supabase';
 import { UserRole } from '../types'; 
@@ -8,11 +8,12 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const AdminManageStores: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth(); // 🔴 initialized 추가
+  const { currentUser, initialized } = useAuth();
 
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 업소 데이터 호출 함수
   const fetchStores = async () => {
     setLoading(true);
     try {
@@ -32,7 +33,7 @@ const AdminManageStores: React.FC = () => {
 
   useFetchGuard(fetchStores, []);
 
-  // 🔴 가드 수정: 세션 초기화 완료 전에는 navigate 하지 않음
+  // 🔴 새로고침 시 홈으로 튕김 방지 로직 (initialized 확인)
   useEffect(() => {
     if (initialized) {
       if (!currentUser || currentUser.role !== UserRole.ADMIN) {
@@ -42,10 +43,10 @@ const AdminManageStores: React.FC = () => {
   }, [initialized, currentUser, navigate]);
 
   /**
-   * 🔴 HOT 설정 토글 - 즉시 UI 반영 로직 (Optimistic UI)
+   * HOT 설정 토글 - 즉시 UI 반영 (Optimistic UI)
    */
   const toggleHotStatus = async (storeId: string, currentStatus: boolean) => {
-    // 1. 로컬 상태 먼저 변경 (사용자 체감 속도 UP)
+    // 로컬 상태 먼저 변경
     const updatedStores = stores.map(s => 
       s.id === storeId ? { ...s, is_hot: !currentStatus } : s
     );
@@ -58,12 +59,11 @@ const AdminManageStores: React.FC = () => {
         .eq('id', storeId);
       
       if (error) {
-        // 에러 발생 시 원래 상태로 롤백
-        setStores(stores);
+        setStores(stores); // 에러 시 롤백
         throw error;
       }
     } catch (err) {
-      alert('상태 변경에 실패했습니다. 관리자 권한(RLS)을 확인하세요.');
+      alert('상태 변경에 실패했습니다. 관리자 권한을 확인하세요.');
     }
   };
 
@@ -79,7 +79,6 @@ const AdminManageStores: React.FC = () => {
     }
   };
 
-  // 초기화 대기 화면
   if (!initialized || (loading && stores.length === 0)) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="text-white font-black italic animate-pulse tracking-widest uppercase text-xl">
@@ -134,7 +133,6 @@ const AdminManageStores: React.FC = () => {
                       <span className="text-[9px] font-black uppercase bg-white/5 px-2.5 py-1 rounded-md text-gray-400 border border-white/5 italic">#{store.category}</span>
                     </td>
                     <td className="p-6 text-center">
-                      {/* 🔴 HOT 버튼: 클릭 시 즉시 스타일 변경 */}
                       <button 
                         onClick={() => toggleHotStatus(store.id, store.is_hot)}
                         className={`px-5 py-2 rounded-full text-[9px] font-black uppercase italic transition-all active:scale-90 ${
