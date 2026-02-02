@@ -24,10 +24,10 @@ import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import PostEdit from './pages/PostEdit';
 
-// 🔴 공지사항 관련 페이지 (파일명 수정 반영)
+// 공지사항 관련 페이지
 import Notice from './pages/Notice';
 import NoticeEdit from './pages/NoticeEdit';
-import NoticeCreate from './pages/NoticeCreate'; // AdminNoticeCreate -> NoticeCreate로 변경
+import NoticeCreate from './pages/NoticeCreate';
 
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
@@ -38,7 +38,8 @@ import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
- * 🔒 [가드 1] 관리자 전용 (내부 구독형)
+ * 🔒 [가드 1] 관리자 전용
+ * 하위 페이지 데이터 호출 전, 인증 로딩 중이라면 null을 반환하여 엇박자를 방지합니다.
  */
 const AdminRoute = () => {
   const { currentUser, loading } = useAuth();
@@ -47,7 +48,7 @@ const AdminRoute = () => {
 };
 
 /**
- * 🔒 [가드 2] 일반 로그인 유저 전용 (내부 구독형)
+ * 🔒 [가드 2] 일반 로그인 유저 전용
  */
 const PrivateRoute = () => {
   const { currentUser, loading } = useAuth();
@@ -56,7 +57,7 @@ const PrivateRoute = () => {
 };
 
 /**
- * 🔒 [가드 3] 특정 등급(Level) 이상 전용 (내부 구독형)
+ * 🔒 [가드 3] 특정 등급(Level) 이상 전용
  */
 const LevelRoute = ({ minLevel }: { minLevel: number }) => {
   const { currentUser, loading } = useAuth();
@@ -65,17 +66,8 @@ const LevelRoute = ({ minLevel }: { minLevel: number }) => {
 };
 
 function App() {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-red-600 font-black animate-pulse tracking-[0.3em] text-xl italic">
-          HONOLJA SYNCING...
-        </div>
-      </div>
-    );
-  }
+  // 🔴 더 이상 앱 최상단에서 loading을 조건으로 'return'하지 않습니다.
+  // 이로써 유저는 접속 즉시 서비스의 골격(Header, Footer)을 보게 됩니다.
 
   return (
     <Router>
@@ -84,7 +76,7 @@ function App() {
         
         <main className="flex-grow pt-[80px]">
           <Routes>
-            {/* --- 공용 구역 --- */}
+            {/* --- 공용 구역 (접속 즉시 렌더링) --- */}
             <Route path="/" element={<Home />} />
             <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
             <Route path="/danang" element={<DanangHome />} />
@@ -104,7 +96,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* --- 보호 구역 --- */}
+            {/* --- 보호 구역 (가드가 내부적으로 loading을 기다림) --- */}
             <Route element={<PrivateRoute />}>
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/coupon-shop" element={<CouponShop />} />
@@ -126,7 +118,6 @@ function App() {
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
               <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
               
-              {/* 🔴 컴포넌트 이름 NoticeCreate로 수정 */}
               <Route path="/notice/create" element={<NoticeCreate />} />
               <Route path="/notice/edit/:id" element={<NoticeEdit />} />
             </Route>
