@@ -25,7 +25,7 @@ const CreatePost: React.FC = () => {
     try {
       const { data } = await supabase.from('stores').select('*').order('name');
       if (data) setStores(data as Store[]);
-    } catch (err: any) { console.error(err.message); }
+    } catch (err) { console.error(err); }
   };
 
   useFetchGuard(fetchStores, []);
@@ -34,8 +34,8 @@ const CreatePost: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setLoading(true);
-    const newUrls: string[] = [];
     try {
+      const newUrls: string[] = [];
       for (const file of Array.from(files)) {
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const filePath = `post-images/${fileName}`;
@@ -53,14 +53,9 @@ const CreatePost: React.FC = () => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (!title.trim() || !content.trim()) return alert('제목과 내용을 입력해주세요.');
     
-    // 🔴 50자 제한 필수 (사진은 이제 옵션)
     if (isReviewAction) {
-      if (content.length < 50) {
-        return alert('🚨 업소 후기는 최소 50자 이상 작성해야 등록이 가능합니다.');
-      }
-      if (!selectedStoreId) {
-        return alert('🚨 후기를 작성할 업소를 선택해 주세요.');
-      }
+      if (content.length < 50) return alert('🚨 업소 후기는 최소 50자 이상 작성해야 등록이 가능합니다.');
+      if (!selectedStoreId) return alert('🚨 후기를 작성할 업소를 선택해 주세요.');
     }
 
     setLoading(true);
@@ -79,16 +74,22 @@ const CreatePost: React.FC = () => {
 
       if (postError) throw postError;
 
-      // 보상: 사진 포함 시 10P 보너스
       const photoBonus = imageUrls.length > 0 ? 10 : 0;
       const totalEarned = (isReviewAction ? 100 : 20) + photoBonus;
 
-      const { data: profile } = await supabase.from('profiles').update({
-        points: (currentUser.points || 0) + totalEarned,
-        review_count: (currentUser.review_count || 0) + (isReviewAction ? 1 : 0)
-      }).eq('id', currentUser.id).select().single();
+      const { data: profile } = await supabase.from('profiles')
+        .update({
+          points: (currentUser.points || 0) + totalEarned,
+          review_count: (currentUser.review_count || 0) + (isReviewAction ? 1 : 0)
+        })
+        .eq('id', currentUser.id)
+        .select().single();
 
-      await supabase.from('point_history').insert([{ user_id: currentUser.id, amount: totalEarned, reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성 ${photoBonus > 0 ? '(사진 보너스)' : ''}` }]);
+      await supabase.from('point_history').insert([{ 
+        user_id: currentUser.id, 
+        amount: totalEarned, 
+        reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성` 
+      }]);
 
       if (profile) {
         let newLevel = profile.level;
@@ -98,26 +99,33 @@ const CreatePost: React.FC = () => {
         if (newLevel > profile.level) await supabase.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
       }
 
-      await refreshUser(); 
+      // 🔴 이제 refreshUser가 존재하므로 안전하게 실행됩니다.
+      if (refreshUser) {
+        await refreshUser(); 
+      }
+      
       alert(`등록 완료! ${totalEarned}P가 적립되었습니다.`);
       navigate(category === 'vip' ? '/vip-lounge' : '/community');
-    } catch (err: any) { alert(`등록 실패: ${err.message}`); }
-    finally { setLoading(false); }
+
+    } catch (err: any) { 
+      alert(`등록 실패: ${err.message}`); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <h2 className="text-3xl font-black text-white italic mb-10 uppercase tracking-tighter">Create <span className="text-red-600">Post</span></h2>
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category Selection</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white outline-none">
                 <option value="free">자유게시판</option>
-                {/* 🔴 선택란 문구 수정 */}
                 <option value="review">업소후기 (50자 필수 + 사진 10P 보너스)</option>
                 <option value="qna">질문/답변</option>
                 <option value="food">맛집/관광</option>
@@ -140,12 +148,7 @@ const CreatePost: React.FC = () => {
           
           <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
             <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">Photo Attachment (Optional: +10P Bonus)</label>
-            {/* 🔴 파일 선택 버튼 빨간색 롤백 */}
-            <input 
-              type="file" multiple accept="image/*" 
-              onChange={handleImageUpload} 
-              className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:mr-4 hover:file:bg-red-700 transition-all" 
-            />
+            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:mr-4 hover:file:bg-red-700 transition-all" />
             <div className="flex flex-wrap gap-4 mt-8">
               {imageUrls.map((url, i) => (
                 <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg"><img src={url} className="w-full h-full object-cover" /><button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px]">DELETE</button></div>
