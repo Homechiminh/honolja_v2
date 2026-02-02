@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // 🔴 Link 제거됨
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
@@ -12,11 +12,12 @@ const PostDetail: React.FC = () => {
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [replyToId, setReplyToId] = useState<string | null>(null); // 대댓글 대상 ID
   const [loading, setLoading] = useState(true);
   const [commenting, setCommenting] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
-  const fetchPostData = async () => {
+  const fetchPostData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
@@ -30,7 +31,6 @@ const PostDetail: React.FC = () => {
 
       supabase.rpc('increment_views', { post_id: id });
     } catch (err: any) {
-      console.error("Post Detail Fetch Failed:", err.message);
       if (err.message?.includes("Post not found")) {
          alert('삭제되었거나 존재하지 않는 게시글입니다.');
          navigate('/community');
@@ -38,7 +38,7 @@ const PostDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
   useFetchGuard(fetchPostData, [id]);
 
@@ -66,29 +66,64 @@ const PostDetail: React.FC = () => {
     }
   };
 
-  const handleCommentSubmit = async (e: React.FormEvent) => {
+  // 🔴 포인트 지급 판독기 (코드 레벨 필터링)
+  const checkPointEligibility = async (content: string) => {
+    if (!currentUser || !post) return false;
+    
+    // 1. 본인 글에 댓글 다는 경우 제외
+    if (currentUser.id === post.author_id) return false;
+    
+    // 2. 10자 미만 성의 없는 댓글 제외
+    if (content.trim().length < 10) return false;
+    
+    // 3. 오늘 댓글 포인트 적립 횟수 제한 (5회)
+    const today = new Date().toISOString().split('T')[0];
+    const { count } = await supabase
+      .from('point_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id)
+      .eq('reason', '댓글 작성 보상')
+      .gte('created_at', today);
+    
+    if (count && count >= 5) return false;
+
+    return true;
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent, parentId: string | null = null) => {
     e.preventDefault();
+    const content = parentId ? newComment : newComment; // 대댓글 시 별도 state를 쓰거나 공통으로 사용
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (!newComment.trim()) return;
 
     setCommenting(true);
     try {
-      const { error: commErr } = await supabase.from('comments').insert([{ 
-        post_id: id, author_id: currentUser.id, content: newComment 
-      }]);
+      // 1. 댓글 저장
+      const { data: insertedComment, error: commErr } = await supabase.from('comments').insert([{ 
+        post_id: id, 
+        author_id: currentUser.id, 
+        content: newComment,
+        parent_id: parentId // 🔴 대댓글 여부 저장
+      }]).select().single();
+      
       if (commErr) throw commErr;
 
-      try {
-        await supabase.from('profiles').update({ points: (currentUser.points || 0) + 5 }).eq('id', currentUser.id);
+      // 2. 포인트 지급 로직 실행
+      const isEligible = await checkPointEligibility(newComment);
+      if (isEligible) {
+        const reward = 5;
+        await supabase.from('profiles').update({ points: (currentUser.points || 0) + reward }).eq('id', currentUser.id);
         await supabase.from('point_history').insert([{ 
-          user_id: currentUser.id, amount: 5, reason: '댓글 작성 보상' 
+          user_id: currentUser.id, 
+          amount: reward, 
+          reason: '댓글 작성 보상' 
         }]);
-      } catch (pErr) {
-        console.warn("Point update failed:", pErr);
       }
 
       setNewComment('');
+      setReplyToId(null);
       fetchPostData(); 
+      if (isEligible) alert('댓글 등록 완료! 포인트가 지급되었습니다.');
     } catch (err: any) {
       alert(`댓글 등록 실패: ${err.message}`);
     } finally {
@@ -96,15 +131,22 @@ const PostDetail: React.FC = () => {
     }
   };
 
+  // 댓글 계층 구조 형성 (부모-자식)
+  const commentTree = comments.filter(c => !c.parent_id).map(parent => ({
+    ...parent,
+    replies: comments.filter(child => child.parent_id === parent.id)
+  }));
+
   if (!initialized || loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse uppercase">Accessing Post Intelligence...</div>
+      <div className="text-white font-black italic animate-pulse uppercase">Accessing Intelligence...</div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans">
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
+        {/* 게시글 영역 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-600/20">#{post.category.toUpperCase()}</span>
@@ -116,7 +158,7 @@ const PostDetail: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white font-black italic text-lg">{post.author?.nickname}</p>
-                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">Lv.{post.author?.level} Verified Member</p>
+                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">Lv.{post.author?.level} Agent</p>
                 </div>
               </div>
               <button onClick={handleLike} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}>
@@ -125,38 +167,93 @@ const PostDetail: React.FC = () => {
               </button>
             </div>
           </header>
-          <article className="p-10 md:p-16 text-gray-300 text-lg md:text-xl leading-relaxed whitespace-pre-wrap font-medium italic">{post.content}</article>
+          <article className="p-10 md:p-16 text-gray-300 text-lg md:text-xl leading-relaxed whitespace-pre-wrap font-medium italic">
+            {post.image_urls?.map((url: string, i: number) => (
+              <img key={i} src={url} alt="post-img" className="w-full rounded-3xl mb-8 border border-white/5" />
+            ))}
+            {post.content}
+          </article>
         </div>
 
+        {/* 댓글 영역 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
-            <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> 
-            댓글창 <span className="text-red-600">({comments.length})</span>
+            <span className="w-2 h-8 bg-red-600 rounded-full"></span> 
+            LOGS <span className="text-red-600">({comments.length})</span>
           </h3>
-          <div className="space-y-10 mb-16">
-            {comments.length === 0 ? (
-              <p className="text-center text-gray-700 font-black italic uppercase py-10 opacity-50">첫 댓글을 남겨보세요.</p>
-            ) : (
-              comments.map((comm) => (
-                <div key={comm.id} className="flex gap-6 items-start group">
+          
+          <div className="space-y-12 mb-16">
+            {commentTree.map((comm) => (
+              <div key={comm.id} className="space-y-6">
+                {/* 부모 댓글 */}
+                <div className="flex gap-6 items-start group">
                   <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0 shadow-lg"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avt" /></div>
                   <div className="flex-1 space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-white font-black text-xs italic uppercase">{comm.author?.nickname} <span className="text-yellow-600 ml-2">LV.{comm.author?.level}</span></span>
-                      <span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span>
+                      <div className="flex items-center gap-4">
+                        <span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span>
+                        <button onClick={() => setReplyToId(comm.id)} className="text-[10px] font-black text-red-600 uppercase hover:underline">Reply</button>
+                      </div>
                     </div>
                     <p className="text-gray-400 text-base md:text-lg leading-relaxed italic">{comm.content}</p>
                   </div>
                 </div>
-              ))
-            )}
+
+                {/* 대댓글 목록 */}
+                <div className="ml-16 space-y-8 border-l-2 border-white/5 pl-8">
+                  {comm.replies.map((reply: any) => (
+                    <div key={reply.id} className="flex gap-4 items-start group">
+                      <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 overflow-hidden shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author?.nickname}`} alt="avt" /></div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-300 font-black text-[11px] italic uppercase">{reply.author?.nickname} <span className="text-yellow-600 ml-1">LV.{reply.author?.level}</span></span>
+                          <span className="text-[8px] text-gray-700 font-bold italic">{new Date(reply.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="text-gray-500 text-base leading-relaxed italic">{reply.content}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* 대댓글 작성창 */}
+                  {replyToId === comm.id && (
+                    <div className="mt-4 animate-in slide-in-from-top-2">
+                      <textarea 
+                        value={newComment} 
+                        onChange={(e) => setNewComment(e.target.value)} 
+                        placeholder="답글을 남겨주세요 (10자 이상 포인트 지급)" 
+                        className="w-full bg-black border border-red-600/30 rounded-2xl px-5 py-4 text-white text-sm outline-none focus:border-red-600 transition-all resize-none italic font-bold"
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button onClick={() => {setReplyToId(null); setNewComment('');}} className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase italic">Cancel</button>
+                        <button onClick={(e) => handleCommentSubmit(e, comm.id)} className="bg-red-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] italic">Post Reply</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          <form onSubmit={handleCommentSubmit} className="relative mt-12">
-            <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder={currentUser ? "댓글 작성 시 5P 적립 및 기록 갱신" : "로그인이 필요한 구역입니다."} disabled={!currentUser} className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-red-600 min-h-[160px] transition-all resize-none italic font-bold" />
-            <button type="submit" disabled={commenting || !currentUser} className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20 active:scale-95 italic">
-              {commenting ? '전송중...' : '등록 +5P'}
-            </button>
-          </form>
+
+          {/* 일반 댓글 작성창 */}
+          {!replyToId && (
+            <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-12">
+              <textarea 
+                value={newComment} 
+                onChange={(e) => setNewComment(e.target.value)} 
+                placeholder={currentUser ? "댓글 작성 시 5P 적립 (자신 글 제외/10자 이상/일 5회)" : "로그인이 필요한 구역입니다."} 
+                disabled={!currentUser} 
+                className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-red-600 min-h-[160px] transition-all resize-none italic font-bold" 
+              />
+              <button 
+                type="submit" 
+                disabled={commenting || !currentUser} 
+                className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20 active:scale-95 italic"
+              >
+                {commenting ? '전송중...' : '등록 +5P'}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="flex justify-center">
