@@ -7,28 +7,24 @@ const CouponShop: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'shop' | 'my'>('shop');
   const [points, setPoints] = useState(0);
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false); // 구매 버튼 로딩
-  const [dataLoading, setDataLoading] = useState(true); // 데이터 동기화 로딩
+  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // 전역 인증 정보 가져오기
   const { currentUser, loading: authLoading } = useAuth();
 
   const COUPON_LIST = [
     { id: 'c1', title: '5만동 즉시 할인권', price: 200, content: '제휴 업체 어디서나 즉시 사용 가능한 입문용 할인권', icon: '🎫' },
-    { id: 'c2', title: '소주 1병 무료 쿠폰', price: 300, content: '식사 또는 유흥 업체 방문 시 소주 1병 서비스', icon: '🍶' },
+    // 🔴 요청 사항: "유흥 업체" -> "가라오케 등 방문 시"로 수정
+    { id: 'c2', title: '소주 1병 무료 쿠폰', price: 300, content: '식사 또는 가라오케 등 방문 시 소주 1병 서비스', icon: '🍶' },
     { id: 'c3', title: '10만동 즉시 할인권', price: 400, content: '결제 금액에서 10만동을 즉시 차감해드리는 실속 쿠폰', icon: '💰' },
     { id: 'c4', title: '마사지/이발소 10% 할인', price: 600, content: '마사지 및 이발소 카테고리 이용 시 전체 금액 10% 할인', icon: '📉' },
     { id: 'c5', title: '모듬 과일안주 서비스', price: 900, content: '가라오케/바 방문 시 신선한 계절 과일안주 무료 제공', icon: '🍓' },
     { id: 'c6', title: '가라오케 10% 할인권', price: 1300, content: '가라오케 이용 시 전체 금액의 10% 파격 할인', icon: '🎤' },
     { id: 'c7', title: '모든업장 10% 할인권', price: 1700, content: '모든 제휴 업체 10% 할인 (단, 클럽 카테고리는 제외)', icon: '🔥' },
     { id: 'c8', title: '풀빌라 $20 할인권', price: 2200, content: '풀빌라 예약 시 현장 결제 금액에서 $20 즉시 할인', icon: '🏡' },
-    { id: 'c9', title: '운영진과 맥주 한 잔', price: 3000, content: '[SPECIAL] 운영진과 만나 꿀정보를 나누는 특별한 시간', icon: '👑' },
+    { id: 'c9', title: '[스페셜] 운영진과 맥주 한 잔', price: 3000, content: '운영진과 직접 만나 꿀정보를 나누는 특별한 오프라인 시간', icon: '👑' },
   ];
 
-  /**
-   * 🔴 [방탄 fetch] 마켓플레이스 데이터 동기화
-   * 포인트와 쿠폰 목록을 병렬로 호출하며 에러 시에도 로딩을 안전하게 해제합니다.
-   */
   const fetchCouponData = async () => {
     if (!currentUser?.id) return;
     setDataLoading(true);
@@ -44,32 +40,27 @@ const CouponShop: React.FC = () => {
       if (profileRes.data) setPoints(profileRes.data.points);
       if (couponRes.data) setMyCoupons(couponRes.data);
     } catch (err: any) {
-      console.error("Marketplace Sync Failed (406 등):", err.message);
+      console.error("Data Sync Failed:", err.message);
     } finally {
       setDataLoading(false);
     }
   };
 
-  /**
-   * 🔴 [데이터 가드] 인증이 완료되고 탭이 바뀔 때마다 데이터 최신화
-   */
   useFetchGuard(fetchCouponData, [activeTab]);
 
   const handlePurchase = async (item: typeof COUPON_LIST[0]) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (points < item.price) return alert('포인트가 부족합니다.');
-    if (!confirm(`[${item.title}]을(를) 교환하시겠습니까?\n${item.price}P가 차감됩니다.`)) return;
+    if (!confirm(`[${item.title}] 쿠폰을 교환하시겠습니까?\n${item.price.toLocaleString()}P가 차감됩니다.`)) return;
 
     setLoading(true);
     try {
-      // 1. 포인트 차감
       const { error: pError } = await supabase
         .from('profiles')
         .update({ points: points - item.price })
         .eq('id', currentUser.id);
       if (pError) throw pError;
 
-      // 2. 쿠폰 발급
       const { error: cError } = await supabase.from('coupons').insert({
         user_id: currentUser.id,
         title: item.title,
@@ -79,30 +70,25 @@ const CouponShop: React.FC = () => {
       });
       if (cError) throw cError;
 
-      // 3. 포인트 내역 기록
       await supabase.from('point_history').insert({
         user_id: currentUser.id,
         amount: -item.price,
         reason: `쿠폰 교환: ${item.title}`
       });
 
-      alert('교환 성공! My Wallet에서 확인하세요.');
-      
-      // UI 즉시 갱신을 위해 데이터 재호출
+      alert('교환이 완료되었습니다! 내 쿠폰함에서 확인하세요.');
       await fetchCouponData();
 
     } catch (err: any) {
-      console.error("Purchase Error:", err.message);
       alert('처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 인증 정보를 확인하는 동안 보여줄 로딩 화면 (Tony님 원래 스타일)
   if (authLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 font-black italic animate-pulse tracking-widest uppercase">
-      Connecting to Marketplace...
+      쿠폰 샵 접속 중...
     </div>
   );
 
@@ -112,13 +98,13 @@ const CouponShop: React.FC = () => {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
           <div>
             <h2 className="text-6xl font-black italic uppercase tracking-tighter leading-none">
-              Honolja <span className="text-red-600">Shop</span>
+              호놀자 <span className="text-red-600">상점</span>
             </h2>
-            <p className="text-gray-500 font-bold uppercase text-[11px] mt-4 italic tracking-[0.2em]">Premium Point Exchange</p>
+            <p className="text-gray-500 font-bold uppercase text-[11px] mt-4 italic tracking-[0.2em]">프리미엄 포인트 교환소</p>
           </div>
           
           <div className="bg-[#111] border-2 border-white/5 p-8 rounded-[2.5rem] flex flex-col items-end min-w-[280px] shadow-2xl">
-            <span className="text-[10px] font-black text-gray-400 uppercase italic mb-2">Available Points</span>
+            <span className="text-[10px] font-black text-gray-400 uppercase italic mb-2">보유 포인트</span>
             <span className="text-4xl font-black text-white italic tracking-tighter">
               {points.toLocaleString()} <span className="text-red-600 text-lg ml-1">P</span>
             </span>
@@ -126,24 +112,30 @@ const CouponShop: React.FC = () => {
         </header>
 
         {/* 탭 네비게이션 */}
-        <div className="flex gap-2 mb-12 bg-white/5 p-2 rounded-[2rem] w-fit">
-          <button onClick={() => setActiveTab('shop')} className={`px-10 py-4 rounded-[1.5rem] font-black italic uppercase transition-all ${activeTab === 'shop' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Store</button>
-          <button onClick={() => setActiveTab('my')} className={`px-10 py-4 rounded-[1.5rem] font-black italic uppercase transition-all ${activeTab === 'my' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>My Wallet</button>
+        <div className="flex gap-2 mb-12 bg-white/5 p-2 rounded-[2rem] w-fit font-bold italic">
+          <button onClick={() => setActiveTab('shop')} className={`px-10 py-4 rounded-[1.5rem] uppercase transition-all ${activeTab === 'shop' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>쿠폰 구매</button>
+          <button onClick={() => setActiveTab('my')} className={`px-10 py-4 rounded-[1.5rem] uppercase transition-all ${activeTab === 'my' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>내 쿠폰함</button>
         </div>
 
         {activeTab === 'shop' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {COUPON_LIST.map((item) => (
-              <div key={item.id} className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 flex flex-col hover:border-red-600/50 transition-all duration-500 group">
+              <div key={item.id} className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 flex flex-col hover:border-red-600/50 transition-all duration-500 group shadow-lg">
                 <div className="text-5xl mb-8 group-hover:scale-110 transition-transform duration-500">{item.icon}</div>
                 <h3 className="text-xl font-black italic uppercase mb-2 tracking-tighter">{item.title}</h3>
                 <p className="text-gray-500 text-[11px] mb-10 font-medium leading-relaxed h-10">{item.content}</p>
+                
+                {/* 🔴 요청 사항: 포인트 부족해도 가격 명시 (단, 비활성화 처리) */}
                 <button 
                   onClick={() => handlePurchase(item)}
                   disabled={loading || points < item.price}
-                  className="w-full py-5 bg-white/5 group-hover:bg-red-600 text-white rounded-2xl font-black italic uppercase text-xs transition-all disabled:opacity-5 active:scale-95"
+                  className={`w-full py-5 rounded-2xl font-black italic uppercase text-xs transition-all active:scale-95 ${
+                    points < item.price 
+                    ? 'bg-white/5 text-gray-600 cursor-not-allowed' 
+                    : 'bg-red-600 text-white hover:bg-white hover:text-red-600 shadow-xl'
+                  }`}
                 >
-                  {points < item.price ? 'INSUFFICIENT POINTS' : `${item.price.toLocaleString()} P EXCHANGE`}
+                  {item.price.toLocaleString()} P 교환
                 </button>
               </div>
             ))}
@@ -152,21 +144,21 @@ const CouponShop: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {dataLoading ? (
               <div className="col-span-2 py-32 text-center text-gray-700 font-black italic animate-pulse uppercase tracking-widest">
-                Decrypting Wallet...
+                쿠폰 정보를 불러오는 중...
               </div>
             ) : myCoupons.length === 0 ? (
               <div className="col-span-2 py-32 text-center bg-[#0a0a0a] rounded-[3rem] border border-dashed border-white/10">
-                <p className="text-gray-600 font-black italic uppercase tracking-widest">No Coupons Found</p>
+                <p className="text-gray-600 font-black italic uppercase tracking-widest">보유한 쿠폰이 없습니다</p>
               </div>
             ) : (
               myCoupons.map((coupon) => (
                 <div key={coupon.id} className={`p-8 rounded-[2.5rem] border flex justify-between items-center transition-all ${coupon.is_used ? 'bg-black/40 border-white/5 opacity-30' : 'bg-[#111] border-red-600/20 shadow-2xl'}`}>
                   <div>
                     <h4 className="text-xl font-black italic uppercase text-white">{coupon.title}</h4>
-                    <p className="text-gray-500 text-[10px] font-bold mt-2 uppercase italic">Exp: {new Date(coupon.expired_at).toLocaleDateString()}</p>
+                    <p className="text-gray-500 text-[10px] font-bold mt-2 uppercase italic">만료일: {new Date(coupon.expired_at).toLocaleDateString()}</p>
                   </div>
                   <div className={`px-6 py-2 rounded-xl font-black italic uppercase text-[10px] ${coupon.is_used ? 'bg-gray-800 text-gray-500' : 'bg-red-600 text-white shadow-lg'}`}>
-                    {coupon.is_used ? 'Used' : 'Ready'}
+                    {coupon.is_used ? '사용 완료' : '사용 가능'}
                   </div>
                 </div>
               ))
