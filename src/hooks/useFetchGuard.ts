@@ -2,35 +2,32 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export const useFetchGuard = (fetchFn: () => Promise<void>, deps: any[]) => {
-  // 🔴 'loading' 대신 'initialized'를 가져옵니다. 
-  // AuthContext에서 보낸 이름과 똑같아야 에러가 나지 않습니다.
-  const { initialized } = useAuth();
-  const retryCount = useRef(0);
+  const { initialized, currentUser } = useAuth();
+  const lastFetchedUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    // 🔴 근본 해결: 아직 준비(initialized)가 안 됐다면 아무것도 하지 않습니다.
+    // 1. 시스템 자체가 초기화되지 않았다면 대기
     if (!initialized) return;
 
-    const safeFetch = async () => {
+    const execute = async () => {
       try {
-        // 브라우저가 세션을 인식할 시간을 0.2초 정도 더 줍니다.
-        await new Promise(res => setTimeout(res, 200));
         await fetchFn();
-        retryCount.current = 0; // 성공 시 카운트 리셋
+        // 성공 시 현재 유저 ID 기록 (무한 루프 방지)
+        lastFetchedUserId.current = currentUser?.id || 'guest';
       } catch (err: any) {
-        // 🔴 근본 해결: 406 에러 발생 시 중앙 시스템이 0.6초 뒤 '딱 한 번' 자동 재시도
-        if (err.status === 406 && retryCount.current < 1) {
-          retryCount.current++;
-          console.warn("🔄 Auth sync delay detected. Central system retrying...");
-          setTimeout(safeFetch, 600);
-        } else {
-          console.error("Critical Fetch Error:", err);
+        // 🔴 근본 해결: 406 에러(인증 지연) 발생 시
+        if (err.status === 406) {
+          console.warn("⚠️ [406] Auth lag detected. Waiting for session sync...");
+          // 여기서 아무것도 안 해도, 아래 의존성 배열의 [currentUser] 덕분에
+          // 로그인이 완료되는 순간 useEffect가 다시 돌아갑니다.
         }
       }
     };
 
-    safeFetch();
+    execute();
     
-    // 🔴 'initialized'가 true로 바뀔 때 다시 실행되도록 의존성 배열에 넣습니다.
-  }, [initialized, ...deps]); 
+    // 🔴 핵심: currentUser.id를 의존성에 넣습니다.
+    // 탭을 바꿨거나, 뒤늦게 로그인이 풀렸거나, 다시 잡히는 모든 순간에 
+    // 데이터 호출을 자동으로 '재동기화'합니다.
+  }, [initialized, currentUser?.id, ...deps]); 
 };
