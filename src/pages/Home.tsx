@@ -9,14 +9,21 @@ import StoreCard from '../components/StoreCard';
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, initialized } = useAuth();
+  
+  // 1. 업소 데이터 로드
   const { stores, loading: storesLoading } = useStores('all');
   
+  // 🔴 에러 원인 해결: 필터링 변수 재선언
+  const hotStores = stores.filter((s: any) => s.is_hot).slice(0, 5);
+  const villaStores = stores.filter((s: any) => s.category === 'villa').slice(0, 4);
+
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
   const [latestVipPosts, setLatestVipPosts] = useState<any[]>([]);
   const [latestNotices, setLatestNotices] = useState<any[]>([]);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
+  // 5초 자동 광고 슬라이드
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -103,21 +110,18 @@ const Home: React.FC = () => {
           <Link to="/stores/all" className="text-gray-500 font-bold text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
-          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotStores.map(store => <StoreCard key={store.id} store={store} />)}
+          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
         </div>
       </section>
 
-      {/* [섹션 3] 커뮤니티 & SNS - 디자인 대폭 강화 */}
+      {/* [섹션 3] 커뮤니티 & SNS */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-2 flex lg:flex-col gap-4">
-          {/* 텔레그램 버튼 - H 배경 복구 및 디자인 수정 */}
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl">
             <span className="text-[10px] font-black text-white/50 uppercase block mb-1 whitespace-nowrap z-10 relative">그룹챗 입장</span>
             <h4 className="text-xl md:text-2xl font-black italic text-white leading-tight whitespace-nowrap z-10 relative tracking-tighter">호놀자 텔레그램</h4>
             <span className="absolute -bottom-4 -right-2 text-9xl font-black text-white/10 italic select-none pointer-events-none group-hover:scale-110 transition-transform duration-500">H</span>
           </a>
-          
-          {/* 카카오톡 버튼 - H 배경 복구 및 디자인 수정 */}
           <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl">
             <span className="text-[10px] font-black text-black/40 uppercase block mb-1 whitespace-nowrap z-10 relative">단톡방 입장</span>
             <h4 className="text-xl md:text-2xl font-black italic leading-tight whitespace-nowrap z-10 relative tracking-tighter">호놀자 카카오톡</h4>
@@ -138,7 +142,6 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          {/* VIP 라운지 - [LV.3 전용] 문구 삭제 */}
           <div>
             <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4><button onClick={handleVIPClick} className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">Access</button></div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
@@ -176,27 +179,22 @@ const Home: React.FC = () => {
             <Link to="/stores/villa" className="bg-red-600 px-10 py-4 rounded-2xl font-black text-sm text-white shadow-xl shadow-red-600/20 active:scale-95 transition-all">예약문의</Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10 px-4">
-            {storesLoading ? [1, 2, 3, 4].map(i => <div key={i} className="aspect-video bg-white/5 rounded-[1.5rem] animate-pulse" />) : villaStores.map(store => <StoreCard key={store.id} store={store} />)}
+            {storesLoading ? [1, 2, 3, 4].map(i => <div key={i} className="aspect-video bg-white/5 rounded-[1.5rem] animate-pulse" />) : villaStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
           </div>
         </div>
       </section>
 
-      {/* [배너 슬라이더] 1열 교체 형식 */}
+      {/* [배너 슬라이더] */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24">
         <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] h-[220px] shadow-2xl">
           <div 
             className="flex h-full transition-transform duration-1000 ease-in-out"
             style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}
           >
-            {/* 슬라이드 1 */}
             <div className="min-w-full h-full flex flex-col justify-center items-center text-center p-10">
               <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Partnership</span>
-              <h4 className="text-white text-xl md:text-3xl font-black italic tracking-tighter break-keep">
-                호놀자와 함께하실 <br className="md:hidden"/> 광고주분들의 연락을 기다립니다.
-              </h4>
+              <h4 className="text-white text-xl md:text-3xl font-black italic tracking-tighter break-keep">호놀자와 함께하실 <br className="md:hidden"/> 광고주분들의 연락을 기다립니다.</h4>
             </div>
-            
-            {/* 슬라이드 2 */}
             <a 
               href="https://t.me/honolja84" 
               target="_blank" 
@@ -204,13 +202,10 @@ const Home: React.FC = () => {
               className="min-w-full h-full flex flex-col justify-center items-center text-center p-10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:bg-white/5 transition-all"
             >
               <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Telegram Ad Contact</span>
-              <h4 className="text-white text-xl md:text-3xl font-black italic tracking-tighter mb-6 whitespace-nowrap">
-                호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span>
-              </h4>
-              <div className="px-6 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest italic hover:bg-blue-600 hover:text-white transition-all">Contact Now</div>
+              <h4 className="text-white text-xl md:text-3xl font-black italic tracking-tighter mb-6 whitespace-nowrap">호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
+              <div className="px-6 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest italic group-hover:bg-blue-600 hover:text-white transition-all">Contact Now</div>
             </a>
           </div>
-
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
             <div className={`w-2 h-2 rounded-full transition-all ${currentAdIdx === 0 ? 'bg-red-600 w-6' : 'bg-white/20'}`} />
             <div className={`w-2 h-2 rounded-full transition-all ${currentAdIdx === 1 ? 'bg-blue-600 w-6' : 'bg-white/20'}`} />
