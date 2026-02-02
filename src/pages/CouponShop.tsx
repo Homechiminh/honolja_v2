@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; // 
-import { useFetchGuard } from '../hooks/useFetchGuard'; // 
+import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
-const CouponShop: React.FC = () => { // 🔴 프롭 제거
+const CouponShop: React.FC = () => { 
   const [activeTab, setActiveTab] = useState<'shop' | 'my'>('shop');
   const [points, setPoints] = useState(0);
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // 구매 버튼 로딩
+  const [dataLoading, setDataLoading] = useState(true); // 데이터 동기화 로딩
 
   // 전역 인증 정보 가져오기
   const { currentUser, loading: authLoading } = useAuth();
@@ -24,26 +25,35 @@ const CouponShop: React.FC = () => { // 🔴 프롭 제거
     { id: 'c9', title: '운영진과 맥주 한 잔', price: 3000, content: '[SPECIAL] 운영진과 만나 꿀정보를 나누는 특별한 시간', icon: '👑' },
   ];
 
-  // 🔴 [데이터 가드] 인증이 완료되고 탭이 바뀔 때마다 실행
-  useFetchGuard(async () => {
+  /**
+   * 🔴 [방탄 fetch] 마켓플레이스 데이터 동기화
+   * 포인트와 쿠폰 목록을 병렬로 호출하며 에러 시에도 로딩을 안전하게 해제합니다.
+   */
+  const fetchCouponData = async () => {
     if (!currentUser?.id) return;
-    
-    // 1. 포인트 정보 동기화
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('points')
-      .eq('id', currentUser.id)
-      .single();
-    if (profile) setPoints(profile.points);
+    setDataLoading(true);
+    try {
+      const [profileRes, couponRes] = await Promise.all([
+        supabase.from('profiles').select('points').eq('id', currentUser.id).single(),
+        supabase.from('coupons').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false })
+      ]);
 
-    // 2. 내 쿠폰 목록 동기화
-    const { data: coupons } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false });
-    if (coupons) setMyCoupons(coupons);
-  }, [activeTab]); // activeTab이 바뀔 때마다 데이터를 최신화함
+      if (profileRes.error) throw profileRes.error;
+      if (couponRes.error) throw couponRes.error;
+
+      if (profileRes.data) setPoints(profileRes.data.points);
+      if (couponRes.data) setMyCoupons(couponRes.data);
+    } catch (err: any) {
+      console.error("Marketplace Sync Failed (406 등):", err.message);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  /**
+   * 🔴 [데이터 가드] 인증이 완료되고 탭이 바뀔 때마다 데이터 최신화
+   */
+  useFetchGuard(fetchCouponData, [activeTab]);
 
   const handlePurchase = async (item: typeof COUPON_LIST[0]) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
@@ -78,20 +88,18 @@ const CouponShop: React.FC = () => { // 🔴 프롭 제거
 
       alert('교환 성공! My Wallet에서 확인하세요.');
       
-      // 즉시 UI 갱신을 위해 데이터 수동 호출 (혹은 refreshUser 사용 가능)
-      const { data: updatedProfile } = await supabase.from('profiles').select('points').eq('id', currentUser.id).single();
-      if (updatedProfile) setPoints(updatedProfile.points);
-      const { data: updatedCoupons } = await supabase.from('coupons').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-      if (updatedCoupons) setMyCoupons(updatedCoupons);
+      // UI 즉시 갱신을 위해 데이터 재호출
+      await fetchCouponData();
 
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Purchase Error:", err.message);
       alert('처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 인증 정보를 확인하는 동안 보여줄 로딩 화면
+  // 인증 정보를 확인하는 동안 보여줄 로딩 화면 (Tony님 원래 스타일)
   if (authLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 font-black italic animate-pulse tracking-widest uppercase">
       Connecting to Marketplace...
@@ -142,7 +150,11 @@ const CouponShop: React.FC = () => { // 🔴 프롭 제거
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {myCoupons.length === 0 ? (
+            {dataLoading ? (
+              <div className="col-span-2 py-32 text-center text-gray-700 font-black italic animate-pulse uppercase tracking-widest">
+                Decrypting Wallet...
+              </div>
+            ) : myCoupons.length === 0 ? (
               <div className="col-span-2 py-32 text-center bg-[#0a0a0a] rounded-[3rem] border border-dashed border-white/10">
                 <p className="text-gray-600 font-black italic uppercase tracking-widest">No Coupons Found</p>
               </div>
