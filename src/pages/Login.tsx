@@ -12,7 +12,6 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 이미 로그인된 유저 리다이렉트
   useEffect(() => {
     if (!authLoading && currentUser) {
       navigate('/', { replace: true });
@@ -31,7 +30,6 @@ const Login: React.FC = () => {
       console.error("Google Auth Error:", err.message);
       alert(err.message);
     } finally {
-      // OAuth는 페이지 이동이 일어나지만 에러 시 버튼 해제를 위해 추가
       setIsLoading(false);
     }
   };
@@ -48,7 +46,6 @@ const Login: React.FC = () => {
       console.error("Login Error:", err.message);
       alert(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호를 확인해주세요.' : err.message);
     } finally {
-      // 🔴 무한 뺑뺑이 방지 핵심
       setIsLoading(false);
     }
   };
@@ -80,7 +77,6 @@ const Login: React.FC = () => {
               disabled={isLoading}
               className="w-full flex items-center justify-center space-x-4 bg-white text-black py-4 rounded-2xl font-black text-sm hover:scale-[1.02] transition-all shadow-lg active:scale-95 disabled:opacity-50"
             >
-              {/* 🔴 SVG 오타 수정됨 */}
               <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -99,17 +95,23 @@ const Login: React.FC = () => {
           <form className="space-y-6" onSubmit={handleFormSubmit}>
             <div className="space-y-4">
               <input 
+                id="login-email"
+                name="email"
                 type="email" 
                 placeholder="Email Address" 
                 required 
+                autoComplete="email"
                 value={email} 
                 onChange={e => setEmail(e.target.value)} 
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700" 
               />
               <input 
+                id="login-password"
+                name="password"
                 type="password" 
                 placeholder="Password" 
                 required 
+                autoComplete="current-password"
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700" 
