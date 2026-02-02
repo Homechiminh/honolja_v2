@@ -39,11 +39,14 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
  * 🔒 [가드 1] 관리자 전용
- * 하위 페이지 데이터 호출 전, 인증 로딩 중이라면 null을 반환하여 엇박자를 방지합니다.
  */
 const AdminRoute = () => {
-  const { currentUser, loading } = useAuth();
-  if (loading) return null; 
+  // 🔴 기존 loading 대신 AuthContext의 initialized 사용
+  const { currentUser, initialized } = useAuth();
+  
+  // 초기화 중에는 아무것도 렌더링하지 않거나 로딩 스피너를 보여줌
+  if (!initialized) return null; 
+  
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -51,8 +54,10 @@ const AdminRoute = () => {
  * 🔒 [가드 2] 일반 로그인 유저 전용
  */
 const PrivateRoute = () => {
-  const { currentUser, loading } = useAuth();
-  if (loading) return null;
+  const { currentUser, initialized } = useAuth();
+  
+  if (!initialized) return null;
+  
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
@@ -60,14 +65,14 @@ const PrivateRoute = () => {
  * 🔒 [가드 3] 특정 등급(Level) 이상 전용
  */
 const LevelRoute = ({ minLevel }: { minLevel: number }) => {
-  const { currentUser, loading } = useAuth();
-  if (loading) return null;
+  const { currentUser, initialized } = useAuth();
+  
+  if (!initialized) return null;
+  
   return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
-  // 이로써 유저는 접속 즉시 서비스의 골격(Header, Footer)을 보게 됩니다.
-
   return (
     <Router>
       <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30">
@@ -95,7 +100,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* --- 보호 구역 (가드가 내부적으로 loading을 기다림) --- */}
+            {/* --- 보호 구역 (가드가 내부적으로 initialized를 기다림) --- */}
             <Route element={<PrivateRoute />}>
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/coupon-shop" element={<CouponShop />} />
@@ -121,6 +126,7 @@ function App() {
               <Route path="/notice/edit/:id" element={<NoticeEdit />} />
             </Route>
 
+            {/* 잘못된 경로는 홈으로 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
