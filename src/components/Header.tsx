@@ -2,17 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
-import { useAuth } from '../contexts/AuthContext'; // 🔴 중앙 컨텍스트 임포트
+import { useAuth } from '../contexts/AuthContext'; 
 
-// 🔴 HeaderProps 인터페이스 제거 (프롭 의존성 제거)
-
-const Header: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
+const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 1. 전역 인증 정보 가져오기 (엔진 교체)
-  const { currentUser } = useAuth();
+  // 1. 전역 인증 정보 및 로딩 상태 구독
+  const { currentUser, loading: authLoading } = useAuth();
 
   const navItems = [
     { name: '마사지', path: '/stores/massage' },
@@ -33,8 +31,7 @@ const Header: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
     await supabase.auth.signOut();
     localStorage.clear();
     navigate('/');
-    // 🔴 팁: onAuthStateChange가 감지하므로 reload() 없이도 상태가 변하지만, 
-    // 확실한 캐시 초기화를 위해 유지하셔도 좋습니다.
+    // 세션 초기화를 위해 페이지 리로드 유지
     window.location.reload();
   };
 
@@ -77,7 +74,12 @@ const Header: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
             <Link to="/nhatrang" className="text-[13px] font-black text-emerald-500 hover:text-emerald-400 uppercase italic">나트랑놀자</Link>
           </div>
 
-          {currentUser ? (
+          {/* 🔴 인증 버튼 구역: 로딩 상태에 따른 조건부 렌더링 */}
+          {authLoading ? (
+            /* 로딩 중: 레이아웃 유지를 위해 높이/너비가 확보된 투명한 placeholder 노출 */
+            <div className="w-32 h-10"></div>
+          ) : currentUser ? (
+            /* 로그인 완료 상태 */
             <div className="flex items-center gap-6 animate-in fade-in duration-300">
               <Link to="/mypage" className="flex items-center gap-4 group">
                 <div className="flex flex-col items-end hidden md:flex">
@@ -102,6 +104,7 @@ const Header: React.FC = () => { // 🔴 프롭 없이 독립적으로 작동
               </button>
             </div>
           ) : (
+            /* 비로그인 상태 */
             <div className="flex items-center gap-6 animate-in fade-in duration-300">
               <Link to="/signup" className="text-[13px] font-black text-gray-400 hover:text-white uppercase italic tracking-tighter">회원가입</Link>
               <Link to="/login" className="bg-red-600 text-white px-8 py-3 rounded-2xl text-[14px] font-black italic uppercase shadow-xl shadow-red-600/20 active:scale-95 transition-all">
