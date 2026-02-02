@@ -1,11 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-backend-js'; // 또는 사용하는 버전
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL 또는 Anon Key가 설정되지 않았습니다.');
-}
-
-// 클라이언트 생성
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true, // 세션을 로컬 스토리지에 강제로 유지
+      autoRefreshToken: true, // 토큰 만료 전 자동 갱신
+      detectSessionInUrl: true // 리다이렉트 시 세션 즉시 감지
+    }
+  }
+);
