@@ -1,30 +1,39 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../supabase';
+
+// 1. 컨텍스트 생성
+const AuthContext = createContext<any>(null);
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [initialized, setInitialized] = useState(false);
+  const [initialized, setInitialized] = useState(false); // 🔴 앱 준비 완료 상태
 
   useEffect(() => {
-    // 1. 초기 세션 체크 (가장 빠른 시점에 실행)
+    // 초기 세션 확인 로직
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        setCurrentUser(data);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          setCurrentUser(data);
+        }
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+      } finally {
+        setInitialized(true); // 🔴 성공하든 실패하든 '준비 완료' 신호를 보냄
       }
-      setInitialized(true); // 어떤 결과든 일단 앱의 문을 엶
     };
     init();
 
-    // 2. 인증 이벤트 리스너 (탭 전환, 세션 만료, 재로그인 감지)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`📡 Auth Event: ${event}`); // 로그로 흐름 확인 가능
-      
+    // 실시간 인증 상태 변화 감지 (탭 전환, 재로그인 대응)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         setCurrentUser(data);
       } else {
         setCurrentUser(null);
       }
-      setInitialized(true); 
+      setInitialized(true);
     });
 
     return () => subscription.unsubscribe();
@@ -35,4 +44,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
+};
+
+/**
+ * 🔴 핵심 해결책: TS2305 에러는 이 코드가 없어서 발생한 것입니다.
+ * 반드시 'export'가 붙어 있어야 다른 파일에서 useAuth를 import 할 수 있습니다.
+ */
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 };
