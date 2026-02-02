@@ -26,6 +26,7 @@ import PostEdit from './pages/PostEdit';
 
 // 공지사항 관련 페이지
 import Notice from './pages/Notice';
+import NoticeDetail from './pages/NoticeDetail'; // 🔴 추가
 import NoticeEdit from './pages/NoticeEdit';
 import NoticeCreate from './pages/NoticeCreate';
 
@@ -41,12 +42,8 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
  * 🔒 [가드 1] 관리자 전용
  */
 const AdminRoute = () => {
-  // 🔴 기존 loading 대신 AuthContext의 initialized 사용
   const { currentUser, initialized } = useAuth();
-  
-  // 초기화 중에는 아무것도 렌더링하지 않거나 로딩 스피너를 보여줌
   if (!initialized) return null; 
-  
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -55,9 +52,7 @@ const AdminRoute = () => {
  */
 const PrivateRoute = () => {
   const { currentUser, initialized } = useAuth();
-  
   if (!initialized) return null;
-  
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
@@ -66,9 +61,7 @@ const PrivateRoute = () => {
  */
 const LevelRoute = ({ minLevel }: { minLevel: number }) => {
   const { currentUser, initialized } = useAuth();
-  
   if (!initialized) return null;
-  
   return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -80,7 +73,6 @@ function App() {
         
         <main className="flex-grow pt-[80px]">
           <Routes>
-            {/* --- 공용 구역 (접속 즉시 렌더링) --- */}
             <Route path="/" element={<Home />} />
             <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
             <Route path="/danang" element={<DanangHome />} />
@@ -92,7 +84,10 @@ function App() {
             <Route path="/policies" element={<Policies />} />
             
             <Route path="/community" element={<Community />} />
+            
+            {/* 공지사항 라우트 */}
             <Route path="/notice" element={<Notice />} />
+            <Route path="/notice/:id" element={<NoticeDetail />} /> {/* 🔴 상세페이지 연결 */}
 
             <Route path="/store/:id" element={<StoreDetail />} />
             <Route path="/post/:id" element={<PostDetail />} />
@@ -100,7 +95,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* --- 보호 구역 (가드가 내부적으로 initialized를 기다림) --- */}
             <Route element={<PrivateRoute />}>
               <Route path="/mypage" element={<MyPage />} />
               <Route path="/coupon-shop" element={<CouponShop />} />
@@ -108,12 +102,10 @@ function App() {
               <Route path="/post/edit/:id" element={<PostEdit />} />
             </Route>
 
-            {/* --- VIP 구역 --- */}
             <Route element={<LevelRoute minLevel={3} />}>
               <Route path="/vip-lounge" element={<VipLounge />} />
             </Route>
 
-            {/* --- 관리자 구역 --- */}
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/create-store" element={<AdminStoreCreate />} />
@@ -121,12 +113,10 @@ function App() {
               <Route path="/admin/manage-stores" element={<AdminManageStores />} />
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
               <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
-              
               <Route path="/notice/create" element={<NoticeCreate />} />
               <Route path="/notice/edit/:id" element={<NoticeEdit />} />
             </Route>
 
-            {/* 잘못된 경로는 홈으로 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
