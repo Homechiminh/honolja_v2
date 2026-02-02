@@ -17,14 +17,19 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🔴 빌라(villa) 중 HOT인 업소들을 필터링하여 랜덤으로 2개만 추출 (PC/모바일 공통 2열 배치용)
-  const randomHotVillas = useMemo(() => {
-    const hotVillas = stores.filter((s: any) => s.category === 'villa' && s.is_hot);
-    return [...hotVillas].sort(() => 0.5 - Math.random()).slice(0, 2);
+  // 🔴 [수정] HOT 업장 리스트: 'villa'를 제외한 카테고리 중 HOT인 업소 상위 5개
+  const hotServiceStores = useMemo(() => {
+    return stores
+      .filter((s: any) => s.is_hot && s.category !== 'villa')
+      .slice(0, 5);
   }, [stores]);
 
-  // 상단 HOT 리스트 (기존 5개 유지)
-  const hotStoresForGrid = stores.filter((s: any) => s.is_hot).slice(0, 5);
+  // 🔴 [수정] PREMIUM STAYS: 'villa' 카테고리 중 HOT인 숙소 상위 2개 (가로 배치용)
+  const premiumHotStays = useMemo(() => {
+    return stores
+      .filter((s: any) => s.category === 'villa' && s.is_hot)
+      .slice(0, 2);
+  }, [stores]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -63,36 +68,30 @@ const Home: React.FC = () => {
   if (!initialized) return null;
 
   return (
-    <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans">
+    <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
+      {/* 레벨 제한 모달 (기존 동일) */}
       {showLevelModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
-          <div className="relative bg-[#111] border border-yellow-600/30 p-8 rounded-[2rem] max-w-[340px] w-full text-center shadow-2xl animate-in zoom-in duration-200">
-            <div className="w-14 h-14 bg-yellow-600/10 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-yellow-600/20"><span className="text-2xl">🔒</span></div>
-            <h3 className="text-xl font-black text-white italic mb-2 uppercase tracking-tighter text-yellow-500">ACCESS DENIED</h3>
-            <p className="text-slate-400 text-sm font-bold mb-8">VIP 라운지는 베테랑(Lv.3) 이상만 입장 가능합니다.</p>
-            <button onClick={() => setShowLevelModal(false)} className="w-full py-4 bg-yellow-600 text-black rounded-xl font-black text-sm hover:bg-yellow-500 transition-all">확인</button>
+          <div className="relative bg-[#111] border border-yellow-600/30 p-8 rounded-[2rem] max-w-[340px] w-full text-center shadow-2xl">
+            <h3 className="text-xl font-black italic mb-2 uppercase text-yellow-500 font-sans">ACCESS DENIED</h3>
+            <p className="text-slate-400 text-sm font-bold mb-8 font-sans">VIP 라운지는 베테랑(Lv.3) 이상만 입장 가능합니다.</p>
+            <button onClick={() => setShowLevelModal(false)} className="w-full py-4 bg-yellow-600 text-black rounded-xl font-black text-sm hover:bg-yellow-500 transition-all font-sans">확인</button>
           </div>
         </div>
       )}
 
-      {/* [섹션 1] Hero - 모달 줄바꿈 해결 */}
+      {/* [섹션 1] Hero 섹션 (기존 동일) */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
-        <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none text-white">호치민에서 <span className="text-red-600 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]">놀자!</span></h2>
-        <div className="space-y-4 mb-16 z-10 px-4">
-          <p className="text-2xl md:text-4xl font-black tracking-tight text-white uppercase leading-tight">남성들을 위한 호치민의 모든 것</p>
-          <div className="space-y-2">
-            {/* 🔴 모바일에서 '즐거움' 줄바꿈 처리 */}
-            <p className="text-blue-500 font-black text-lg md:text-2xl italic leading-snug">
-              실시간 정보 + 검증된 업장 + <br className="md:hidden" /> 그 이상의 즐거움(α)
-            </p>
-            <p className="text-cyan-400 font-bold text-sm md:text-lg opacity-90">풀빌라 · 아파트 예약까지 한번에 !</p>
-          </div>
+        <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">호치민에서 <span className="text-red-600">놀자!</span></h2>
+        <div className="space-y-4 mb-16 z-10 px-4 font-sans">
+          <p className="text-2xl md:text-4xl font-black tracking-tight uppercase">남성들을 위한 호치민의 모든 것</p>
+          <p className="text-blue-500 font-black text-lg md:text-2xl italic">실시간 정보 + 검증된 업장 + <br className="md:hidden" /> 그 이상의 즐거움(α)</p>
         </div>
 
-        <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2">
+        <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2 font-sans">
           {[{ id: 'massage', name: '마사지/스파', icon: '💆‍♀️' }, { id: 'barber', name: '이발소', icon: '💈' }, { id: 'karaoke', name: '가라오케', icon: '🎤' }, { id: 'barclub', name: '바/클럽', icon: '🍸' }, { id: 'villa', name: '숙소/풀빌라', icon: '🏠' }].map((cat) => (
-            <Link key={cat.id} to={`/stores/${cat.id}`} className="flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 bg-white/5 backdrop-blur-sm rounded-2xl md:rounded-[32px] border border-white/5 hover:bg-white/10 transition-all group">
+            <Link key={cat.id} to={`/stores/${cat.id}`} className="flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 bg-white/5 backdrop-blur-sm rounded-2xl md:rounded-[32px] border border-white/5 hover:bg-white/10 transition-all group shadow-lg">
               <span className="text-2xl md:text-5xl group-hover:scale-110 transition-transform">{cat.icon}</span>
               <span className="text-[8px] md:text-sm font-black text-gray-400 group-hover:text-white uppercase tracking-tighter whitespace-nowrap">{cat.name}</span>
             </Link>
@@ -100,39 +99,36 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 2] HOT 인기 업소 - 모바일 폰트 크기 최적화 */}
+      {/* [섹션 2] HOT 인기 업소 - 🔴 숙소 제외 일반 업장 5개 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20">
-        <div className="flex items-center justify-between mb-12">
-          {/* 🔴 모바일 타이틀 한 줄 유지 및 크기 축소 */}
-          <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3 text-white whitespace-nowrap overflow-hidden">
-            <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full flex-shrink-0"></span>
+        <div className="flex items-center justify-between mb-12 font-sans">
+          <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
+            <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span>
             HOT 실시간 인기 업소
           </h3>
-          <Link to="/stores/all" className="text-gray-500 font-bold text-[10px] md:text-sm hover:text-white underline italic whitespace-nowrap flex-shrink-0 ml-2">전체보기</Link>
+          <Link to="/stores/all" className="text-gray-500 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotStoresForGrid.map((store: any) => <StoreCard key={store.id} store={store} />)}
+          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
         </div>
       </section>
 
-      {/* [섹션 3] SNS & 커뮤니티 */}
-      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
+      {/* [섹션 3] SNS & 커뮤니티 섹션 (기존 동일) */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
-          <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[100px] md:min-h-[140px]">
-            <span className="text-[8px] md:text-[10px] font-black text-white/60 uppercase block mb-1 z-10 relative">그룹챗 입장</span>
-            <h4 className="text-sm md:text-xl font-black italic text-white leading-tight z-10 relative tracking-tighter">호놀자 텔레그램</h4>
-            <span className="absolute -bottom-4 -right-2 text-7xl md:text-9xl font-black text-white/10 italic select-none pointer-events-none group-hover:scale-110 transition-transform duration-500">H</span>
+          <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center">
+            <span className="text-[8px] md:text-[10px] font-black text-white/60 uppercase block mb-1">그룹챗 입장</span>
+            <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter">호놀자 텔레그램</h4>
           </a>
-          <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center min-h-[100px] md:min-h-[140px]">
-            <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase block mb-1 z-10 relative">단톡방 입장</span>
-            <h4 className="text-sm md:text-xl font-black italic leading-tight z-10 relative tracking-tighter">호놀자 카카오톡</h4>
-            <span className="absolute -bottom-4 -right-2 text-7xl md:text-9xl font-black text-black/5 italic select-none pointer-events-none group-hover:scale-110 transition-transform duration-500">H</span>
+          <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center">
+            <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase block mb-1">단톡방 입장</span>
+            <h4 className="text-sm md:text-xl font-black italic tracking-tighter">호놀자 카카오톡</h4>
           </a>
         </div>
 
         <div className="lg:col-span-10 grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
-            <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase text-white">Community</h4><Link to="/community" className="text-[10px] text-gray-600 font-bold underline hover:text-white transition-colors">더보기</Link></div>
+            <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4><Link to="/community" className="text-[10px] text-gray-600 font-bold underline hover:text-white">더보기</Link></div>
             <div className="bg-[#111] rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestPosts.map(post => (
                 <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-4 hover:bg-white/5 transition-all group">
@@ -143,21 +139,18 @@ const Home: React.FC = () => {
             </div>
           </div>
           <div>
-            <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4><button onClick={handleVIPClick} className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">Access</button></div>
+            <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4></div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestVipPosts.map(post => (
                 <div key={post.id} onClick={handleVIPClick} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group">
-                  <div className="min-w-0 pr-4">
-                    <p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p>
-                    <span className="text-[10px] text-gray-600 font-bold tracking-tighter italic">Veteran Only Content</span>
-                  </div>
+                  <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p></div>
                   <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic uppercase">VIP</span>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4><Link to="/notice" className="text-[10px] text-gray-600 font-bold underline hover:text-white transition-colors">더보기</Link></div>
+            <div className="flex justify-between items-center mb-6"><h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4></div>
             <div className="space-y-3">
               {latestNotices.map(notice => (
                 <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl"><p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>{notice.is_important && '[필독] '}{notice.title}</p></Link>
@@ -167,20 +160,21 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS - 🔴 빌라 중 HOT 무작위 2개 배치 */}
-      <section className="max-w-[1400px] mx-auto px-6 py-24">
-        <div className="bg-[#080808] rounded-[2rem] p-8 md:p-12 border border-white/5 relative overflow-hidden shadow-2xl">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative z-10">
+      {/* [섹션 4] PREMIUM STAYS - 🔴 HOT 숙소 무작위 2개 (가로 2열 배치) */}
+      <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans">
+        <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
             <div>
-              <h3 className="text-3xl md:text-4xl font-black italic mb-2 tracking-tighter text-white uppercase leading-none">Premium Stays</h3>
-              <p className="text-gray-500 font-bold text-xs md:text-base">호놀자가 검증한 최고급 풀빌라와 가성비 아파트를 만나보세요</p>
+              <h3 className="text-3xl md:text-5xl font-black italic mb-3 tracking-tighter uppercase leading-none">Premium Stays</h3>
+              <p className="text-gray-500 font-bold text-sm md:text-lg">호놀자가 검증한 최고급 풀빌라와 가성비 아파트를 만나보세요</p>
             </div>
-            <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-10 py-4 rounded-xl md:rounded-2xl font-black text-sm text-white shadow-xl shadow-red-600/20 active:scale-95 transition-all">예약문의</Link>
+            <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl shadow-red-600/20 hover:bg-red-500 transition-all">예약문의</Link>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-8 relative z-10">
-            {storesLoading ? [1, 2].map(i => <div key={i} className="aspect-video bg-white/5 rounded-2xl animate-pulse" />) : 
-              randomHotVillas.map((store: any) => (
+          {/* 🔴 가로로 넓게 채우기 위해 grid-cols-2 적용 및 간격 확대 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+            {storesLoading ? [1, 2].map(i => <div key={i} className="aspect-video bg-white/5 rounded-[2rem] animate-pulse" />) : 
+              premiumHotStays.map((store: any) => (
                 <div key={store.id} className="block group">
                   <StoreCard store={store} />
                 </div>
@@ -190,23 +184,19 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [배너 슬라이더] */}
-      <section className="max-w-[1400px] mx-auto px-6 pb-24">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[180px] md:h-[220px] shadow-2xl">
+      {/* [배너 슬라이더] (기존 동일) */}
+      <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
             <div className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10">
-              <span className="text-red-600 font-black text-[8px] md:text-[10px] uppercase tracking-[0.3em] mb-3 md:mb-4 italic">Partnership</span>
-              <h4 className="text-white text-lg md:text-3xl font-black italic tracking-tighter break-keep leading-tight">호놀자와 함께하실 <br/> 광고주분들의 연락을 기다립니다.</h4>
+              <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Partnership</span>
+              <h4 className="text-white text-xl md:text-4xl font-black italic tracking-tighter leading-tight">호놀자와 함께하실 <br/> 광고주분들의 연락을 기다립니다.</h4>
             </div>
             <a href="https://t.me/honolja84" target="_blank" rel="noreferrer" className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:bg-white/5 transition-all">
-              <span className="text-blue-500 font-black text-[8px] md:text-[10px] uppercase tracking-[0.3em] mb-3 md:mb-4 italic">Telegram Ad Contact</span>
-              <h4 className="text-white text-base md:text-3xl font-black italic tracking-tighter mb-4 md:mb-6 whitespace-nowrap">호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
-              <div className="px-4 md:px-6 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest italic group-hover:bg-blue-600 hover:text-white transition-all">Contact Now</div>
+              <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Telegram Ad Contact</span>
+              <h4 className="text-white text-lg md:text-4xl font-black italic tracking-tighter mb-6 whitespace-nowrap font-sans">호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
+              <div className="px-8 py-3 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-xs font-black uppercase tracking-widest italic hover:bg-blue-600 hover:text-white transition-all">Contact Now</div>
             </a>
-          </div>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full transition-all ${currentAdIdx === 0 ? 'bg-red-600 w-4' : 'bg-white/20'}`} />
-            <div className={`w-1.5 h-1.5 rounded-full transition-all ${currentAdIdx === 1 ? 'bg-blue-600 w-4' : 'bg-white/20'}`} />
           </div>
         </div>
       </section>
