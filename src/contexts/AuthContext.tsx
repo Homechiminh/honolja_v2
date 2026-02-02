@@ -8,33 +8,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // 유저 정보를 가져오는 통합 함수
     const getProfile = async (userId: string) => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      return data;
+      try {
+        const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        return data;
+      } catch (err) {
+        return null;
+      }
     };
 
     const initialize = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const profile = await getProfile(session.user.id);
-          setCurrentUser(profile || session.user);
+          // 🔴 일단 기본 유저 정보를 넣고 문부터 엽니다.
+          setCurrentUser(session.user); 
+          
+          // 프로필은 백그라운드에서 조용히 가져옵니다.
+          getProfile(session.user.id).then(profile => {
+            if (profile) setCurrentUser(profile);
+          });
         }
       } catch (err) {
         console.error("Auth Init Error:", err);
       } finally {
-        setInitialized(true);
+        // 🔴 세션 확인만 끝나면 무조건 초기화 완료!
+        setInitialized(true); 
       }
     };
 
     initialize();
 
-    // 상태 변화 리스너
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        const profile = await getProfile(session.user.id);
-        setCurrentUser(profile || session.user);
+        setCurrentUser(session.user);
+        getProfile(session.user.id).then(profile => {
+          if (profile) setCurrentUser(profile);
+        });
       } else {
         setCurrentUser(null);
       }
@@ -51,8 +61,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
