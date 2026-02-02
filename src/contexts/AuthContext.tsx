@@ -7,66 +7,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // 세션 정보로 프로필을 가져오는 함수
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      if (!error && data) return data;
-    } catch (err) {
-      return null;
-    }
-    return null;
-  };
-
   useEffect(() => {
-    // 🔴 타임아웃 5초 (인증 지연 방지)
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn("⚠️ Auth Engine: Slow response. Releasing UI at 5s.");
-        setLoading(false);
-      }
-    }, 5000);
-
-    const initializeAuth = async () => {
+    // 🔴 근본 해결 1: 세션을 '완벽하게' 동기화하는 비동기 함수
+    const initialize = async () => {
       try {
+        // 현재 브라우저에 저장된 세션을 즉시 가져옴
         const { data: { session } } = await supabase.auth.getSession();
+        
         if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
+          const { data: profile } = await supabase
+            .from('profiles').select('*').eq('id', session.user.id).single();
           setCurrentUser(profile);
         }
       } catch (err) {
-        console.error("Initial Auth Error:", err);
+        console.error("Auth Init Error:", err);
       } finally {
-        // 초기 확인 후 일단 로딩 해제 시도
+        // 모든 확인이 끝난 후에만 로딩을 해제
         setLoading(false);
       }
     };
 
-    initializeAuth();
+    initialize();
 
-    // 인증 상태 변경 감지
+    // 상태 변경 리스너 (로그인/로그아웃 실시간 대응)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`📡 Auth System Event: ${event}`);
-      
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
+        const { data: profile } = await supabase
+          .from('profiles').select('*').eq('id', session.user.id).single();
         setCurrentUser(profile);
       } else {
         setCurrentUser(null);
       }
-      
       setLoading(false);
-      clearTimeout(timeoutId);
     });
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -76,14 +51,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-/**
- * 🔴 핵심: 이 부분이 누락되어 TS2305 에러가 발생한 것입니다.
- * 이 도구를 export 해야 다른 페이지에서 import useAuth 할 수 있습니다.
- */
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
