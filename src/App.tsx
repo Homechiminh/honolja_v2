@@ -24,6 +24,11 @@ import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import PostEdit from './pages/PostEdit';
 
+// 🔴 공지사항 관련 페이지 임포트 추가
+import Notice from './pages/Notice';
+import NoticeEdit from './pages/NoticeEdit';
+import AdminNoticeCreate from './pages/AdminNoticeCreate';
+
 // 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
 import AdminStoreCreate from './pages/AdminStoreCreate';
@@ -34,11 +39,10 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
  * 🔒 [가드 1] 관리자 전용 (내부 구독형)
- * 부모로부터 props를 받지 않고 Context에서 직접 꺼내어 엇박자를 방지합니다.
  */
 const AdminRoute = () => {
   const { currentUser, loading } = useAuth();
-  if (loading) return null; // 로딩 중에는 판단 유보
+  if (loading) return null; 
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -63,8 +67,7 @@ const LevelRoute = ({ minLevel }: { minLevel: number }) => {
 function App() {
   const { loading } = useAuth();
 
-  // 🔴 앱 최상단 로딩 가드: 인증이 확정될 때까지 (최대 3초) 라우터 실행을 대기합니다.
-  // 이 처리가 되어야 직접 링크 접속 시 '존재하지 않는 유저'로 오판하여 홈으로 튕기는 걸 막습니다.
+  // 앱 최상단 로딩 가드: 인증 동기화 대기
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -78,7 +81,6 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30">
-        {/* 🔴 Header에서도 currentUser 프롭 제거 (Header 내부에서 useAuth 사용 권장) */}
         <Header />
         
         <main className="flex-grow pt-[80px]">
@@ -95,6 +97,9 @@ function App() {
             <Route path="/policies" element={<Policies />} />
             
             <Route path="/community" element={<Community />} />
+            {/* 🔴 공지사항 목록은 누구나 볼 수 있도록 설정 */}
+            <Route path="/notice" element={<Notice />} />
+
             <Route path="/store/:id" element={<StoreDetail />} />
             <Route path="/post/:id" element={<PostDetail />} />
             
@@ -122,6 +127,10 @@ function App() {
               <Route path="/admin/manage-stores" element={<AdminManageStores />} />
               <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
               <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
+              
+              {/* 🔴 공지사항 관리 (생성/수정) 추가 */}
+              <Route path="/notice/create" element={<AdminNoticeCreate />} />
+              <Route path="/notice/edit/:id" element={<NoticeEdit />} />
             </Route>
 
             {/* 잘못된 경로는 홈으로 */}
