@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // 🔴 Link 제거됨
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
@@ -73,20 +73,18 @@ const PostDetail: React.FC = () => {
 
     setCommenting(true);
     try {
-      // 1. 댓글 등록
       const { error: commErr } = await supabase.from('comments').insert([{ 
         post_id: id, author_id: currentUser.id, content: newComment 
       }]);
       if (commErr) throw commErr;
 
-      // 2. 포인트 지급 (실패하더라도 댓글은 등록됨)
       try {
         await supabase.from('profiles').update({ points: (currentUser.points || 0) + 5 }).eq('id', currentUser.id);
         await supabase.from('point_history').insert([{ 
           user_id: currentUser.id, amount: 5, reason: '댓글 작성 보상' 
         }]);
       } catch (pErr) {
-        console.warn("Point update failed (RLS issue):", pErr);
+        console.warn("Point update failed:", pErr);
       }
 
       setNewComment('');
@@ -100,7 +98,7 @@ const PostDetail: React.FC = () => {
 
   if (!initialized || loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse uppercase">Accessing Post...</div>
+      <div className="text-white font-black italic animate-pulse uppercase">Accessing Post Intelligence...</div>
     </div>
   );
 
@@ -113,16 +111,23 @@ const PostDetail: React.FC = () => {
             <h1 className="text-3xl md:text-5xl font-black text-white mt-10 mb-10 italic tracking-tighter leading-tight">{post.title}</h1>
             <div className="flex justify-between items-center pt-8 border-t border-white/5">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 overflow-hidden"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.nickname}`} alt="avatar" /></div>
-                <div><p className="text-white font-black italic text-lg">{post.author?.nickname}</p><p className="text-yellow-500 text-[10px] font-black uppercase">Lv.{post.author?.level} Verified</p></div>
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 overflow-hidden shadow-xl">
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.nickname}`} alt="avatar" />
+                </div>
+                <div>
+                  <p className="text-white font-black italic text-lg">{post.author?.nickname}</p>
+                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest">Lv.{post.author?.level} Verified Member</p>
+                </div>
               </div>
-              <button onClick={handleLike} className={`flex flex-col items-center gap-1 transition-all ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}><span className="text-2xl">{isLiked ? '❤️' : '🤍'}</span><span className="text-[9px] font-black uppercase italic tracking-tighter">Recommended {post.likes || 0}</span></button>
+              <button onClick={handleLike} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}>
+                <span className="text-2xl">{isLiked ? '❤️' : '🤍'}</span>
+                <span className="text-[9px] font-black uppercase italic tracking-tighter">Recommended {post.likes || 0}</span>
+              </button>
             </div>
           </header>
           <article className="p-10 md:p-16 text-gray-300 text-lg md:text-xl leading-relaxed whitespace-pre-wrap font-medium italic">{post.content}</article>
         </div>
 
-        {/* 🔴 댓글창 한글화 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
             <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> 
@@ -136,8 +141,11 @@ const PostDetail: React.FC = () => {
                 <div key={comm.id} className="flex gap-6 items-start group">
                   <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0 shadow-lg"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avt" /></div>
                   <div className="flex-1 space-y-2">
-                    <div className="flex justify-between items-center"><span className="text-white font-black text-xs italic uppercase">{comm.author?.nickname} <span className="text-yellow-600 ml-2">LV.{comm.author?.level}</span></span><span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span></div>
-                    <p className="text-gray-400 text-base md:text-lg italic">{comm.content}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-black text-xs italic uppercase">{comm.author?.nickname} <span className="text-yellow-600 ml-2">LV.{comm.author?.level}</span></span>
+                      <span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-gray-400 text-base md:text-lg leading-relaxed italic">{comm.content}</p>
                   </div>
                 </div>
               ))
@@ -145,10 +153,16 @@ const PostDetail: React.FC = () => {
           </div>
           <form onSubmit={handleCommentSubmit} className="relative mt-12">
             <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder={currentUser ? "댓글 작성 시 5P 적립 및 기록 갱신" : "로그인이 필요한 구역입니다."} disabled={!currentUser} className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-red-600 min-h-[160px] transition-all resize-none italic font-bold" />
-            <button type="submit" disabled={commenting || !currentUser} className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20 italic">
+            <button type="submit" disabled={commenting || !currentUser} className="absolute bottom-8 right-8 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-xl disabled:opacity-20 active:scale-95 italic">
               {commenting ? '전송중...' : '등록 +5P'}
             </button>
           </form>
+        </div>
+
+        <div className="flex justify-center">
+          <button onClick={() => navigate(-1)} className="text-gray-700 hover:text-white font-black uppercase italic text-xs tracking-[0.3em] transition-all border-b border-transparent hover:border-white">
+            ← Return to Community Archive
+          </button>
         </div>
       </div>
     </div>
