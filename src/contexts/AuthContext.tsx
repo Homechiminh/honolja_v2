@@ -1,39 +1,37 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 
-// 1. 컨텍스트 생성
 const AuthContext = createContext<any>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [initialized, setInitialized] = useState(false); // 🔴 앱 준비 완료 상태
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // 초기 세션 확인 로직
-    const init = async () => {
+    // 🔴 1. 즉시 실행하여 현재 브라우저 세션 확인
+    const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
           setCurrentUser(data);
         }
-      } catch (err) {
-        console.error("Auth Init Error:", err);
       } finally {
-        setInitialized(true); // 🔴 성공하든 실패하든 '준비 완료' 신호를 보냄
+        setInitialized(true); 
       }
     };
-    init();
+    checkSession();
 
-    // 실시간 인증 상태 변화 감지 (탭 전환, 재로그인 대응)
+    // 🔴 2. 지연되는 SIGNED_IN 이벤트를 낚아채서 유저 정보 업데이트
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log(`📡 Auth Event: ${_event}`); 
       if (session?.user) {
         const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         setCurrentUser(data);
       } else {
         setCurrentUser(null);
       }
-      setInitialized(true);
+      setInitialized(true); 
     });
 
     return () => subscription.unsubscribe();
@@ -46,10 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-/**
- * 🔴 핵심 해결책: TS2305 에러는 이 코드가 없어서 발생한 것입니다.
- * 반드시 'export'가 붙어 있어야 다른 파일에서 useAuth를 import 할 수 있습니다.
- */
+// 🔴 빌드 에러(TS2305)를 해결하는 핵심 내보내기
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");
