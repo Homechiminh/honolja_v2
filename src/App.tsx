@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { HelmetProvider, Helmet } from 'react-helmet-async'; // 🔴 SEO 라이브러리 추가
 import { useAuth } from './contexts/AuthContext'; 
 import { Region } from './types'; 
 import './index.css';
@@ -26,7 +27,7 @@ import PostEdit from './pages/PostEdit';
 
 // 공지사항 관련 페이지
 import Notice from './pages/Notice';
-import NoticeDetail from './pages/NoticeDetail'; // 🔴 추가
+import NoticeDetail from './pages/NoticeDetail'; 
 import NoticeEdit from './pages/NoticeEdit';
 import NoticeCreate from './pages/NoticeCreate';
 
@@ -67,63 +68,75 @@ const LevelRoute = ({ minLevel }: { minLevel: number }) => {
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30">
-        <Header />
-        
-        <main className="flex-grow pt-[80px]">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
-            <Route path="/danang" element={<DanangHome />} />
-            <Route path="/danang/:category" element={<StoreList forcedRegion={Region.DANANG} />} />
-            <Route path="/nhatrang" element={<NhatrangHome />} />
-            <Route path="/nhatrang/:category" element={<StoreList forcedRegion={Region.NHA_TRANG} />} />
-            <Route path="/booking" element={<Booking />} />
-            <Route path="/partnership" element={<Partnership />} />
-            <Route path="/policies" element={<Policies />} />
-            
-            <Route path="/community" element={<Community />} />
-            
-            {/* 공지사항 라우트 */}
-            <Route path="/notice" element={<Notice />} />
-            <Route path="/notice/:id" element={<NoticeDetail />} /> {/* 🔴 상세페이지 연결 */}
+    <HelmetProvider> {/* 🔴 SEO를 위한 전체 감싸기 */}
+      <Router>
+        {/* 🔴 기본 SEO 설정 (각 페이지에서 덮어쓰기 가능) */}
+        <Helmet>
+          <title>호놀자 | 호치민 여행 & 밤문화 정보</title>
+          <meta name="description" content="베트남 호치민 밤문화, 유흥, 커뮤니티 및 숙소 예약 정보 NO.1" />
+          <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민여자, 호치민 관광, 호치민 커뮤니티" />
+        </Helmet>
 
-            <Route path="/store/:id" element={<StoreDetail />} />
-            <Route path="/post/:id" element={<PostDetail />} />
-            
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+        <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30 font-sans">
+          <Header />
+          
+          <main className="flex-grow pt-[80px]">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
+              <Route path="/danang" element={<DanangHome />} />
+              <Route path="/danang/:category" element={<StoreList forcedRegion={Region.DANANG} />} />
+              <Route path="/nhatrang" element={<NhatrangHome />} />
+              <Route path="/nhatrang/:category" element={<StoreList forcedRegion={Region.NHA_TRANG} />} />
+              <Route path="/booking" element={<Booking />} />
+              <Route path="/partnership" element={<Partnership />} />
+              <Route path="/policies" element={<Policies />} />
+              
+              <Route path="/community" element={<Community />} />
+              
+              {/* 공지사항 라우트 */}
+              <Route path="/notice" element={<Notice />} />
+              <Route path="/notice/:id" element={<NoticeDetail />} />
 
-            <Route element={<PrivateRoute />}>
-              <Route path="/mypage" element={<MyPage />} />
-              <Route path="/coupon-shop" element={<CouponShop />} />
-              <Route path="/community/create" element={<CreatePost />} />
-              <Route path="/post/edit/:id" element={<PostEdit />} />
-            </Route>
+              <Route path="/store/:id" element={<StoreDetail />} />
+              <Route path="/post/:id" element={<PostDetail />} />
+              
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            <Route element={<LevelRoute minLevel={3} />}>
-              <Route path="/vip-lounge" element={<VipLounge />} />
-            </Route>
+              {/* 🔒 인증 필요 구역 */}
+              <Route element={<PrivateRoute />}>
+                <Route path="/mypage" element={<MyPage />} />
+                <Route path="/coupon-shop" element={<CouponShop />} />
+                <Route path="/community/create" element={<CreatePost />} />
+                <Route path="/post/edit/:id" element={<PostEdit />} />
+              </Route>
 
-            <Route element={<AdminRoute />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/create-store" element={<AdminStoreCreate />} />
-              <Route path="/admin/manage-users" element={<AdminManageUsers />} />
-              <Route path="/admin/manage-stores" element={<AdminManageStores />} />
-              <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
-              <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
-              <Route path="/notice/create" element={<NoticeCreate />} />
-              <Route path="/notice/edit/:id" element={<NoticeEdit />} />
-            </Route>
+              {/* 🔒 레벨 필요 구역 */}
+              <Route element={<LevelRoute minLevel={3} />}>
+                <Route path="/vip-lounge" element={<VipLounge />} />
+              </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        
-        <Footer />
-      </div>
-    </Router>
+              {/* 🔒 관리자 전용 구역 */}
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/create-store" element={<AdminStoreCreate />} />
+                <Route path="/admin/manage-users" element={<AdminManageUsers />} />
+                <Route path="/admin/manage-stores" element={<AdminManageStores />} />
+                <Route path="/admin/edit-store/:id" element={<AdminStoreEdit />} />
+                <Route path="/admin/manage-coupons" element={<AdminManageCoupons />} />
+                <Route path="/notice/create" element={<NoticeCreate />} />
+                <Route path="/notice/edit/:id" element={<NoticeEdit />} />
+              </Route>
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          
+          <Footer />
+        </div>
+      </Router>
+    </HelmetProvider>
   );
 }
 
