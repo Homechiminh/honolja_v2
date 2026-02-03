@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // SEO용 추가
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { Region } from '../types'; 
 import type { Store } from '../types';
@@ -15,7 +15,8 @@ const ITEMS_PER_PAGE = 9;
 
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
-  const { initialized } = useAuth(); // authLoading 대신 initialized 사용
+  // initialized는 헤더나 권한 체크용으로만 남겨둡니다.
+  const { initialized } = useAuth(); 
   
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,18 +30,12 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     setCurrentPage(1);
   }, [category, currentRegion]);
 
-  /**
-   * 🔴 카테고리 명칭 변환 함수
-   */
   const getCategoryDisplay = (cat: string | undefined) => {
     if (!cat || cat === 'all') return 'PREMIUM LIST';
     if (cat === 'villa') return '숙소 / 풀빌라';
     return cat.replace('_', ' ').toUpperCase();
   };
 
-  /**
-   * 🔴 SEO용 카테고리 한글 명칭
-   */
   const getCategoryKR = (cat: string | undefined) => {
     if (!cat || cat === 'all') return '전체 업소';
     if (cat === 'massage') return '마사지 스파';
@@ -54,6 +49,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const fetchStores = async () => {
     setLoading(true);
     try {
+      console.log(`🔍 [StoreList] Fetching ${category} in ${currentRegion}...`);
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
@@ -62,10 +58,11 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
-      // 필터링 로직 유지
+      // 필터링 로직
       if (category && category !== 'all') {
         query = query.eq('category', category);
       } else if (category === 'all') {
+        // 'all'일 때는 풀빌라, 차량, 가이드를 제외한 나머지 일반 업소 노출
         query = query.not('category', 'in', '("villa", "car", "guide")');
       }
 
@@ -74,45 +71,37 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .order('created_at', { ascending: false })
         .range(from, to);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [StoreList] Supabase Error:', error.message);
+        throw error;
+      }
 
       if (data) {
+        console.log(`✅ [StoreList] Received ${data.length} stores.`);
         setStores(data as Store[]);
         if (count !== null) setTotalCount(count);
       }
     } catch (err: any) {
-      console.error('Store Sync Error:', err.message);
+      console.error('❌ [StoreList] Sync Error:', err.message);
       setStores([]); 
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔴 useFetchGuard를 제거하고 useEffect로 직접 호출 (비로그인 접근 허용 핵심)
+  // 🔴 수정: initialized를 기다리지 않고 즉시 실행합니다!
   useEffect(() => {
-    if (initialized) {
-      fetchStores();
-    }
-  }, [initialized, category, currentRegion, currentPage]);
+    fetchStores();
+  }, [category, currentRegion, currentPage]); 
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
-  // 초기화 중일 때만 로딩 표시
-  if (!initialized) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
+  // 🔴 수정: 인증을 기다리느라 화면 전체를 막지 않습니다.
+  // 대신 헤더 등은 AuthContext가 알아서 처리할 것입니다.
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      {/* 🔴 SEO 최적화 메타 태그 */}
       <Helmet>
         <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 여행 정보</title>
-        <meta name="description" content={`${currentRegion} 지역 ${getCategoryKR(category)}의 실시간 정보와 검증된 업장 정보를 확인하세요. 베트남 호치민 밤문화 & 관광 No.1 가이드.`} />
-        <meta name="keywords" content={`베트남여행, 호치민여행, ${currentRegion}여행, 호치민 밤문화, 호치민 유흥, 호치민 ${getCategoryKR(category)}, 호치민 관광, 호치민 커뮤니티`} />
-        <meta property="og:title" content={`호놀자 | ${currentRegion} ${getCategoryKR(category)}`} />
-        <meta property="og:description" content="남성들을 위한 베트남 호치민 프리미엄 가이드" />
+        <meta name="description" content={`${currentRegion} 지역 ${getCategoryKR(category)}의 실시간 정보를 확인하세요.`} />
       </Helmet>
 
       <div className="max-w-7xl mx-auto">
@@ -134,13 +123,13 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
             <p className="text-gray-600 font-black italic uppercase tracking-widest text-xs">Syncing Store Database...</p>
           </div>
         ) : stores.length === 0 ? (
-          <div className="py-32 text-center bg-[#111] rounded-[3.5rem] border border-dashed border-white/5 animate-in fade-in duration-500">
+          <div className="py-32 text-center bg-[#111] rounded-[3.5rem] border border-dashed border-white/5">
             <span className="text-5xl mb-6 block">🏙️</span>
-            <p className="text-gray-500 font-black italic uppercase tracking-widest">해당 조건의 업소가 아직 등록되지 않았습니다.</p>
+            <p className="text-gray-500 font-black italic uppercase tracking-widest">데이터가 없습니다. (Console을 확인해 보세요)</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 animate-in fade-in duration-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
               {stores.map((store) => (
                 <StoreCard key={store.id} store={store} />
               ))}
@@ -150,43 +139,29 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
               <div className="flex justify-center items-center gap-3 mt-20">
                 <button
                   disabled={currentPage === 1}
-                  onClick={() => {
-                    setCurrentPage(prev => prev - 1);
-                    window.scrollTo(0, 0);
-                  }}
+                  onClick={() => { setCurrentPage(prev => prev - 1); window.scrollTo(0, 0); }}
                   className="px-6 py-3 rounded-2xl border border-white/5 bg-white/5 text-gray-400 font-black text-xs uppercase italic hover:bg-white/10 disabled:opacity-20 transition-all shadow-xl"
                 >
                   PREV
                 </button>
-                
                 <div className="flex gap-2 mx-4">
-                  {[...Array(totalPages)].map((_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => {
-                          setCurrentPage(pageNum);
-                          window.scrollTo(0, 0);
-                        }}
-                        className={`w-12 h-12 rounded-2xl font-black italic transition-all border-2 ${
-                          currentPage === pageNum 
-                          ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-600/30 scale-110' 
-                          : 'bg-[#111] border-white/5 text-gray-600 hover:text-white hover:border-white/20'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => { setCurrentPage(i + 1); window.scrollTo(0, 0); }}
+                      className={`w-12 h-12 rounded-2xl font-black italic transition-all border-2 ${
+                        currentPage === i + 1 
+                        ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-600/30 scale-110' 
+                        : 'bg-[#111] border-white/5 text-gray-600 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
                 </div>
-
                 <button
                   disabled={currentPage === totalPages}
-                  onClick={() => {
-                    setCurrentPage(prev => prev + 1);
-                    window.scrollTo(0, 0);
-                  }}
+                  onClick={() => { setCurrentPage(prev => prev + 1); window.scrollTo(0, 0); }}
                   className="px-6 py-3 rounded-2xl border border-white/5 bg-white/5 text-gray-400 font-black text-xs uppercase italic hover:bg-white/10 disabled:opacity-20 transition-all shadow-xl"
                 >
                   NEXT
