@@ -194,7 +194,6 @@ const Home: React.FC = () => {
             <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all italic">예약문의</Link>
           </div>
           
-          {/* 🔴 가로 2열 유지하되 aspect-video 적용으로 세로 높이만 축소 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
             {storesLoading ? [1, 2].map(i => <div key={i} className="aspect-video bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
