@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // 🔴 SEO 추가
+import { Helmet } from 'react-helmet-async'; 
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
