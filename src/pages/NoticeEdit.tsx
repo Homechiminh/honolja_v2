@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // 🔴 useEffect 제거 (에러 해결)
+import React, { useState } from 'react'; 
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
@@ -8,8 +8,6 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  // 🔴 currentUser, authLoading 제거 (에러 해결)
   const { initialized } = useAuth(); 
   
   const [loading, setLoading] = useState(true);
@@ -20,67 +18,41 @@ const NoticeEdit: React.FC = () => {
     is_important: false
   });
 
-  /**
-   * 🔴 [방탄 fetch] 데이터 로드 로직
-   */
   const fetchNotice = async () => {
     if (!id || !initialized) return; 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notices')
-        .select('*')
-        .eq('id', id)
-        .single();
-
+      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
       if (error) throw error;
-
       if (data) {
-        setFormData({ 
-          title: data.title, 
-          content: data.content, 
-          is_important: data.is_important 
-        });
+        setFormData({ title: data.title, content: data.content, is_important: data.is_important });
       }
     } catch (err: any) {
       console.error('HQ Archive Sync Error:', err.message);
-      alert('데이터를 불러올 수 없습니다.');
       navigate('/notice');
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * 🔴 데이터 가드 적용
-   */
   useFetchGuard(fetchNotice, [id, initialized]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.content.trim()) return;
-
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from('notices')
-        .update(formData)
-        .eq('id', id);
-
+      const { error } = await supabase.from('notices').update(formData).eq('id', id);
       if (error) throw error;
-
       alert('아카이브 수정이 완료되었습니다.');
       navigate('/notice');
     } catch (err) {
-      alert('수정 중 오류가 발생했습니다.');
+      alert('수정 중 오류 발생');
     } finally {
       setUpdating(false);
     }
   };
 
-  /**
-   * 🔴 튕김 방지 가드 UI
-   */
   if (!initialized || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic text-xl">
