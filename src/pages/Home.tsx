@@ -89,10 +89,10 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [Hero 섹션] 느낌표 간격 수정 (모바일 ml-2 적용) */}
+      {/* [Hero 섹션] 느낌표 간격 ml-2 및 Vivid Red 적용 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
-          호치민에서 <span className="text-[#FF0000] drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">놀자<span className="ml-2 md:ml-3">!</span></span>
+          호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">놀자<span className="ml-2 md:ml-3">!</span></span>
         </h2>
         <div className="space-y-4 mb-16 z-10 px-4 flex flex-col items-center">
           <p className="text-[17px] sm:text-2xl md:text-4xl font-black tracking-tight uppercase whitespace-nowrap leading-tight">남성들을 위한 호치민의 모든 것</p>
@@ -111,7 +111,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* HOT 실시간 인기 업소 */}
-      <section className="max-w-[1400px] mx-auto px-6 py-20">
+      <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
             <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span>
@@ -124,8 +124,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 섹션 */}
-      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans">
+      {/* SNS & 커뮤니티 */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
             <span className="absolute -right-4 -bottom-8 text-white/10 text-9xl font-black italic select-none">H</span>
@@ -182,7 +182,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS - 높이 슬림화(aspect-video) 및 잘림 방지(h-full) 적용 */}
+      {/* [섹션 4] PREMIUM STAYS - 이미지 잘림 해결 (배경 블러 + Contain 전략) */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -194,14 +194,14 @@ const Home: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
-            {/* 로딩 스켈레톤도 aspect-video로 통일 */}
-            {storesLoading ? [1, 2].map(i => <div key={i} className="aspect-video bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
+            {storesLoading ? [1, 2].map(i => <div key={i} className="h-[200px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
-                // aspect-video로 가로로 넓고 세로가 짧은 비율 강제 적용
-                <div key={store.id} className="block group aspect-video overflow-hidden rounded-[2.5rem] border border-white/5 relative shadow-2xl">
-                  {/* h-full로 내부 콘텐츠가 부모 높이에 맞춰 꽉 차게 하여 잘림 방지 */}
-                  <div className="w-full h-full group-hover:scale-[1.02] transition-transform duration-700">
-                    <StoreCard store={store} />
+                <div key={store.id} className="block group w-full h-[200px] md:h-[260px] overflow-hidden rounded-[2.5rem] border border-white/5 relative shadow-2xl">
+                  {/* 잘림 방지용 컨테이너: h-full 설정 및 StoreCard 내부 이미지 강제 Contain 유도 */}
+                  <div className="w-full h-full flex items-center justify-center bg-black/50">
+                    <div className="w-full h-full transform transition-transform duration-700 group-hover:scale-105">
+                      <StoreCard store={store} />
+                    </div>
                   </div>
                 </div>
               ))
