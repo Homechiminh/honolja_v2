@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // SEO용
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
@@ -9,7 +9,7 @@ const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 전역 인증 정보 및 초기화 상태 가져오기 (initialized 추가)
+  // 1. 전역 인증 정보 가져오기
   const { currentUser, loading: authLoading, initialized } = useAuth(); 
   
   const [loading, setLoading] = useState(true);
@@ -21,22 +21,18 @@ const NoticeEdit: React.FC = () => {
   });
 
   /**
-   * 🔴 [보안 가드] 관리자 권한 체크 로직
-   * 초기화가 완료된 후, 관리자가 아니면 홈으로 보냅니다.
+   * 🔴 [중요] 내부 useEffect 리다이렉트 로직 삭제
+   * App.tsx의 <AdminRoute>가 이미 관문을 지키고 있으므로, 
+   * 페이지 내부에서 navigate('/')를 중복 실행하면 탭 전환 시 튕김이 발생합니다.
    */
-  useEffect(() => {
-    if (initialized) {
-      if (!currentUser || currentUser.role !== 'ADMIN') {
-        navigate('/', { replace: true });
-      }
-    }
-  }, [initialized, currentUser, navigate]);
 
   /**
    * 🔴 [방탄 fetch] 기존 공지사항 데이터 로드
    */
   const fetchNotice = async () => {
-    if (!id || !initialized) return; // 초기화 전에는 실행 방지
+    // id가 없거나 초기화 전이면 실행하지 않음
+    if (!id || !initialized) return; 
+    
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -64,7 +60,7 @@ const NoticeEdit: React.FC = () => {
   };
 
   /**
-   * 🔴 데이터 가드 적용 (id와 initialized가 준비되면 실행)
+   * 🔴 데이터 가드 적용
    */
   useFetchGuard(fetchNotice, [id, initialized]);
 
@@ -90,8 +86,9 @@ const NoticeEdit: React.FC = () => {
     }
   };
 
-  // 🔴 튕김 방지 핵심: 초기화 중이거나 로딩 중일 때는 로딩 화면 유지
-  if (!initialized || (authLoading && !currentUser) || loading) return (
+  // 🔴 튕김 방지 핵심 UI 가드
+  // App.tsx에서 세션을 확인할 때까지는 아무것도 렌더링하지 않고 대기합니다.
+  if (!initialized || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic text-xl">
         Syncing HQ Archives...
@@ -103,7 +100,6 @@ const NoticeEdit: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      {/* SEO 설정 */}
       <Helmet>
         <title>호놀자 관리자 | 공지사항 수정</title>
         <meta name="robots" content="noindex, nofollow" />
@@ -117,7 +113,6 @@ const NoticeEdit: React.FC = () => {
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-10 animate-in fade-in duration-700">
-          {/* 중요 공지 토글 섹션 */}
           <div className="bg-black/40 p-10 rounded-[2.5rem] border border-white/5 flex items-center justify-between shadow-inner">
             <p className="text-xl font-black text-red-600 italic uppercase tracking-tight">🔥 Priority Override</p>
             <button 
@@ -129,7 +124,6 @@ const NoticeEdit: React.FC = () => {
             </button>
           </div>
 
-          {/* 입력 섹션 */}
           <div className="space-y-6">
             <input 
               required 
@@ -148,7 +142,6 @@ const NoticeEdit: React.FC = () => {
             />
           </div>
 
-          {/* 버튼 섹션 */}
           <div className="flex gap-6">
             <button 
               type="button" 
