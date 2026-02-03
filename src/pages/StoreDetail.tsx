@@ -15,7 +15,7 @@ const StoreDetail: React.FC = () => {
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // 🔴 갤러리 크게 보기 전용 상태
+  // 갤러리 크게 보기 전용 상태
   const [activeImgIndex, setActiveImgIndex] = useState<number | null>(null);
 
   const isAdmin = currentUser?.role === UserRole.ADMIN;
@@ -67,11 +67,18 @@ const StoreDetail: React.FC = () => {
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
-  // 슬라이드용 이미지 배열
   const galleryImages = useMemo(() => {
     if (!store) return [];
     return store.promo_images && store.promo_images.length > 0 ? store.promo_images : [store.image_url];
   }, [store]);
+
+  // 🔴 에러 수정 지점: tags를 안전하게 처리하는 로직
+  const tagList = useMemo(() => {
+    if (!store?.tags) return [];
+    if (Array.isArray(store.tags)) return store.tags;
+    if (typeof store.tags === 'string') return (store.tags as string).split(',');
+    return [];
+  }, [store?.tags]);
 
   if (!initialized || loading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse uppercase font-black">Syncing Intelligence...</div>
@@ -100,13 +107,16 @@ const StoreDetail: React.FC = () => {
                 {isAdmin && <button onClick={handleDelete} className="bg-red-600/20 text-red-500 border border-red-600/30 px-4 py-1 rounded-full text-[9px] font-black hover:bg-red-600 hover:text-white transition-all uppercase italic">Admin: Delete</button>}
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter italic leading-none uppercase">{store.name}</h1>
-              {store.tags && (
+              
+              {/* 🔴 수정한 해시태그 렌더링 로직 */}
+              {tagList.length > 0 && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                  {(typeof store.tags === 'string' ? store.tags.split(',') : (Array.isArray(store.tags) ? store.tags : [])).map((tag: any, i: number) => (
-                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag.toString().trim()}</span>
+                  {tagList.map((tag, i) => (
+                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag.trim()}</span>
                   ))}
                 </div>
               )}
+
               <div className="flex items-center justify-center md:justify-start space-x-2 text-white font-black italic"><span className="text-yellow-500 text-2xl">★</span><span className="text-2xl tracking-tighter">{(store.rating ?? 4.5).toFixed(1)}</span></div>
             </div>
           </div>
@@ -118,7 +128,7 @@ const StoreDetail: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-16">
             
-            {/* 🔴 순서 변경 1: 이미지 갤러리 (Interior Gallery) */}
+            {/* 1. 이미지 갤러리 (가장 위로 이동) */}
             <section>
               <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
@@ -126,11 +136,7 @@ const StoreDetail: React.FC = () => {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {galleryImages.map((img, i) => (
-                  <div 
-                    key={i} 
-                    onClick={() => setActiveImgIndex(i)}
-                    className="aspect-[16/10] rounded-[2rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative"
-                  >
+                  <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[2rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all flex items-center justify-center">
                        <span className="opacity-0 group-hover:opacity-100 text-white font-black text-[10px] uppercase italic bg-red-600 px-3 py-1 rounded-full shadow-lg transition-opacity">Zoom In</span>
@@ -140,11 +146,10 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
-            {/* 🔴 순서 변경 2: 제휴 혜택 (제목 축소 및 한줄 처리) */}
+            {/* 2. 제휴 혜택 (한줄 처리 및 명칭 축소) */}
             <section className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-[2.5rem] p-8 md:p-10 border border-red-600/20 shadow-2xl">
               <div className="flex items-center space-x-4 mb-8">
                 <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg"><svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg></div>
-                {/* 글자수 줄여서 한줄로 보이게 수정 */}
                 <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase whitespace-nowrap">호놀자 제휴 혜택</h3>
               </div>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -154,7 +159,7 @@ const StoreDetail: React.FC = () => {
               </ul>
             </section>
 
-            {/* 🔴 순서 변경 3: 상세 설명 (Store Information) */}
+            {/* 3. 상세 설명 (Store Information) */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center"><div className="w-1 h-5 bg-red-600 mr-3 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></div>Store Information</h3>
               <div className="bg-[#0f0f0f] rounded-[2rem] p-8 border border-white/5">
@@ -162,6 +167,7 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
+            {/* 위치 정보 */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center"><div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>Our Location</h3>
               <div className="bg-[#0f0f0f] rounded-[2.5rem] p-8 border border-white/5 space-y-6">
@@ -171,6 +177,7 @@ const StoreDetail: React.FC = () => {
             </section>
           </div>
 
+          {/* 사이드바 */}
           <div className="space-y-6">
              <div className="sticky top-28 bg-white rounded-[2.5rem] p-10 text-black shadow-2xl">
                 <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic">Exclusive Reservation</span>
@@ -185,42 +192,20 @@ const StoreDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* 🔴 갤러리 슬라이드 모달  */}
+      {/* 갤러리 슬라이드 모달 */}
       {activeImgIndex !== null && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-300">
-          <button 
-            onClick={() => setActiveImgIndex(null)}
-            className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all group"
-          >
+          <button onClick={() => setActiveImgIndex(null)} className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all group">
             <span className="text-white text-2xl group-hover:scale-125 transition-transform">✕</span>
           </button>
-          
           <div className="relative max-w-5xl w-full aspect-video md:aspect-[16/10] overflow-hidden rounded-[3rem] border border-white/10 shadow-2xl">
-            <img 
-              src={galleryImages[activeImgIndex]} 
-              alt="Zoomed" 
-              className="w-full h-full object-cover animate-in zoom-in-95 duration-500" 
-            />
+            <img src={galleryImages[activeImgIndex]} alt="Zoomed" className="w-full h-full object-cover animate-in zoom-in-95 duration-500" />
           </div>
-
           <div className="mt-10 flex gap-4">
-             <button 
-               onClick={() => setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1))}
-               className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-black italic uppercase text-xs hover:bg-white hover:text-black transition-all"
-             >
-               Prev
-             </button>
-             <button 
-               onClick={() => setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0))}
-               className="px-8 py-3 bg-red-600 rounded-2xl font-black italic uppercase text-xs shadow-xl active:scale-95 transition-all"
-             >
-               Next
-             </button>
+             <button onClick={() => setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1))} className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-black italic uppercase text-xs hover:bg-white hover:text-black transition-all">Prev</button>
+             <button onClick={() => setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0))} className="px-8 py-3 bg-red-600 rounded-2xl font-black italic uppercase text-xs shadow-xl active:scale-95 transition-all">Next</button>
           </div>
-          
-          <p className="mt-6 text-gray-500 font-black italic text-[10px] tracking-[0.3em] uppercase">
-            {activeImgIndex + 1} / {galleryImages.length}
-          </p>
+          <p className="mt-6 text-gray-500 font-black italic text-[10px] tracking-[0.3em] uppercase">{activeImgIndex + 1} / {galleryImages.length}</p>
         </div>
       )}
     </div>
