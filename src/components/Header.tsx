@@ -50,7 +50,7 @@ const Header: React.FC = () => {
       <div className="max-w-[1500px] mx-auto px-6 flex items-center justify-between">
         
         <div className="flex items-center gap-10">
-          <Link to="/" className="flex items-center gap-2 group relative z-[110]">
+          <Link title="홈으로 이동" to="/" className="flex items-center gap-2 group relative z-[110]">
             <div className="bg-red-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-xl shadow-red-600/20 group-hover:scale-105 transition-transform">
               <span className="text-white font-black italic text-2xl">H</span>
             </div>
@@ -67,17 +67,27 @@ const Header: React.FC = () => {
           </nav>
         </div>
 
-        {/* PC 우측 버튼 (기존 동일) */}
-        <div className="hidden xl:flex items-center gap-6">
-          <div className="flex items-center gap-6 border-r border-white/10 pr-6 mr-2">
+        <div className="flex items-center gap-4 md:gap-6">
+          {/* PC용 링크 섹션 */}
+          <div className="hidden xl:flex items-center gap-6 border-r border-white/10 pr-6 mr-2">
             <Link to="/danang" className="text-[13px] font-black text-blue-500 hover:text-blue-400 uppercase italic">다낭놀자</Link>
             <Link to="/nhatrang" className="text-[13px] font-black text-emerald-500 hover:text-emerald-400 uppercase italic">나트랑놀자</Link>
           </div>
+
           {!authLoading && (
             currentUser ? (
-              <div className="flex items-center gap-6">
-                <Link to="/mypage" className="flex items-center gap-4 group">
-                  <div className="flex flex-col items-end hidden md:flex">
+              <div className="flex items-center gap-3 md:gap-6">
+                {/* 🔴 모바일 전용 닉네임 표시 추가 (햄버거 바 왼편) */}
+                <Link to="/mypage" className="xl:hidden flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
+                  <span className="text-[11px] font-black text-white italic">{currentUser.nickname}님</span>
+                  <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center overflow-hidden">
+                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" /> : <span className="text-[10px] text-white">{currentUser.nickname?.[0]}</span>}
+                  </div>
+                </Link>
+
+                {/* PC용 유저 정보 */}
+                <Link to="/mypage" className="hidden xl:flex items-center gap-4 group">
+                  <div className="flex flex-col items-end">
                     {currentUser.role === 'ADMIN' && <span className="text-[9px] text-red-500 font-black tracking-widest uppercase italic mb-0.5">ADMINISTRATOR</span>}
                     <span className="text-sm font-black text-white italic tracking-tight">{currentUser.nickname}님</span>
                   </div>
@@ -85,32 +95,29 @@ const Header: React.FC = () => {
                     {currentUser.avatar_url ? <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" /> : <span className="text-xl">{currentUser.nickname?.[0].toUpperCase()}</span>}
                   </div>
                 </Link>
-                <button onClick={handleLogout} className="px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white">로그아웃</button>
+                <button onClick={handleLogout} className="hidden xl:block px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white">로그아웃</button>
               </div>
             ) : (
-              <div className="flex items-center gap-6">
-                <Link to="/signup" className="text-[13px] font-black text-gray-400 hover:text-white uppercase italic">회원가입</Link>
-                <Link to="/login" className="bg-red-600 text-white px-8 py-3 rounded-2xl text-[14px] font-black italic uppercase shadow-xl shadow-red-600/20 transition-all">로그인</Link>
+              <div className="flex items-center gap-3 md:gap-6">
+                <Link to="/signup" className="text-[11px] md:text-[13px] font-black text-gray-400 hover:text-white uppercase italic">회원가입</Link>
+                <Link to="/login" className="bg-red-600 text-white px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[12px] md:text-[14px] font-black italic uppercase shadow-xl transition-all">로그인</Link>
               </div>
             )
           )}
-        </div>
 
-        <button onClick={toggleMenu} className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5">
-          <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'w-8 rotate-45 translate-y-2' : 'w-8'}`}></span>
-          <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'w-8'}`}></span>
-          <span className={`h-0.5 bg-red-600 transition-all duration-300 ${isMenuOpen ? 'w-8 -rotate-45 -translate-y-2' : 'w-5'}`}></span>
-        </button>
+          {/* 햄버거 버튼 */}
+          <button onClick={toggleMenu} className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5">
+            <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'w-8 rotate-45 translate-y-2' : 'w-8'}`}></span>
+            <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'w-8'}`}></span>
+            <span className={`h-0.5 bg-red-600 transition-all duration-300 ${isMenuOpen ? 'w-8 -rotate-45 -translate-y-2' : 'w-5'}`}></span>
+          </button>
+        </div>
       </div>
 
-      {/* 🔴 모바일 사이드바 수정: 내부 스크롤 허용 및 클릭 영역 확보 */}
+      {/* 모바일 사이드바 */}
       <div className={`fixed inset-0 z-[105] xl:hidden transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}>
         <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu}></div>
-        
-        <div className={`absolute top-0 right-0 h-full w-[65%] max-w-[280px] bg-[#0a0a0a] border-l border-white/5 shadow-2xl transition-transform duration-400 ease-in-out p-8 flex flex-col overflow-y-auto ${
-          isMenuOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}>
-          {/* 메뉴 링크 리스트 */}
+        <div className={`absolute top-0 right-0 h-full w-[65%] max-w-[280px] bg-[#0a0a0a] border-l border-white/5 shadow-2xl transition-transform duration-400 ease-in-out p-8 flex flex-col overflow-y-auto ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="flex flex-col gap-6 mt-20">
             {navItems.map((item) => (
               <Link key={item.name} to={item.path} className={`text-xl font-black italic uppercase tracking-tighter ${isActive(item.path) ? 'text-red-600' : 'text-gray-300'}`}>
@@ -120,16 +127,11 @@ const Header: React.FC = () => {
             <Link to="/community" className={`text-xl font-black italic uppercase tracking-tighter ${isActive('/community') ? 'text-red-600' : 'text-gray-300'}`}>커뮤니티</Link>
             <Link to="/coupon-shop" className={`text-xl font-black italic uppercase tracking-tighter ${isActive('/coupon-shop') ? 'text-red-600' : 'text-gray-300'}`}>쿠폰샵</Link>
           </div>
-
           <div className="h-px bg-white/5 w-full my-8 flex-shrink-0"></div>
-
-          {/* 지역 서비스 링크 */}
           <div className="flex flex-col gap-5 mb-10">
             <Link to="/danang" className="text-lg font-black text-blue-500 italic uppercase">다낭놀자</Link>
             <Link to="/nhatrang" className="text-lg font-black text-emerald-500 italic uppercase">나트랑놀자</Link>
           </div>
-
-          {/* 하단 인증/로그아웃 버튼 (확실히 클릭되도록 배치) */}
           <div className="mt-auto pb-10">
             {currentUser ? (
               <div className="space-y-4">
