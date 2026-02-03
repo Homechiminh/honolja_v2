@@ -41,7 +41,6 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
  * 🔒 [가드 1] 관리자 전용
- * 튕김 방지를 위해 loading 상태가 끝날 때까지 대기합니다.
  */
 const AdminRoute = () => {
   const { currentUser, initialized, loading } = useAuth();
@@ -92,7 +91,6 @@ function App() {
         <Helmet>
           <title>호놀자 | 호치민 여행 & 밤문화 정보</title>
           <meta name="description" content="베트남 호치민 밤문화, 유흥, 커뮤니티 및 숙소 예약 정보 NO.1" />
-          <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민여자, 호치민 관광, 호치민 커뮤니티" />
         </Helmet>
 
         <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30 font-sans">
@@ -109,19 +107,14 @@ function App() {
               <Route path="/booking" element={<Booking />} />
               <Route path="/partnership" element={<Partnership />} />
               <Route path="/policies" element={<Policies />} />
-              
               <Route path="/community" element={<Community />} />
-              
               <Route path="/notice" element={<Notice />} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
-
               <Route path="/store/:id" element={<StoreDetail />} />
               <Route path="/post/:id" element={<PostDetail />} />
-              
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
-              {/* 🔒 인증 필요 구역 */}
               <Route element={<PrivateRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/coupon-shop" element={<CouponShop />} />
@@ -129,12 +122,10 @@ function App() {
                 <Route path="/post/edit/:id" element={<PostEdit />} />
               </Route>
 
-              {/* 🔒 레벨 필요 구역 */}
               <Route element={<LevelRoute minLevel={3} />}>
                 <Route path="/vip-lounge" element={<VipLounge />} />
               </Route>
 
-              {/* 🔒 관리자 전용 구역 */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/create-store" element={<AdminStoreCreate />} />
