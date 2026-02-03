@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // 🔴 Link 제거 (에러 해결)
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,35 +10,40 @@ const Notice: React.FC = () => {
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 useFetchGuard 대신 initialized 체크 후 직접 호출 (튕김 방지 핵심)
+  // 🔴 튕김 방지: initialized 체크 후 데이터 호출
+  const fetchNotices = async () => {
+    if (!initialized) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .order('is_important', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setNotices(data || []);
+    } catch (err: any) {
+      console.error('Notice Sync Failed:', err.message);
+      setNotices([]); 
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchNotices = async () => {
-      if (!initialized) return;
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('notices')
-          .select('*')
-          .order('is_important', { ascending: false })
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setNotices(data || []);
-      } catch (err: any) {
-        console.error('Notice Sync Failed:', err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchNotices();
   }, [initialized]);
 
+  // 🔴 튕김 방지 가드: 세션 확인 전에는 렌더링을 멈춤
   if (!initialized) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30 text-white">
-      <Helmet><title>호놀자 | 공식 공지사항</title></Helmet>
+      <Helmet>
+        <title>호놀자 | 공식 공지사항</title>
+        <meta name="description" content="호놀자의 최신 공지사항 및 커뮤니티 이용 가이드를 확인하세요." />
+      </Helmet>
       
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-end mb-12">
@@ -49,7 +54,12 @@ const Notice: React.FC = () => {
             <p className="text-gray-600 font-bold uppercase text-[9px] mt-2 italic tracking-[0.3em]">HQ Intelligence & Guidelines</p>
           </div>
           {currentUser?.role === 'ADMIN' && (
-            <button onClick={() => navigate('/notice/create')} className="px-6 py-3 bg-white text-black font-black text-[10px] rounded-xl uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95">+ Create</button>
+            <button 
+              onClick={() => navigate('/notice/create')} 
+              className="px-6 py-3 bg-white text-black font-black text-[10px] rounded-xl uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95"
+            >
+              + Create
+            </button>
           )}
         </header>
 
@@ -70,8 +80,12 @@ const Notice: React.FC = () => {
                 <div className="flex justify-between items-center gap-6">
                   <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      {notice.is_important && <span className="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic animate-pulse">Important</span>}
-                      <span className="text-gray-600 font-black text-[9px] uppercase italic tracking-widest">{new Date(notice.created_at).toLocaleDateString()}</span>
+                      {notice.is_important && (
+                        <span className="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic animate-pulse">Important</span>
+                      )}
+                      <span className="text-gray-600 font-black text-[9px] uppercase italic tracking-widest">
+                        {new Date(notice.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                     <h3 className={`text-xl md:text-2xl font-black italic tracking-tight group-hover:text-red-500 transition-colors truncate ${notice.is_important ? 'text-white' : 'text-gray-400'}`}>
                       {notice.title}
