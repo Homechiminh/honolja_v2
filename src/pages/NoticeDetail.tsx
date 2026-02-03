@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // 🔴 실제로 사용합니다.
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
@@ -11,12 +11,18 @@ const NoticeDetail: React.FC = () => {
   const [notice, setNotice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // 🔴 데이터 가드: initialized가 확인된 후에만 실행
   useEffect(() => {
     const fetchNotice = async () => {
       if (!id || !initialized) return;
       setLoading(true);
       try {
-        const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
+        const { data, error } = await supabase
+          .from('notices')
+          .select('*')
+          .eq('id', id)
+          .single();
+
         if (error) throw error;
         setNotice(data);
       } catch (err: any) {
@@ -30,9 +36,13 @@ const NoticeDetail: React.FC = () => {
     fetchNotice();
   }, [id, initialized, navigate]);
 
-  // 🔴 튕김 방지 핵심
-  if (!initialized || (loading && !notice)) return (
-    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">Decrypting HQ Intel...</div>
+  // 🔴 튕김 방지 가드: 초기화 완료 전까지 아무것도 렌더링하지 않음
+  if (!initialized) return null;
+
+  if (loading && !notice) return (
+    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
+      Decrypting HQ Intel...
+    </div>
   );
 
   if (!notice) return null;
@@ -69,7 +79,6 @@ const NoticeDetail: React.FC = () => {
             <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
           </header>
           
-          {/* 🔴 가독성 강화: 텍스트를 더 밝게, 행간을 넓게 */}
           <article className="p-10 md:p-14 text-slate-100 text-lg md:text-xl leading-[1.8] whitespace-pre-wrap font-medium italic">
             {notice.content}
           </article>
