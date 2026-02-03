@@ -15,14 +15,19 @@ const StoreDetail: React.FC = () => {
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 에러 해결: isAdmin 변수 활용
+  // 🔴 isAdmin 변수 활용 (에러 해결)
   const isAdmin = currentUser?.role === UserRole.ADMIN;
 
   const fetchStoreDetail = async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       if (error) throw error;
       if (data) setStore(data as Store);
     } catch (err: any) {
@@ -33,14 +38,17 @@ const StoreDetail: React.FC = () => {
     }
   };
 
+  // 비로그인 접근 허용을 위해 initialized 시점에 데이터 로드
   useEffect(() => {
-    if (initialized) fetchStoreDetail();
+    if (initialized) {
+      fetchStoreDetail();
+    }
   }, [id, initialized]);
 
-  // 🔴 에러 해결: handleDelete 함수 UI 연결
+  // 🔴 handleDelete 함수 UI 연결 (에러 해결)
   const handleDelete = () => {
     if (window.confirm('관리자 권한으로 이 업소를 삭제하시겠습니까? 데이터는 복구되지 않습니다.')) {
-      alert('관리자 대시보드(Manage Stores)에서 삭제를 진행해 주세요.');
+      alert('삭제 처리는 관리자 대시보드(Manage Stores) 메뉴를 이용해 주세요.');
     }
   };
 
@@ -67,7 +75,7 @@ const StoreDetail: React.FC = () => {
   }, [store?.address]);
 
   if (!initialized || loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse tracking-widest uppercase font-black">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse uppercase font-black">
       Syncing Intelligence...
     </div>
   );
@@ -85,25 +93,42 @@ const StoreDetail: React.FC = () => {
     <div className="min-h-screen bg-[#050505] font-sans selection:bg-red-600/30 text-white">
       <Helmet>
         <title>호놀자 | {store.name} - 호치민 {store.category} 정보</title>
-        <meta name="keywords" content={`베트남여행, 호치민여행, 호치민 밤문화, ${store.name}`} />
+        <meta name="description" content={`${store.name} - ${store.region} 추천 업소. 호놀자 보고 연락 시 제휴 혜택 제공.`} />
+        <meta name="keywords" content={`베트남여행, 호치민여행, 호치민 밤문화, ${store.name}, ${store.category}`} />
       </Helmet>
 
-      {/* Hero Header - UI 축소 버전 */}
+      {/* Hero Header - UI 축소 버전 (h-40vh) */}
       <div className="relative h-[40vh] md:h-[55vh] w-full overflow-hidden bg-black">
-        <div className="absolute inset-0 w-full h-full opacity-60" style={{ backgroundImage: `url('${store.image_url}')`, backgroundSize: spriteConfig.size, backgroundPosition: backgroundPosition, filter: 'blur(15px)', transform: 'scale(1.1)' }} />
+        <div 
+          className="absolute inset-0 w-full h-full opacity-60"
+          style={{
+            backgroundImage: `url('${store.image_url}')`,
+            backgroundSize: spriteConfig.size,
+            backgroundPosition: backgroundPosition,
+            filter: 'blur(15px)',
+            transform: 'scale(1.1)'
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-[#050505]"></div>
         
         <div className="container mx-auto px-6 h-full flex items-end pb-8 relative z-10">
           <div className="flex flex-col md:flex-row items-end gap-8 w-full">
             <div className="w-40 h-56 md:w-52 md:h-72 rounded-[2rem] overflow-hidden border-4 border-white/10 shadow-2xl shrink-0">
-               <div className="w-full h-full" style={{ backgroundImage: `url('${store.image_url}')`, backgroundSize: spriteConfig.size, backgroundPosition: backgroundPosition }} />
+               <div 
+                 className="w-full h-full"
+                 style={{
+                   backgroundImage: `url('${store.image_url}')`,
+                   backgroundSize: spriteConfig.size,
+                   backgroundPosition: backgroundPosition,
+                 }}
+               />
             </div>
             <div className="flex-grow pb-2 text-center md:text-left">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
                 <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic">Premium {store.category}</span>
                 <span className="text-white/40 text-xs font-bold uppercase tracking-tighter italic">{store.region} • VIETNAM</span>
                 
-                {/* 🔴 isAdmin 활용한 관리자 삭제 모드 노출 */}
+                {/* 🔴 isAdmin 활용 (에러 해결 및 기능 노출) */}
                 {isAdmin && (
                   <button onClick={handleDelete} className="bg-red-600/20 text-red-500 border border-red-600/30 px-4 py-1 rounded-full text-[9px] font-black hover:bg-red-600 hover:text-white transition-all uppercase italic">Admin: Delete Mode</button>
                 )}
@@ -111,11 +136,11 @@ const StoreDetail: React.FC = () => {
               
               <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter italic leading-none uppercase">{store.name}</h1>
               
-              {/* 🔴 해시태그 반영 (TS2339 split 에러 해결) */}
+              {/* 🔴 split 에러 해결: tags 타입 방어 로직 */}
               {store.tags && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                  {(typeof store.tags === 'string' ? store.tags.split(',') : (Array.isArray(store.tags) ? store.tags : [])).map((tag: any, i: number) => (
-                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag.toString().trim()}</span>
+                  {(typeof store.tags === 'string' ? (store.tags as string).split(',') : (Array.isArray(store.tags) ? store.tags : [])).map((tag: string, i: number) => (
+                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag.trim()}</span>
                   ))}
                 </div>
               )}
@@ -192,6 +217,7 @@ const StoreDetail: React.FC = () => {
             </section>
           </div>
 
+          {/* Sidebar - 문구 수정 반영 */}
           <div className="space-y-6">
              <div className="sticky top-28 bg-white rounded-[2.5rem] p-10 text-black shadow-2xl">
                 <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic">Exclusive Reservation</span>
@@ -204,6 +230,7 @@ const StoreDetail: React.FC = () => {
                     <span className="uppercase tracking-tighter italic text-xs">Telegram Inquiry</span>
                   </a>
                 </div>
+                
                 <div className="mt-8 pt-8 border-t border-slate-100 text-center">
                   <p className="text-[10px] text-slate-500 font-black uppercase leading-relaxed italic tracking-tighter">
                     호놀자 보고 연락했다고 말씀해주시면<br/>제휴 혜택과 최상의 서비스를 제공해드립니다.
