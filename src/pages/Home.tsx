@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useFetchGuard } from '../hooks/useFetchGuard';
 import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
@@ -17,10 +16,12 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
+  // HOT 업장 리스트 (빌라 제외 상위 5개)
   const hotServiceStores = useMemo(() => {
     return stores.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5);
   }, [stores]);
 
+  // PREMIUM STAYS (빌라 중 HOT 상위 2개)
   const premiumHotStays = useMemo(() => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
@@ -32,7 +33,7 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 🔴 비로그인 유저도 데이터를 가져올 수 있도록 가드 없이 호출
+  // 비로그인 상태에서도 호출 가능하도록 가드 없이 fetch
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -76,10 +77,10 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [섹션 1] Hero - 🔴 느낌표 띄우기 최적화 */}
+      {/* [섹션 1] Hero - 느낌표 간격 조정 및 초록색 문구 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
-          호치민에서 <span className="text-red-600">놀자&nbsp;!</span>
+          호치민에서 <span className="text-red-600">놀자&nbsp;&nbsp;!</span>
         </h2>
         
         <div className="space-y-4 mb-16 z-10 px-4 flex flex-col items-center">
@@ -88,7 +89,7 @@ const Home: React.FC = () => {
           <p className="text-emerald-400 font-bold text-sm md:text-lg opacity-90 mt-2 italic">풀빌라 · 아파트 예약까지 한번에!</p>
         </div>
 
-        <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2">
+        <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2 font-sans">
           {[{ id: 'massage', name: '마사지/스파', icon: '💆‍♀️' }, { id: 'barber', name: '이발소', icon: '💈' }, { id: 'karaoke', name: '가라오케', icon: '🎤' }, { id: 'barclub', name: '바/클럽', icon: '🍸' }, { id: 'villa', name: '숙소/풀빌라', icon: '🏠' }].map((cat) => (
             <Link key={cat.id} to={`/stores/${cat.id}`} className="flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 bg-white/5 backdrop-blur-sm rounded-2xl md:rounded-[32px] border border-white/5 hover:bg-white/10 transition-all group shadow-lg">
               <span className="text-2xl md:text-5xl group-hover:scale-110 transition-transform">{cat.icon}</span>
@@ -112,14 +113,14 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 3] SNS & 커뮤니티 - 🔴 더보기 버튼들 확실히 복구 */}
-      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
+      {/* [섹션 3] SNS & 커뮤니티 - 더보기 버튼 복구 */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
-          <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center">
+          <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
             <span className="text-[8px] md:text-[10px] font-black text-white/60 uppercase block mb-1">그룹챗 입장</span>
             <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter">호놀자 텔레그램</h4>
           </a>
-          <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center">
+          <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center min-h-[140px]">
             <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase block mb-1">단톡방 입장</span>
             <h4 className="text-sm md:text-xl font-black italic tracking-tighter">호놀자 카카오톡</h4>
           </a>
@@ -129,7 +130,7 @@ const Home: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4>
-              <Link to="/community" className="text-[10px] text-gray-600 font-bold underline hover:text-white">더보기</Link>
+              <Link to="/community" className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="bg-[#111] rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestPosts.map(post => (
@@ -157,7 +158,7 @@ const Home: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4>
-              <Link to="/notice" className="text-[10px] text-gray-600 font-bold underline hover:text-white">더보기</Link>
+              <Link to="/notice" className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="space-y-3">
               {latestNotices.map(notice => (
@@ -188,7 +189,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [배너 슬라이더] */}
+      {/* 배너 슬라이더 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
