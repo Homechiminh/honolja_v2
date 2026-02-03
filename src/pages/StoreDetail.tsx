@@ -10,7 +10,9 @@ import type { Store } from '../types';
 const StoreDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth(); 
+  
+  // 🔴 에러 수정: 사용하지 않는 initialized를 삭제하여 TS6133 방지
+  const { currentUser } = useAuth(); 
 
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,6 @@ const StoreDetail: React.FC = () => {
       const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
       if (error) throw error;
       if (data) {
-        console.log("✅ [StoreDetail] Data received:", data.name);
         setStore(data as Store);
       }
     } catch (err: any) {
@@ -37,7 +38,7 @@ const StoreDetail: React.FC = () => {
     }
   };
 
-  // 🔴 수정: initialized에 의존하지 않고 id가 있으면 즉시 호출
+  // 🔴 즉시 호출: 인증 여부와 상관없이 페이지 들어오면 데이터부터 부릅니다.
   useEffect(() => {
     fetchStoreDetail();
   }, [id]);
@@ -65,7 +66,7 @@ const StoreDetail: React.FC = () => {
     return `${x}% ${y}%`;
   }, [store, spriteConfig]);
 
-  // 🔴 지도 URL 문법 오류 수정
+  // 🔴 구글 지도 URL 문법 오류 수정
   const mapUrl = useMemo(() => {
     if (!store?.address) return "";
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
@@ -79,11 +80,10 @@ const StoreDetail: React.FC = () => {
   const tagList = useMemo(() => {
     if (!store?.tags) return [];
     if (Array.isArray(store.tags)) return store.tags;
-    if (typeof store.tags === 'string') return (store.tags as string).split(',');
+    if (typeof store.tags === 'string') return (store.tags as string).split(',').map(t => t.trim());
     return [];
   }, [store?.tags]);
 
-  // 🔴 수정: 인증 로딩 때문에 데이터 화면을 막지 않습니다.
   if (loading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse uppercase font-black tracking-widest">
       Scanning Target Database...
@@ -93,8 +93,8 @@ const StoreDetail: React.FC = () => {
   if (!store) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-center px-6">
       <div>
-        <p className="text-white font-black italic uppercase text-2xl mb-6 tracking-tighter text-red-600">Target Not Found</p>
-        <button onClick={() => navigate(-1)} className="text-gray-400 font-bold uppercase text-xs border-b border-gray-600 pb-1 hover:text-white hover:border-white transition-all">Go Back</button>
+        <p className="text-red-600 font-black italic uppercase text-2xl mb-6 tracking-tighter">Target Not Found</p>
+        <button onClick={() => navigate(-1)} className="text-gray-400 font-bold uppercase text-xs border-b border-gray-600 pb-1">Go Back</button>
       </div>
     </div>
   );
@@ -122,7 +122,7 @@ const StoreDetail: React.FC = () => {
               {tagList.length > 0 && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
                   {tagList.map((tag, i) => (
-                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag.trim()}</span>
+                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag}</span>
                   ))}
                 </div>
               )}
@@ -145,7 +145,7 @@ const StoreDetail: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-16">
             
-            {/* 1. 이미지 갤러리 */}
+            {/* 이미지 갤러리 */}
             <section>
               <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
@@ -156,18 +156,18 @@ const StoreDetail: React.FC = () => {
                   <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[2rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all flex items-center justify-center">
-                       <span className="opacity-0 group-hover:opacity-100 text-white font-black text-[10px] uppercase italic bg-red-600 px-3 py-1 rounded-full shadow-lg transition-opacity">Zoom In</span>
+                       <span className="opacity-0 group-hover:opacity-100 text-white font-black text-[10px] uppercase italic bg-red-600 px-3 py-1 rounded-full shadow-lg">Zoom In</span>
                     </div>
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* 2. 제휴 혜택 */}
+            {/* 제휴 혜택 */}
             <section className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-[2.5rem] p-8 md:p-10 border border-red-600/20 shadow-2xl">
               <div className="flex items-center space-x-4 mb-8">
-                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg"><svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg></div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase whitespace-nowrap">호놀자 제휴 혜택</h3>
+                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center"><svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg></div>
+                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">호놀자 제휴 혜택</h3>
               </div>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(store.benefits && store.benefits.length > 0 ? store.benefits : ["호놀자 회원 특별 할인가 제공", "예약 시 대기 시간 최소화"]).map((benefit, i) => (
@@ -179,7 +179,7 @@ const StoreDetail: React.FC = () => {
               </ul>
             </section>
 
-            {/* 3. 상세 설명 */}
+            {/* 상세 설명 */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center"><div className="w-1 h-5 bg-red-600 mr-3 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></div>Store Information</h3>
               <div className="bg-[#0f0f0f] rounded-[2rem] p-8 border border-white/5">
@@ -187,7 +187,7 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
-            {/* 4. 위치 정보 */}
+            {/* 위치 정보 */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center"><div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>Our Location</h3>
               <div className="bg-[#0f0f0f] rounded-[2.5rem] p-8 border border-white/5 space-y-6">
@@ -205,10 +205,10 @@ const StoreDetail: React.FC = () => {
                 <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic">Exclusive Reservation</span>
                 <h4 className="text-2xl font-black mb-6 tracking-tighter italic uppercase leading-none">실시간 예약 및 문의</h4>
                 <div className="space-y-3">
-                  <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block hover:bg-[#F2D800] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 shadow-lg group">
+                  <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block hover:bg-[#F2D800] transition-all flex items-center justify-center space-x-2 shadow-lg group">
                     <span className="uppercase tracking-tighter italic text-xs">KakaoTalk Reservation</span>
                   </a>
-                  <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:bg-[#007AB8] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 shadow-lg group">
+                  <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:bg-[#007AB8] transition-all flex items-center justify-center space-x-2 shadow-lg group">
                     <span className="uppercase tracking-tighter italic text-xs">Telegram Inquiry</span>
                   </a>
                 </div>
@@ -224,16 +224,16 @@ const StoreDetail: React.FC = () => {
 
       {/* 갤러리 슬라이드 모달 */}
       {activeImgIndex !== null && (
-        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
           <button onClick={() => setActiveImgIndex(null)} className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all group">
             <span className="text-white text-2xl group-hover:scale-125 transition-transform">✕</span>
           </button>
           <div className="relative max-w-5xl w-full aspect-video md:aspect-[16/10] overflow-hidden rounded-[3rem] border border-white/10 shadow-2xl">
-            <img src={galleryImages[activeImgIndex]} alt="Zoomed" className="w-full h-full object-cover animate-in zoom-in-95 duration-500" />
+            <img src={galleryImages[activeImgIndex]} alt="Zoomed" className="w-full h-full object-cover" />
           </div>
           <div className="mt-10 flex gap-4">
-             <button onClick={() => setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1))} className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-black italic uppercase text-xs hover:bg-white hover:text-black transition-all">Prev</button>
-             <button onClick={() => setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0))} className="px-8 py-3 bg-red-600 rounded-2xl font-black italic uppercase text-xs shadow-xl active:scale-95 transition-all">Next</button>
+             <button onClick={() => setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1))} className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-black italic uppercase text-xs hover:bg-white hover:text-black">Prev</button>
+             <button onClick={() => setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0))} className="px-8 py-3 bg-red-600 rounded-2xl font-black italic uppercase text-xs shadow-xl active:scale-95">Next</button>
           </div>
           <p className="mt-6 text-gray-500 font-black italic text-[10px] tracking-[0.3em] uppercase">{activeImgIndex + 1} / {galleryImages.length}</p>
         </div>
