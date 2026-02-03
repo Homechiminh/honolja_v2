@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const Notice: React.FC = () => {
   const navigate = useNavigate();
@@ -10,35 +10,36 @@ const Notice: React.FC = () => {
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotices = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('notices')
-        .select('*')
-        .order('is_important', { ascending: false })
-        .order('created_at', { ascending: false });
+  // 🔴 useFetchGuard 대신 initialized 체크 후 직접 호출 (튕김 방지 핵심)
+  useEffect(() => {
+    const fetchNotices = async () => {
+      if (!initialized) return;
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('notices')
+          .select('*')
+          .order('is_important', { ascending: false })
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setNotices(data || []);
-    } catch (err: any) {
-      console.error('Notice Sync Failed:', err.message);
-      setNotices([]); 
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (error) throw error;
+        setNotices(data || []);
+      } catch (err: any) {
+        console.error('Notice Sync Failed:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useFetchGuard(fetchNotices, []);
+    fetchNotices();
+  }, [initialized]);
 
-  if (!initialized || (loading && notices.length === 0)) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="text-red-600 font-black animate-pulse uppercase tracking-[0.3em] italic">Syncing HQ...</div>
-    </div>
-  );
+  if (!initialized) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30 text-white">
+      <Helmet><title>호놀자 | 공식 공지사항</title></Helmet>
+      
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-end mb-12">
           <div>
@@ -53,7 +54,9 @@ const Notice: React.FC = () => {
         </header>
 
         <div className="space-y-4">
-          {notices.length === 0 ? (
+          {loading && notices.length === 0 ? (
+            <div className="py-40 text-center text-red-600 font-black animate-pulse italic uppercase tracking-widest">Syncing Archives...</div>
+          ) : notices.length === 0 ? (
             <div className="py-20 text-center bg-[#0f0f0f] rounded-[2.5rem] border border-dashed border-white/5 italic opacity-30 text-white">No Bulletins Issued.</div>
           ) : (
             notices.map((notice) => (
@@ -67,9 +70,7 @@ const Notice: React.FC = () => {
                 <div className="flex justify-between items-center gap-6">
                   <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      {notice.is_important && (
-                        <span className="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic animate-pulse">Important</span>
-                      )}
+                      {notice.is_important && <span className="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic animate-pulse">Important</span>}
                       <span className="text-gray-600 font-black text-[9px] uppercase italic tracking-widest">{new Date(notice.created_at).toLocaleDateString()}</span>
                     </div>
                     <h3 className={`text-xl md:text-2xl font-black italic tracking-tight group-hover:text-red-500 transition-colors truncate ${notice.is_important ? 'text-white' : 'text-gray-400'}`}>
