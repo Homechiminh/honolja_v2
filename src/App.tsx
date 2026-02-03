@@ -41,12 +41,10 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
  * 🔒 [가드 1] 관리자 전용
- * 튕김 방지 핵심: loading이 끝날 때까지 절대 Navigate를 실행하지 않습니다.
  */
 const AdminRoute = () => {
   const { currentUser, initialized, loading } = useAuth();
   
-  // 🔴 데이터 확인 중일 때는 대기 (이게 없으면 유저 정보가 오기 전에 홈으로 튕김)
   if (!initialized || loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -57,7 +55,6 @@ const AdminRoute = () => {
     );
   }
   
-  // 🔴 확인이 완전히 끝난 후, 관리자가 아님이 확실할 때만 보냅니다.
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -101,7 +98,6 @@ function App() {
       <Router>
         <Helmet>
           <title>호놀자 | 호치민 여행 & 밤문화 정보</title>
-          <meta name="description" content="베트남 호치민 밤문화, 유흥, 커뮤니티 및 숙소 예약 정보 NO.1" />
         </Helmet>
 
         <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30 font-sans">
@@ -118,19 +114,14 @@ function App() {
               <Route path="/booking" element={<Booking />} />
               <Route path="/partnership" element={<Partnership />} />
               <Route path="/policies" element={<Policies />} />
-              
               <Route path="/community" element={<Community />} />
-              
               <Route path="/notice" element={<Notice />} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
-
               <Route path="/store/:id" element={<StoreDetail />} />
               <Route path="/post/:id" element={<PostDetail />} />
-              
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
-              {/* 🔒 인증 필요 구역 */}
               <Route element={<PrivateRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/coupon-shop" element={<CouponShop />} />
@@ -138,12 +129,10 @@ function App() {
                 <Route path="/post/edit/:id" element={<PostEdit />} />
               </Route>
 
-              {/* 🔒 레벨 필요 구역 */}
               <Route element={<LevelRoute minLevel={3} />}>
                 <Route path="/vip-lounge" element={<VipLounge />} />
               </Route>
 
-              {/* 🔒 관리자 전용 구역 */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/create-store" element={<AdminStoreCreate />} />
