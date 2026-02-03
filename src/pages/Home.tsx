@@ -8,14 +8,14 @@ import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized, loading: authLoading } = useAuth();
+  const { currentUser, initialized } = useAuth(); // 🔴 authLoading 제거
   const { stores, loading: storesLoading } = useStores('all');
   
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
   const [latestVipPosts, setLatestVipPosts] = useState<any[]>([]);
   const [latestNotices, setLatestNotices] = useState<any[]>([]);
   const [showLevelModal, setShowLevelModal] = useState(false);
-  const [currentAdIdx, setCurrentAdIdx] = useState(0); // 🔴 에러 원인이었던 변수 사용 확인
+  const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
   const hotServiceStores = useMemo(() => {
     return stores.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5);
@@ -25,7 +25,6 @@ const Home: React.FC = () => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
 
-  // 광고 슬라이더 타이머
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -70,8 +69,8 @@ const Home: React.FC = () => {
     }
   };
 
-  // 튕김 방지 가드: 초기화 전에는 아무것도 렌더링하지 않음
-  if (!initialized || authLoading) return null;
+  // 🔴 수정: initialized(세션 체크)만 확인하여 블랙홀 현상 방지
+  if (!initialized) return null;
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
@@ -91,7 +90,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [Hero 섹션] 느낌표 간격 ml-2 적용 */}
+      {/* Hero 섹션 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">놀자<span className="ml-2 md:ml-3">!</span></span>
@@ -112,7 +111,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* HOT 실시간 인기 업소 */}
+      {/* 인기 업소 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -126,7 +125,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 */}
+      {/* SNS & 게시판 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
@@ -184,7 +183,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS - 이미지 잘림 해결 */}
+      {/* PREMIUM STAYS */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -199,7 +198,6 @@ const Home: React.FC = () => {
             {storesLoading ? [1, 2].map(i => <div key={i} className="h-[200px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
                 <div key={store.id} className="block group w-full h-[200px] md:h-[260px] overflow-hidden rounded-[2.5rem] border border-white/10 relative shadow-2xl bg-black">
-                  {/* 이미지 잘림 방지 (Letterbox 효과) */}
                   <img src={store.image_url} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30" alt="bg" />
                   <div className="w-full h-full flex items-center justify-center p-2 relative z-10 transform transition-transform duration-700 group-hover:scale-105">
                     <StoreCard store={store} />
@@ -211,7 +209,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 하단 배너 - 🔴 currentAdIdx 실제 사용 위치 */}
+      {/* 하단 배너 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
