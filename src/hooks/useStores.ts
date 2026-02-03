@@ -10,34 +10,27 @@ export const useStores = (category?: string) => {
     const fetchStores = async () => {
       try {
         setLoading(true);
-        // 🔍 진단 로그: 어떤 카테고리를 요청 중인지 확인
-        console.log(`📡 [useStores] 데이터 요청 시작 (Category: ${category || 'all'})`);
+        console.log(`📡 [useStores] 1. 요청 시작 (Category: ${category || 'all'})`);
 
-        let query = supabase.from('stores').select('*');
-        
+        const query = supabase.from('stores').select('*');
         if (category && category !== 'all') {
-          query = query.eq('category', category);
+          query.eq('category', category);
         }
 
-        // 별점순으로 가져오기
+        // 🔴 여기서 응답이 올 때까지 기다립니다.
         const { data, error } = await query.order('rating', { ascending: false });
 
+        console.log("📡 [useStores] 2. 서버 응답 도착!"); // 이 로그가 찍히는지 봐야 합니다.
+
         if (error) {
-          console.error('❌ [useStores] Supabase 에러:', error.message);
+          console.error('❌ [useStores] 3. Supabase 에러 발생:', error.message);
           setStores([]);
         } else {
-          // ✅ 진단 로그: 실제로 몇 개의 데이터를 받았는지 확인
-          console.log(`✅ [useStores] 성공! 수신된 업소 개수: ${data?.length || 0}개`);
-          
-          if (data && data.length > 0) {
-            // 디버깅: 받은 데이터 중 첫 번째 업소의 is_hot 상태 출력
-            console.log(`💡 [Check] 첫 번째 업소 HOT 상태:`, data[0].is_hot);
-          }
-          
-          setStores(data as Store[]);
+          console.log(`✅ [useStores] 3. 데이터 수신 완료: ${data?.length || 0}개`);
+          setStores(data as Store[] || []);
         }
       } catch (err) {
-        console.error('❌ [useStores] 시스템 에러:', err);
+        console.error('❌ [useStores] 3. 시스템 치명적 오류:', err);
       } finally {
         setLoading(false);
       }
