@@ -41,13 +41,19 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
  * 🔒 [가드 1] 관리자 전용
- * 튕김 방지를 위해 initialized가 끝날 때까지 로딩 화면을 보여줍니다.
+ * 튕김 방지를 위해 loading 상태가 끝날 때까지 대기합니다.
  */
 const AdminRoute = () => {
-  const { currentUser, initialized } = useAuth();
+  const { currentUser, initialized, loading } = useAuth();
   
-  if (!initialized) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-black italic animate-pulse">VERIFYING ADMIN...</div>;
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-red-600 font-black animate-pulse italic uppercase tracking-[0.3em]">
+          Verifying Security Clearance...
+        </div>
+      </div>
+    );
   }
   
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
@@ -57,10 +63,10 @@ const AdminRoute = () => {
  * 🔒 [가드 2] 일반 로그인 유저 전용
  */
 const PrivateRoute = () => {
-  const { currentUser, initialized } = useAuth();
+  const { currentUser, initialized, loading } = useAuth();
   
-  if (!initialized) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-black italic animate-pulse">SYNCING SESSION...</div>;
+  if (!initialized || loading) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-white italic animate-pulse">Syncing Session...</div>;
   }
   
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
@@ -70,10 +76,10 @@ const PrivateRoute = () => {
  * 🔒 [가드 3] 특정 등급(Level) 이상 전용
  */
 const LevelRoute = ({ minLevel }: { minLevel: number }) => {
-  const { currentUser, initialized } = useAuth();
+  const { currentUser, initialized, loading } = useAuth();
   
-  if (!initialized) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-black italic animate-pulse">CHECKING LEVEL...</div>;
+  if (!initialized || loading) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-yellow-500 italic animate-pulse">Checking Level...</div>;
   }
   
   return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
