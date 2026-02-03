@@ -1,261 +1,161 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
-import { useAuth } from '../contexts/AuthContext'; 
-import { SNS_LINKS } from '../constants';
-import { UserRole } from '../types'; 
-import type { Store } from '../types';
+import { BRAND_NAME } from '../constants';
+import { useAuth } from '../contexts/AuthContext';
 
-const StoreDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth(); 
+  const { currentUser, loading: authLoading } = useAuth();
 
-  const [store, setStore] = useState<Store | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // 🔴 에러 해결: isAdmin 변수 활용
-  const isAdmin = currentUser?.role === UserRole.ADMIN;
-
-  const fetchStoreDetail = async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      if (data) setStore(data as Store);
-    } catch (err: any) {
-      console.error("Store Sync Failed:", err.message);
-      setStore(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '', nickname: '' });
 
   useEffect(() => {
-    if (initialized) {
-      fetchStoreDetail();
+    if (!authLoading && currentUser) {
+      navigate('/');
     }
-  }, [id, initialized]);
+  }, [currentUser, authLoading, navigate]);
 
-  // 🔴 에러 해결: handleDelete 함수 UI 연결용
-  const handleDelete = () => {
-    if (window.confirm('관리자 권한으로 이 업소를 삭제하시겠습니까? 데이터는 복구되지 않습니다.')) {
-      alert('삭제 처리는 관리자 대시보드(Manage Stores) 메뉴를 이용해 주세요.');
+  const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const spriteConfig = useMemo(() => {
-    if (!store) return { cols: 1, rows: 1, size: 'cover' };
-    if (store.image_url?.includes('supabase.co')) return { cols: 1, rows: 1, size: 'cover' };
-    if (store.image_url?.includes('kuf0m2')) return { cols: 4, rows: 3, size: '400% 300%' };
-    return { cols: 3, rows: 3, size: '300% 300%' };
-  }, [store]);
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLoading) return;
 
-  const backgroundPosition = useMemo(() => {
-    if (!store || spriteConfig.size === 'cover') return 'center';
-    const { cols, rows } = spriteConfig;
-    const col = (store.image_index || 0) % cols;
-    const row = Math.floor((store.image_index || 0) / cols);
-    const x = cols > 1 ? (col / (cols - 1)) * 100 : 0;
-    const y = rows > 1 ? (row / (rows - 1)) * 100 : 0;
-    return `${x}% ${y}%`;
-  }, [store, spriteConfig]);
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: { data: { nickname: formData.nickname } }
+      });
 
-  const mapUrl = useMemo(() => {
-    if (!store?.address) return "";
-    return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
-  }, [store?.address]);
+      if (error) throw error;
 
-  if (!initialized || loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse tracking-widest uppercase font-black">
-      Syncing Intelligence...
-    </div>
-  );
+      if (data.user) {
+        alert('회원가입 성공! 로그인 페이지로 이동합니다.');
+        navigate('/login');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  if (!store) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-center px-6">
-      <div>
-        <p className="text-white font-black italic uppercase text-2xl mb-6 tracking-tighter">Target Not Found</p>
-        <button onClick={() => navigate(-1)} className="text-red-600 font-bold uppercase text-xs border-b border-red-600 pb-1">Go Back</button>
-      </div>
-    </div>
-  );
+  const inputStyle = "w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all shadow-inner placeholder:text-gray-700 font-bold";
+
+  if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] font-sans selection:bg-red-600/30 text-white">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans text-white">
       <Helmet>
-        <title>호놀자 | {store.name} - 호치민 {store.category} 추천</title>
-        <meta name="description" content={`${store.name} - ${store.region} 최고의 ${store.category} 정보. 호놀자 제휴 혜택 제공.`} />
-        <meta name="keywords" content={`베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, ${store.name}, ${store.category}`} />
+        <title>{BRAND_NAME} | 회원가입 - 호치민 베스트 가이드</title>
+        <meta name="description" content="호놀자 회원가입을 통해 실시간 호치민 여행 및 밤문화 정보를 확인하세요." />
       </Helmet>
 
-      {/* Hero Header - UI 축소 버전 */}
-      <div className="relative h-[40vh] md:h-[55vh] w-full overflow-hidden bg-black">
-        <div 
-          className="absolute inset-0 w-full h-full opacity-60"
-          style={{
-            backgroundImage: `url('${store.image_url}')`,
-            backgroundSize: spriteConfig.size,
-            backgroundPosition: backgroundPosition,
-            filter: 'blur(15px)',
-            transform: 'scale(1.1)'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-[#050505]"></div>
-        
-        <div className="container mx-auto px-6 h-full flex items-end pb-8 relative z-10">
-          <div className="flex flex-col md:flex-row items-end gap-8 w-full">
-            <div className="w-40 h-56 md:w-52 md:h-72 rounded-[2rem] overflow-hidden border-4 border-white/10 shadow-2xl shrink-0">
-               <div 
-                 className="w-full h-full"
-                 style={{
-                   backgroundImage: `url('${store.image_url}')`,
-                   backgroundSize: spriteConfig.size,
-                   backgroundPosition: backgroundPosition,
-                 }}
-               />
-            </div>
-            <div className="flex-grow pb-2 text-center md:text-left">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
-                <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic">Premium {store.category}</span>
-                <span className="text-white/40 text-xs font-bold uppercase tracking-tighter italic">{store.region} • VIETNAM</span>
-                
-                {/* 🔴 isAdmin과 handleDelete 활용하여 에러 해결 */}
-                {isAdmin && (
-                  <button onClick={handleDelete} className="bg-red-600/20 text-red-500 border border-red-600/30 px-4 py-1 rounded-full text-[9px] font-black hover:bg-red-600 hover:text-white transition-all uppercase italic">
-                    Delete Mode
-                  </button>
-                )}
-              </div>
-              
-              <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter italic leading-none uppercase">{store.name}</h1>
-              
-              {/* 🔴 TS2339 에러 해결: tags 분기 처리 로직 */}
-              {store.tags && (
-                <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                  {(typeof store.tags === 'string' ? store.tags.split(',') : (Array.isArray(store.tags) ? store.tags : [])).map((tag: any, i: number) => (
-                    <span key={i} className="text-red-500 text-[11px] font-black italic">#{tag.toString().trim()}</span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center justify-center md:justify-start space-x-6 text-white font-black italic">
-                 <div className="flex items-center space-x-2">
-                   <span className="text-yellow-500 text-2xl">★</span>
-                   <span className="text-2xl tracking-tighter">{(store.rating ?? 4.5).toFixed(1)}</span>
-                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <button onClick={() => navigate(-1)} className="absolute top-6 left-6 z-30 p-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white hover:bg-white/10 transition-all shadow-2xl">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-        </button>
+      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
       </div>
 
-      <div className="container mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2 space-y-16">
-            <section className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-[2.5rem] p-8 md:p-10 border border-red-600/20 shadow-2xl">
-              <div className="flex items-center space-x-4 mb-8">
-                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
-                </div>
-                <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">호놀자 전용 멤버십 혜택</h3>
-              </div>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(store.benefits && store.benefits.length > 0 ? store.benefits : ["호놀자 회원 특별 할인가 제공", "예약 시 대기 시간 최소화"]).map((benefit, i) => (
-                  <li key={i} className="flex items-center space-x-3 bg-white/[0.03] p-5 rounded-2xl border border-white/5 group hover:bg-red-600/5 transition-colors">
-                    <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
-                    <span className="text-slate-300 font-bold italic tracking-tight text-sm">{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
-                <div className="w-1 h-5 bg-red-600 mr-3 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></div>
-                Store Information
-              </h3>
-              <div className="bg-[#0f0f0f] rounded-[2rem] p-8 border border-white/5">
-                <p className="text-slate-400 text-base md:text-lg leading-relaxed font-medium whitespace-pre-line italic">
-                  {store.description}
-                </p>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
-                <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
-                Interior Gallery
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {(store.promo_images && store.promo_images.length > 0 ? store.promo_images : [store.image_url]).map((img, i) => (
-                  <div key={i} className="aspect-[16/10] rounded-[2rem] overflow-hidden border-2 border-white/5 shadow-xl">
-                    <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
-                <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
-                Our Location
-              </h3>
-              <div className="bg-[#0f0f0f] rounded-[2.5rem] p-8 border border-white/5 space-y-6">
-                <div className="bg-black/50 px-6 py-4 rounded-xl border border-white/5">
-                  <p className="text-white font-black italic text-base tracking-tight">{store.address}</p>
-                </div>
-                <div className="h-[350px] md:h-[450px] bg-slate-900 rounded-[2rem] overflow-hidden border-2 border-white/5">
-                   <iframe
-                     title="store-location"
-                     width="100%" height="100%" frameBorder="0"
-                     style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%)' }}
-                     src={mapUrl}
-                     allowFullScreen
-                   ></iframe>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* Sidebar - 문구 수정 반영 */}
-          <div className="space-y-6">
-             <div className="sticky top-28 bg-white rounded-[2.5rem] p-10 text-black shadow-2xl">
-                <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic">Exclusive Reservation</span>
-                <h4 className="text-2xl font-black mb-6 tracking-tighter italic uppercase leading-none">실시간 예약 및 문의</h4>
-                
-                <div className="space-y-3">
-                  <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block hover:bg-[#F2D800] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 shadow-lg group">
-                    <span className="uppercase tracking-tighter italic text-xs">KakaoTalk Reservation</span>
-                  </a>
-                  <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:bg-[#007AB8] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 shadow-lg group">
-                    <span className="uppercase tracking-tighter italic text-xs">Telegram Inquiry</span>
-                  </a>
-                </div>
-                
-                <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-                  <p className="text-[10px] text-slate-500 font-black uppercase leading-relaxed italic tracking-tighter">
-                    호놀자 보고 연락드렸다고 말씀해주시면<br/>
-                    제휴 혜택과 최상의 서비스를 제공해드립니다.
-                  </p>
-                </div>
-             </div>
-          </div>
+      <div className="max-w-xl w-full relative z-10">
+        <div className="text-center mb-12">
+          <Link to="/" className="inline-flex items-center space-x-3 mb-8 group">
+            <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+              <span className="text-white font-black text-2xl italic">H</span>
+            </div>
+            <span className="text-3xl font-black tracking-tighter text-white uppercase italic">{BRAND_NAME}</span>
+          </Link>
+          <h2 className="text-white text-3xl font-black italic tracking-tighter uppercase leading-none">Join to play !</h2>
         </div>
+
+        <div className="bg-[#111] p-10 md:p-14 rounded-[3rem] border border-white/5 shadow-2xl">
+          <div className="mb-12">
+            <button 
+              onClick={handleGoogleSignup}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-4 bg-white text-black py-5 rounded-2xl font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50"
+            >
+              <svg className="w-6 h-6" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              <span>{isLoading ? '연결 중...' : '구글로 1초 만에 가입하기'}</span>
+            </button>
+          </div>
+
+          <div className="relative my-12 text-center">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+            <span className="relative bg-[#111] px-6 text-[10px] text-slate-600 font-black uppercase tracking-widest italic">Or create a manual account</span>
+          </div>
+
+          <div className="flex items-center justify-center space-x-4 mb-12">
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`h-1.5 w-16 rounded-full transition-all duration-500 ${step >= i ? 'bg-red-600' : 'bg-white/5'}`}></div>
+            ))}
+          </div>
+
+          <form className="space-y-8" onSubmit={handleSignup}>
+            {step === 1 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <div className="space-y-4">
+                  <input id="signup-nickname" name="nickname" type="text" placeholder="Nickname" value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} className={inputStyle} required />
+                  <input id="signup-email" name="email" type="email" placeholder="Email" autoComplete="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputStyle} required />
+                </div>
+                <button type="button" onClick={() => formData.nickname && formData.email && setStep(2)} className="w-full py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl uppercase italic active:scale-95">다음 단계로</button>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <input id="signup-password" name="password" type="password" placeholder="Password" autoComplete="new-password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className={inputStyle} required minLength={6} />
+                <div className="flex space-x-4">
+                  <button type="button" onClick={() => setStep(1)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
+                  <button type="button" onClick={() => formData.password.length >= 6 && setStep(3)} className="flex-1 py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all uppercase italic">다음</button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10 text-slate-400 text-sm font-bold leading-relaxed shadow-inner">
+                  <p className="mb-2 text-white italic tracking-tighter uppercase">Terms & Policy</p>
+                  {BRAND_NAME}의 서비스 이용약관 및 <br/>개인정보 처리방침에 동의하여 가입을 진행합니다.
+                </div>
+                <div className="flex space-x-4">
+                  <button type="button" onClick={() => setStep(2)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
+                  <button type="submit" disabled={isLoading} className="flex-1 py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 active:scale-95 uppercase italic">{isLoading ? 'Processing...' : '회원가입 완료'}</button>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+
+        <p className="text-center mt-8 text-slate-500 text-sm font-bold uppercase tracking-widest">
+          이미 계정이 있으신가요? 
+          <Link to="/login" className="text-red-500 font-black ml-2 hover:text-red-400 border-b-2 border-transparent hover:border-red-400 transition-all pb-0.5">로그인하기</Link>
+        </p>
       </div>
     </div>
   );
 };
 
-export default StoreDetail;
+export default Signup;
