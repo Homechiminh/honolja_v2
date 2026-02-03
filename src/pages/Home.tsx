@@ -8,7 +8,6 @@ import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  // 🔴 authLoading(loading) 선언을 완전히 삭제하여 TS6133 에러를 해결했습니다.
   const { currentUser, initialized } = useAuth(); 
   const { stores, loading: storesLoading } = useStores('all');
   
@@ -18,14 +17,16 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
+  // 🔴 인기 업소 필터링 로직 (데이터가 있을 때만 작동)
   const hotServiceStores = useMemo(() => {
-    return stores.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5);
+    return stores?.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5) || [];
   }, [stores]);
 
   const premiumHotStays = useMemo(() => {
-    return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
+    return stores?.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2) || [];
   }, [stores]);
 
+  // 광고 슬라이더 타이머 (기존 유지)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -33,6 +34,7 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // 🔴 데이터 가져오기 로직 보강
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -40,6 +42,7 @@ const Home: React.FC = () => {
         supabase.from('posts').select('*, author:profiles(nickname)').eq('category', 'vip').order('created_at', { ascending: false }).limit(6),
         supabase.from('notices').select('*').order('is_important', { ascending: false }).order('created_at', { ascending: false }).limit(6)
       ]);
+      
       if (postRes.data) setLatestPosts(postRes.data);
       if (vipRes.data) setLatestVipPosts(vipRes.data);
       if (noticeRes.data) setLatestNotices(noticeRes.data);
@@ -48,8 +51,11 @@ const Home: React.FC = () => {
     }
   };
 
+  // 🔴 세션이 확인되면 즉시 데이터 로드 시작
   useEffect(() => {
-    if (initialized) fetchHomeData();
+    if (initialized) {
+      fetchHomeData();
+    }
   }, [initialized]);
 
   const handleVIPClick = (e: React.MouseEvent) => {
@@ -70,7 +76,7 @@ const Home: React.FC = () => {
     }
   };
 
-  // 🔴 세션 체크(initialized)만 확인합니다.
+  // 🔴 초기화 중일 때만 로딩 스피너 노출
   if (!initialized) return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -129,11 +135,13 @@ const Home: React.FC = () => {
           <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
+          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
+           hotServiceStores.length > 0 ? hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />) :
+           <p className="text-gray-500 italic col-span-full py-20 text-center">불러올 업소 정보가 없습니다.</p>}
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 섹션 */}
+      {/* SNS & 커뮤니티 섹션 (디자인 유지) */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
@@ -155,12 +163,12 @@ const Home: React.FC = () => {
               <Link to="/community" className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="bg-[#111] rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden shadow-2xl">
-              {latestPosts.map(post => (
+              {latestPosts.length > 0 ? latestPosts.map(post => (
                 <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-4 hover:bg-white/5 transition-all group">
                   <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-red-500 truncate text-slate-200">{post.title}</p></div>
                   <span className="text-red-600 text-[10px] font-black">+{post.likes || 0}</span>
                 </Link>
-              ))}
+              )) : <p className="p-4 text-xs text-gray-500 italic">게시글이 없습니다.</p>}
             </div>
           </div>
           <div>
@@ -169,12 +177,12 @@ const Home: React.FC = () => {
               <button onClick={handleVIPClick} className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</button>
             </div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
-              {latestVipPosts.map(post => (
+              {latestVipPosts.length > 0 ? latestVipPosts.map(post => (
                 <div key={post.id} onClick={(e) => handleVipPostClick(e, post.id)} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group">
                   <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p></div>
                   <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic uppercase">VIP</span>
                 </div>
-              ))}
+              )) : <p className="p-4 text-xs text-gray-500 italic">VIP 게시글이 없습니다.</p>}
             </div>
           </div>
           <div>
@@ -183,15 +191,15 @@ const Home: React.FC = () => {
               <Link to="/notice" className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="space-y-3">
-              {latestNotices.map(notice => (
+              {latestNotices.length > 0 ? latestNotices.map(notice => (
                 <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl"><p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>{notice.is_important && '[필독] '}{notice.title}</p></Link>
-              ))}
+              )) : <p className="p-4 text-xs text-gray-500 italic">공지사항이 없습니다.</p>}
             </div>
           </div>
         </div>
       </section>
 
-      {/* PREMIUM STAYS */}
+      {/* PREMIUM STAYS (Letterbox 적용) */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -217,7 +225,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 하단 광고 배너 */}
+      {/* 하단 배너 (기존 유지) */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
