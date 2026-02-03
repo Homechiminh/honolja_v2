@@ -10,7 +10,6 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // AuthContext의 모든 상태를 가져옵니다.
   const { currentUser, initialized, loading: authLoading } = useAuth();
 
   const navItems = [
@@ -74,14 +73,14 @@ const Header: React.FC = () => {
             <Link to="/nhatrang" className="text-[13px] font-black text-emerald-500 hover:text-emerald-400 uppercase italic">나트랑놀자</Link>
           </div>
 
-          {/* 🔴 핵심: 로딩 중이 아닐 때만 렌더링하여 UI 증발 방지 */}
-          {!authLoading && initialized && (
+          {/* 🔴 로딩 중일 때 헤더 전체가 사라지지 않도록 내부 정보만 조건부 렌더링 */}
+          {initialized && !authLoading ? (
             currentUser ? (
               <div className="flex items-center gap-3 md:gap-6">
                 <Link to="/mypage" className="xl:hidden flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
                   <span className="text-[11px] font-black text-white italic">{currentUser.nickname}님</span>
                   <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center overflow-hidden">
-                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" alt="avt" /> : <span className="text-[10px] text-white">{currentUser.nickname?.[0]}</span>}
+                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" /> : <span className="text-[10px] text-white">{currentUser.nickname?.[0]}</span>}
                   </div>
                 </Link>
 
@@ -94,14 +93,16 @@ const Header: React.FC = () => {
                     {currentUser.avatar_url ? <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" /> : <span className="text-xl">{currentUser.nickname?.[0].toUpperCase()}</span>}
                   </div>
                 </Link>
-                <button onClick={handleLogout} className="hidden xl:block px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white">로그아웃</button>
+                <button onClick={handleLogout} className="hidden xl:block px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-md active:scale-95">로그아웃</button>
               </div>
             ) : (
               <div className="flex items-center gap-3 md:gap-6">
                 <Link to="/signup" className="text-[11px] md:text-[13px] font-black text-gray-400 hover:text-white uppercase italic">회원가입</Link>
-                <Link to="/login" className="bg-red-600 text-white px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[12px] md:text-[14px] font-black italic uppercase shadow-xl shadow-red-600/20 transition-all">로그인</Link>
+                <Link to="/login" className="bg-red-600 text-white px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl text-[12px] md:text-[14px] font-black italic uppercase shadow-xl transition-all">로그인</Link>
               </div>
             )
+          ) : (
+             <div className="w-20 h-8"></div> // 로딩 중 공간 확보
           )}
 
           <button onClick={toggleMenu} className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5">
@@ -112,6 +113,7 @@ const Header: React.FC = () => {
         </div>
       </div>
 
+      {/* 모바일 메뉴 오버레이 (디자인 동일) */}
       <div className={`fixed inset-0 z-[105] xl:hidden transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}>
         <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu}></div>
         <div className={`absolute top-0 right-0 h-full w-[65%] max-w-[280px] bg-[#0a0a0a] border-l border-white/5 shadow-2xl transition-transform duration-400 ease-in-out p-8 flex flex-col overflow-y-auto ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -134,7 +136,7 @@ const Header: React.FC = () => {
               <div className="space-y-4">
                 <Link to="/mypage" className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl">
                   <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center font-black italic text-white overflow-hidden shadow-lg text-sm">
-                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" alt="avt" /> : currentUser.nickname?.[0]}
+                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" /> : currentUser.nickname?.[0]}
                   </div>
                   <span className="text-sm font-black text-white italic truncate">{currentUser.nickname}님</span>
                 </Link>
