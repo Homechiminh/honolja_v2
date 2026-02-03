@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const NoticeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,22 +11,24 @@ const NoticeDetail: React.FC = () => {
   const [notice, setNotice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotice = async () => {
-    if (!id || !initialized) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
-      if (error) throw error;
-      setNotice(data);
-    } catch (err: any) {
-      console.error('Notice Fetch Error:', err.message);
-      navigate('/notice');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchNotice = async () => {
+      if (!id || !initialized) return;
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
+        if (error) throw error;
+        setNotice(data);
+      } catch (err: any) {
+        console.error('Notice Fetch Error:', err.message);
+        navigate('/notice');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useFetchGuard(fetchNotice, [id, initialized]);
+    fetchNotice();
+  }, [id, initialized, navigate]);
 
   // 🔴 튕김 방지 핵심
   if (!initialized || (loading && !notice)) return (
@@ -37,10 +38,8 @@ const NoticeDetail: React.FC = () => {
   if (!notice) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
-      <Helmet>
-        <title>호놀자 | {notice.title}</title>
-      </Helmet>
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30 text-white">
+      <Helmet><title>호놀자 | {notice.title}</title></Helmet>
 
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
         <div className="flex justify-between items-center px-4">
@@ -70,6 +69,7 @@ const NoticeDetail: React.FC = () => {
             <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
           </header>
           
+          {/* 🔴 가독성 강화: 텍스트를 더 밝게, 행간을 넓게 */}
           <article className="p-10 md:p-14 text-slate-100 text-lg md:text-xl leading-[1.8] whitespace-pre-wrap font-medium italic">
             {notice.content}
           </article>
