@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { useStores } from '../hooks/useStores'; 
+import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth();
+  const { currentUser, initialized } = useAuth(); 
   const { stores, loading: storesLoading } = useStores('all');
   
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
@@ -17,6 +17,7 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
+  // 🔴 데이터 가공 (stores가 비어있을 때를 대비해 옵셔널 체이닝 사용)
   const hotServiceStores = useMemo(() => {
     return stores?.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5) || [];
   }, [stores]);
@@ -25,7 +26,7 @@ const Home: React.FC = () => {
     return stores?.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2) || [];
   }, [stores]);
 
-  // 🔴 currentAdIdx를 사용하여 5초마다 배너를 넘깁니다.
+  // 🔴 광고 슬라이더 (currentAdIdx 에러 방지용 사용처 확보)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -33,28 +34,32 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // 🔴 데이터 패칭 로직 (인증 대기 없이 즉시 호출하여 속도 개선)
   const fetchHomeData = async () => {
     try {
+      console.log("📡 [Home] 데이터 패칭 시작...");
       const [postRes, vipRes, noticeRes] = await Promise.all([
         supabase.from('posts').select('*, author:profiles(nickname)').neq('category', 'vip').order('created_at', { ascending: false }).limit(6),
         supabase.from('posts').select('*, author:profiles(nickname)').eq('category', 'vip').order('created_at', { ascending: false }).limit(6),
         supabase.from('notices').select('*').order('is_important', { ascending: false }).order('created_at', { ascending: false }).limit(6)
       ]);
+      
       if (postRes.data) setLatestPosts(postRes.data);
       if (vipRes.data) setLatestVipPosts(vipRes.data);
       if (noticeRes.data) setLatestNotices(noticeRes.data);
+      console.log("✅ [Home] 게시판 데이터 수신 완료");
     } catch (err) {
-      console.error('Home 데이터 동기화 에러:', err);
+      console.error('❌ Home 데이터 동기화 에러:', err);
     }
   };
 
   useEffect(() => {
     fetchHomeData();
-  }, []);
+  }, []); // 페이지 접속 시 즉시 실행
 
   const handleVIPClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!initialized) return;
+    if (!initialized) return; // 아직 초기화 전이면 동작 방지
     if (!currentUser || currentUser.level < 3) {
       setShowLevelModal(true);
     } else {
@@ -72,16 +77,14 @@ const Home: React.FC = () => {
     }
   };
 
-  if (!initialized) return (
-    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-red-600 font-black italic animate-pulse">
-      INITIALIZING...
-    </div>
-  );
+  // 🔴 2초 지연을 없애기 위해 "풀스크린 로딩 가드"를 제거했습니다.
+  // 대신 인증 정보가 필요한 부분(VIP 등)만 내부에서 체크합니다.
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
       <Helmet>
-        <title>호놀자 | 베트남 호치민 밤문화 & 여행</title>
+        <title>호놀자 | 베트남 호치민 밤문화 & 여행 No.1</title>
+        <meta name="description" content="호치민 밤문화, 유흥, 관광지 정보부터 풀빌라 예약까지 한 번에 해결하세요." />
       </Helmet>
 
       {showLevelModal && (
@@ -95,11 +98,16 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Hero 섹션 */}
+      {/* Hero 섹션 - 접속 즉시 노출 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">놀자<span className="ml-2 md:ml-3">!</span></span>
         </h2>
+        <div className="space-y-4 mb-16 z-10 px-4 flex flex-col items-center">
+          <p className="text-[17px] sm:text-2xl md:text-4xl font-black tracking-tight uppercase whitespace-nowrap leading-tight">남성들을 위한 호치민의 모든 것</p>
+          <p className="text-blue-500 font-black text-lg md:text-2xl italic leading-snug">실시간 정보 + 검증된 업장</p>
+        </div>
+
         <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2 font-sans">
           {[{ id: 'massage', name: '마사지/스파', icon: '💆‍♀️' }, { id: 'barber', name: '이발소', icon: '💈' }, { id: 'karaoke', name: '가라오케', icon: '🎤' }, { id: 'barclub', name: '바/클럽', icon: '🍸' }, { id: 'villa', name: '숙소/풀빌라', icon: '🏠' }].map((cat) => (
             <Link key={cat.id} to={`/stores/${cat.id}`} className="flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 bg-white/5 backdrop-blur-sm rounded-2xl md:rounded-[32px] border border-white/5 hover:bg-white/10 transition-all group shadow-lg">
@@ -117,60 +125,73 @@ const Home: React.FC = () => {
             <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span>
             HOT 실시간 인기 업소
           </h3>
+          <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-          {storesLoading ? 
-            [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
-            hotServiceStores.length > 0 ? hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />) :
-            <p className="text-gray-500 italic col-span-full py-10 text-center uppercase tracking-widest text-xs">Waiting for Target Intel...</p>
-          }
+          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
+           hotServiceStores.length > 0 ? hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />) :
+           <div className="col-span-full py-10 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+             <p className="text-gray-500 italic text-sm">업소 정보를 불러오고 있습니다...</p>
+           </div>}
         </div>
       </section>
 
-      {/* SNS & 게시판 섹션 */}
+      {/* SNS & 커뮤니티 섹션 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
-            <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter relative z-10 leading-tight">호놀자 텔레그램</h4>
+            <h4 className="text-sm md:text-xl font-black italic text-white relative z-10 leading-tight">호놀자 텔레그램</h4>
           </a>
           <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center min-h-[140px]">
-            <h4 className="text-sm md:text-xl font-black italic tracking-tighter relative z-10 leading-tight">호놀자 카카오톡</h4>
+            <h4 className="text-sm md:text-xl font-black italic relative z-10 leading-tight">호놀자 카카오톡</h4>
           </a>
         </div>
 
         <div className="lg:col-span-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Community */}
+          {/* Community Column */}
           <div>
-            <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase mb-6">Community</h4>
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4>
+              <Link to="/community" className="text-[10px] text-gray-300 font-bold underline italic">더보기</Link>
+            </div>
             <div className="bg-[#111] rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestPosts.length > 0 ? latestPosts.map(post => (
-                <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-4 hover:bg-white/5 transition-all">
-                  <p className="text-sm font-bold truncate text-slate-200">{post.title}</p>
+                <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-4 hover:bg-white/5 transition-all group">
+                  <div className="min-w-0 pr-4"><p className="text-sm font-bold truncate text-slate-200">{post.title}</p></div>
+                  <span className="text-red-600 text-[10px] font-black">+{post.likes || 0}</span>
                 </Link>
-              )) : <p className="p-4 text-xs text-gray-600 italic">No Intelligence Found.</p>}
+              )) : <div className="p-4 text-xs text-gray-600 italic">게시글 로딩 중...</div>}
             </div>
           </div>
-          {/* VIP */}
+          
+          {/* VIP Column */}
           <div>
-            <h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase mb-6 text-yellow-500">VIP Lounge</h4>
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4>
+              <button onClick={handleVIPClick} className="text-[10px] text-gray-300 font-bold underline italic">더보기</button>
+            </div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestVipPosts.length > 0 ? latestVipPosts.map(post => (
-                <div key={post.id} onClick={(e) => handleVipPostClick(e, post.id)} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer">
-                  <p className="text-sm font-bold truncate text-slate-200">{post.title}</p>
-                  <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic">VIP</span>
+                <div key={post.id} onClick={(e) => handleVipPostClick(e, post.id)} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group">
+                  <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p></div>
+                  <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic uppercase">VIP</span>
                 </div>
-              )) : <p className="p-4 text-xs text-gray-600 italic">Target Restricted.</p>}
+              )) : <div className="p-4 text-xs text-gray-600 italic">VIP 정보 로딩 중...</div>}
             </div>
           </div>
-          {/* Notice */}
+
+          {/* Notice Column */}
           <div>
-            <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase mb-6 text-sky-500">Notice</h4>
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4>
+              <Link to="/notice" className="text-[10px] text-gray-300 font-bold underline italic">더보기</Link>
+            </div>
             <div className="space-y-3">
               {latestNotices.length > 0 ? latestNotices.map(notice => (
-                <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl">
+                <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl">
                   <p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>{notice.title}</p>
                 </Link>
-              )) : <p className="p-4 text-xs text-gray-600 italic">No Briefings Available.</p>}
+              )) : <div className="p-4 text-xs text-gray-600 italic">공지사항 로딩 중...</div>}
             </div>
           </div>
         </div>
@@ -180,30 +201,41 @@ const Home: React.FC = () => {
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
-            <h3 className="text-3xl md:text-5xl font-black italic uppercase leading-none">Premium Stays</h3>
+            <div>
+              <h3 className="text-3xl md:text-5xl font-black italic mb-3 tracking-tighter uppercase leading-none">Premium Stays</h3>
+              <p className="text-gray-500 font-bold text-sm md:text-lg">호놀자가 검증한 최고급 풀빌라 정보</p>
+            </div>
             <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all italic">예약문의</Link>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
             {storesLoading ? [1, 2].map(i => <div key={i} className="h-[200px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
-              premiumHotStays.map((store: any) => <StoreCard key={store.id} store={store} />)
+              premiumHotStays.map((store: any) => (
+                <div key={store.id} className="block group w-full h-[200px] md:h-[260px] overflow-hidden rounded-[2.5rem] border border-white/10 relative shadow-2xl bg-black">
+                  <img src={store.image_url} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30" alt="bg" />
+                  <div className="w-full h-full flex items-center justify-center p-2 relative z-10 transform transition-transform duration-700 group-hover:scale-105">
+                    <StoreCard store={store} />
+                  </div>
+                </div>
+              ))
             }
           </div>
         </div>
       </section>
 
-      {/* 🔴 하단 배너: currentAdIdx를 다시 사용하여 슬라이딩 효과 복구 */}
+      {/* 하단 광고 배너 (currentAdIdx 슬라이드 복구) */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div 
             className="flex h-full transition-transform duration-1000 ease-in-out" 
             style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}
           >
-            {/* 배너 1 */}
+            {/* Banner 1 */}
             <div className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10 text-white">
               <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Partnership</span>
               <h4 className="text-white text-xl md:text-4xl font-black italic tracking-tighter leading-tight">호놀자와 함께하실 <br/> 광고주분들의 연락을 기다립니다.</h4>
             </div>
-            {/* 배너 2 */}
+            {/* Banner 2 */}
             <a href="https://t.me/honolja84" target="_blank" rel="noreferrer" className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:bg-white/5 transition-all text-white">
               <h4 className="text-white text-lg md:text-4xl font-black italic tracking-tighter mb-6 font-sans relative z-10">광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
               <div className="px-8 py-3 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-xs font-black uppercase tracking-widest italic hover:bg-blue-600 hover:text-white transition-all relative z-10">Contact Now</div>
