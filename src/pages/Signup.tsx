@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // SEO용 추가
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,6 +65,15 @@ const Signup: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans">
+      {/* 🔴 SEO 최적화 메타 태그 */}
+      <Helmet>
+        <title>{BRAND_NAME} | 회원가입 - 베트남 호치민 여행 & 밤문화 커뮤니티</title>
+        <meta name="description" content="호놀자에 가입하여 베트남 호치민의 최신 여행 정보와 밤문화 정보를 확인하세요. 구글 계정으로 1초 만에 간편하게 가입하실 수 있습니다." />
+        <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민여자, 호치민 관광, 호치민 커뮤니티, 호놀자 회원가입" />
+        <meta property="og:title" content={`${BRAND_NAME} | 회원가입`} />
+        <meta property="og:description" content="남성들을 위한 호치민 최고의 가이드, 호놀자에 합류하세요." />
+      </Helmet>
+
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
       </div>
