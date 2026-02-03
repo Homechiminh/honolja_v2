@@ -73,12 +73,14 @@ const Header: React.FC = () => {
             <Link to="/nhatrang" className="text-[13px] font-black text-emerald-500 hover:text-emerald-400 uppercase italic">나트랑놀자</Link>
           </div>
 
-          {/* 🔴 로딩 중일 때 헤더 전체가 사라지지 않도록 내부 정보만 조건부 렌더링 */}
-          {initialized && !authLoading ? (
+          {/* 🔴 수정: initialized(세션 확인)만 되면 즉시 렌더링 시작 */}
+          {initialized ? (
             currentUser ? (
               <div className="flex items-center gap-3 md:gap-6">
                 <Link to="/mypage" className="xl:hidden flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
-                  <span className="text-[11px] font-black text-white italic">{currentUser.nickname}님</span>
+                  <span className="text-[11px] font-black text-white italic">
+                    {authLoading ? 'Syncing...' : `${currentUser.nickname}님`}
+                  </span>
                   <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center overflow-hidden">
                     {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" /> : <span className="text-[10px] text-white">{currentUser.nickname?.[0]}</span>}
                   </div>
@@ -87,10 +89,12 @@ const Header: React.FC = () => {
                 <Link to="/mypage" className="hidden xl:flex items-center gap-4 group">
                   <div className="flex flex-col items-end">
                     {currentUser.role === 'ADMIN' && <span className="text-[9px] text-red-500 font-black tracking-widest uppercase italic mb-0.5">ADMINISTRATOR</span>}
-                    <span className="text-sm font-black text-white italic tracking-tight">{currentUser.nickname}님</span>
+                    <span className="text-sm font-black text-white italic tracking-tight">
+                      {authLoading ? 'Syncing...' : `${currentUser.nickname}님`}
+                    </span>
                   </div>
                   <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-red-600 font-black shadow-2xl relative overflow-hidden">
-                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" /> : <span className="text-xl">{currentUser.nickname?.[0].toUpperCase()}</span>}
+                    {currentUser.avatar_url ? <img src={currentUser.avatar_url} alt="avt" className="w-full h-full object-cover" /> : <span className="text-xl">{currentUser.nickname?.[0]?.toUpperCase()}</span>}
                   </div>
                 </Link>
                 <button onClick={handleLogout} className="hidden xl:block px-6 py-2.5 text-[11px] font-black bg-[#111] border border-white/10 rounded-xl text-gray-400 uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-md active:scale-95">로그아웃</button>
@@ -102,7 +106,7 @@ const Header: React.FC = () => {
               </div>
             )
           ) : (
-             <div className="w-20 h-8"></div> // 로딩 중 공간 확보
+             <div className="w-24 h-10 bg-white/5 animate-pulse rounded-xl"></div> 
           )}
 
           <button onClick={toggleMenu} className="xl:hidden relative z-[110] w-10 h-10 flex flex-col items-end justify-center gap-1.5">
@@ -113,7 +117,7 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* 모바일 메뉴 오버레이 (디자인 동일) */}
+      {/* 모바일 메뉴 (동일) */}
       <div className={`fixed inset-0 z-[105] xl:hidden transition-all duration-300 ${isMenuOpen ? 'visible' : 'invisible'}`}>
         <div className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`} onClick={toggleMenu}></div>
         <div className={`absolute top-0 right-0 h-full w-[65%] max-w-[280px] bg-[#0a0a0a] border-l border-white/5 shadow-2xl transition-transform duration-400 ease-in-out p-8 flex flex-col overflow-y-auto ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
