@@ -17,7 +17,6 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🔴 인기 업소 필터링 로직 (데이터가 있을 때만 작동)
   const hotServiceStores = useMemo(() => {
     return stores?.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5) || [];
   }, [stores]);
@@ -26,7 +25,6 @@ const Home: React.FC = () => {
     return stores?.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2) || [];
   }, [stores]);
 
-  // 광고 슬라이더 타이머 (기존 유지)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -34,7 +32,6 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 🔴 데이터 가져오기 로직 보강
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -51,8 +48,9 @@ const Home: React.FC = () => {
     }
   };
 
-  // 🔴 세션이 확인되면 즉시 데이터 로드 시작
   useEffect(() => {
+    // 🔴 팁: initialized가 되면 즉시 데이터를 가져오되, 
+    // 이미 데이터가 있다면 다시 부르지 않게 최적화 가능하지만 현재는 정석대로 진행합니다.
     if (initialized) {
       fetchHomeData();
     }
@@ -76,7 +74,7 @@ const Home: React.FC = () => {
     }
   };
 
-  // 🔴 초기화 중일 때만 로딩 스피너 노출
+  // 🔴 초기화 중일 때 로딩 화면
   if (!initialized) return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -141,7 +139,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 섹션 (디자인 유지) */}
+      {/* SNS & 커뮤니티 섹션 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
@@ -199,7 +197,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* PREMIUM STAYS (Letterbox 적용) */}
+      {/* PREMIUM STAYS */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -225,7 +223,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 하단 배너 (기존 유지) */}
+      {/* 하단 배너 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
