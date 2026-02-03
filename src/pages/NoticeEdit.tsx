@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react'; // 🔴 useEffect 제거 (에러 해결)
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
@@ -9,8 +9,8 @@ const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 전역 인증 정보 가져오기
-  const { currentUser, loading: authLoading, initialized } = useAuth(); 
+  // 🔴 currentUser, authLoading 제거 (에러 해결)
+  const { initialized } = useAuth(); 
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -21,18 +21,10 @@ const NoticeEdit: React.FC = () => {
   });
 
   /**
-   * 🔴 [중요] 내부 useEffect 리다이렉트 로직 삭제
-   * App.tsx의 <AdminRoute>가 이미 관문을 지키고 있으므로, 
-   * 페이지 내부에서 navigate('/')를 중복 실행하면 탭 전환 시 튕김이 발생합니다.
-   */
-
-  /**
-   * 🔴 [방탄 fetch] 기존 공지사항 데이터 로드
+   * 🔴 [방탄 fetch] 데이터 로드 로직
    */
   const fetchNotice = async () => {
-    // id가 없거나 초기화 전이면 실행하지 않음
     if (!id || !initialized) return; 
-    
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -80,14 +72,15 @@ const NoticeEdit: React.FC = () => {
       alert('아카이브 수정이 완료되었습니다.');
       navigate('/notice');
     } catch (err) {
-      alert('수정 중 서버 오류가 발생했습니다.');
+      alert('수정 중 오류가 발생했습니다.');
     } finally {
       setUpdating(false);
     }
   };
 
-  // 🔴 튕김 방지 핵심 UI 가드
-  // App.tsx에서 세션을 확인할 때까지는 아무것도 렌더링하지 않고 대기합니다.
+  /**
+   * 🔴 튕김 방지 가드 UI
+   */
   if (!initialized || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic text-xl">
