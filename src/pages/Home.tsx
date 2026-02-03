@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,12 +17,10 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // HOT 업장 리스트 (빌라 제외 상위 5개)
   const hotServiceStores = useMemo(() => {
     return stores.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5);
   }, [stores]);
 
-  // PREMIUM STAYS (빌라 중 HOT 상위 2개)
   const premiumHotStays = useMemo(() => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
@@ -33,7 +32,6 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 비로그인 상태에서도 호출 가능하도록 가드 없이 fetch
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -62,10 +60,26 @@ const Home: React.FC = () => {
     }
   };
 
+  // 🔴 고쳐진 부분: 클릭 시 VIP 라운지가 아닌 해당 '게시글 상세'로 이동
+  const handleVipPostClick = (e: React.MouseEvent, postId: string) => {
+    e.preventDefault();
+    if (!currentUser || currentUser.level < 3) {
+      setShowLevelModal(true);
+    } else {
+      navigate(`/post/${postId}`);
+    }
+  };
+
   if (!initialized) return null;
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
+      <Helmet>
+        <title>호놀자 | 베트남 호치민 밤문화 & 여행의 모든 것</title>
+        <meta name="description" content="베트남여행, 호치민여행 필수 커뮤니티 호놀자! 호치민 밤문화, 유흥, 관광지 정보부터 풀빌라 예약까지 한 번에 해결하세요." />
+        <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민여자, 호치민 관광, 호치민 커뮤니티, 호치민 마사지, 호치민 가라오케" />
+      </Helmet>
+
       {showLevelModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
@@ -77,7 +91,6 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [섹션 1] Hero - 느낌표 간격 조정 및 초록색 문구 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           호치민에서 <span className="text-red-600">놀자&nbsp;&nbsp;!</span>
@@ -99,30 +112,33 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 2] HOT 인기 업소 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
             <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span>
             HOT 실시간 인기 업소
           </h3>
-          <Link to="/stores/all" className="text-gray-500 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
+          <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
           {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
         </div>
       </section>
 
-      {/* [섹션 3] SNS & 커뮤니티 - 더보기 버튼 복구 */}
-      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans">
+      {/* [섹션 3] SNS & 커뮤니티 - 더보기 버튼 및 SNS 음영 복구 */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
-            <span className="text-[8px] md:text-[10px] font-black text-white/60 uppercase block mb-1">그룹챗 입장</span>
-            <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter">호놀자 텔레그램</h4>
+            {/* 🔴 복구된 H 음영 배경 */}
+            <span className="absolute -right-4 -bottom-8 text-white/10 text-9xl font-black italic select-none">H</span>
+            <span className="text-[8px] md:text-[10px] font-black text-white/60 uppercase block mb-1 relative z-10">그룹챗 입장</span>
+            <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter relative z-10">호놀자 텔레그램</h4>
           </a>
           <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center min-h-[140px]">
-            <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase block mb-1">단톡방 입장</span>
-            <h4 className="text-sm md:text-xl font-black italic tracking-tighter">호놀자 카카오톡</h4>
+            {/* 🔴 복구된 H 음영 배경 */}
+            <span className="absolute -right-4 -bottom-8 text-black/5 text-9xl font-black italic select-none">H</span>
+            <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase block mb-1 relative z-10">단톡방 입장</span>
+            <h4 className="text-sm md:text-xl font-black italic tracking-tighter relative z-10">호놀자 카카오톡</h4>
           </a>
         </div>
 
@@ -130,7 +146,8 @@ const Home: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4>
-              <Link to="/community" className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">더보기</Link>
+              {/* 🔴 더보기 가시성 상향 */}
+              <Link to="/community" className="text-[10px] text-gray-400 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="bg-[#111] rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestPosts.map(post => (
@@ -144,11 +161,16 @@ const Home: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4>
-              <button onClick={handleVIPClick} className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">더보기</button>
+              {/* 🔴 더보기 가시성 상향 */}
+              <button onClick={handleVIPClick} className="text-[10px] text-gray-400 font-bold underline hover:text-white uppercase italic">더보기</button>
             </div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestVipPosts.map(post => (
-                <div key={post.id} onClick={handleVIPClick} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group">
+                <div 
+                  key={post.id} 
+                  onClick={(e) => handleVipPostClick(e, post.id)} 
+                  className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group"
+                >
                   <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p></div>
                   <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic uppercase">VIP</span>
                 </div>
@@ -158,7 +180,8 @@ const Home: React.FC = () => {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4>
-              <Link to="/notice" className="text-[10px] text-gray-600 font-bold underline hover:text-white uppercase italic">더보기</Link>
+              {/* 🔴 더보기 가시성 상향 */}
+              <Link to="/notice" className="text-[10px] text-gray-400 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="space-y-3">
               {latestNotices.map(notice => (
@@ -169,7 +192,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -189,7 +211,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 배너 슬라이더 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
