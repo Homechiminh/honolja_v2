@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { HelmetProvider, Helmet } from 'react-helmet-async'; // 🔴 SEO 라이브러리 추가
+import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { useAuth } from './contexts/AuthContext'; 
 import { Region } from './types'; 
 import './index.css';
@@ -41,10 +41,15 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
 
 /**
  * 🔒 [가드 1] 관리자 전용
+ * 튕김 방지를 위해 initialized가 끝날 때까지 로딩 화면을 보여줍니다.
  */
 const AdminRoute = () => {
   const { currentUser, initialized } = useAuth();
-  if (!initialized) return null; 
+  
+  if (!initialized) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-black italic animate-pulse">VERIFYING ADMIN...</div>;
+  }
+  
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -53,7 +58,11 @@ const AdminRoute = () => {
  */
 const PrivateRoute = () => {
   const { currentUser, initialized } = useAuth();
-  if (!initialized) return null;
+  
+  if (!initialized) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-black italic animate-pulse">SYNCING SESSION...</div>;
+  }
+  
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
@@ -62,15 +71,18 @@ const PrivateRoute = () => {
  */
 const LevelRoute = ({ minLevel }: { minLevel: number }) => {
   const { currentUser, initialized } = useAuth();
-  if (!initialized) return null;
+  
+  if (!initialized) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-black italic animate-pulse">CHECKING LEVEL...</div>;
+  }
+  
   return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
   return (
-    <HelmetProvider> {/* 🔴 SEO를 위한 전체 감싸기 */}
+    <HelmetProvider>
       <Router>
-        {/* 🔴 기본 SEO 설정 (각 페이지에서 덮어쓰기 가능) */}
         <Helmet>
           <title>호놀자 | 호치민 여행 & 밤문화 정보</title>
           <meta name="description" content="베트남 호치민 밤문화, 유흥, 커뮤니티 및 숙소 예약 정보 NO.1" />
@@ -94,7 +106,6 @@ function App() {
               
               <Route path="/community" element={<Community />} />
               
-              {/* 공지사항 라우트 */}
               <Route path="/notice" element={<Notice />} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
 
