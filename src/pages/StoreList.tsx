@@ -15,16 +15,18 @@ const ITEMS_PER_PAGE = 9;
 
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
-  // initialized는 헤더나 권한 체크용으로만 남겨둡니다.
-  const { initialized } = useAuth(); 
+  // 🔴 에러 수정 1: 사용하지 않는 initialized 제거
+  useAuth(); 
   
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   const currentRegion = forcedRegion || Region.HCMC;
+
+  // 🔴 에러 수정 2: totalPages 계산식 추가 (반드시 return 위쪽에 위치해야 함)
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -49,7 +51,6 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const fetchStores = async () => {
     setLoading(true);
     try {
-      console.log(`🔍 [StoreList] Fetching ${category} in ${currentRegion}...`);
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
@@ -58,11 +59,9 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
-      // 필터링 로직
       if (category && category !== 'all') {
         query = query.eq('category', category);
       } else if (category === 'all') {
-        // 'all'일 때는 풀빌라, 차량, 가이드를 제외한 나머지 일반 업소 노출
         query = query.not('category', 'in', '("villa", "car", "guide")');
       }
 
@@ -71,37 +70,28 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .order('created_at', { ascending: false })
         .range(from, to);
 
-      if (error) {
-        console.error('❌ [StoreList] Supabase Error:', error.message);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
-        console.log(`✅ [StoreList] Received ${data.length} stores.`);
         setStores(data as Store[]);
         if (count !== null) setTotalCount(count);
       }
     } catch (err: any) {
-      console.error('❌ [StoreList] Sync Error:', err.message);
+      console.error('Store Sync Error:', err.message);
       setStores([]); 
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔴 수정: initialized를 기다리지 않고 즉시 실행합니다!
   useEffect(() => {
     fetchStores();
   }, [category, currentRegion, currentPage]); 
-
-  // 🔴 수정: 인증을 기다리느라 화면 전체를 막지 않습니다.
-  // 대신 헤더 등은 AuthContext가 알아서 처리할 것입니다.
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <Helmet>
         <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 여행 정보</title>
-        <meta name="description" content={`${currentRegion} 지역 ${getCategoryKR(category)}의 실시간 정보를 확인하세요.`} />
       </Helmet>
 
       <div className="max-w-7xl mx-auto">
@@ -125,7 +115,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         ) : stores.length === 0 ? (
           <div className="py-32 text-center bg-[#111] rounded-[3.5rem] border border-dashed border-white/5">
             <span className="text-5xl mb-6 block">🏙️</span>
-            <p className="text-gray-500 font-black italic uppercase tracking-widest">데이터가 없습니다. (Console을 확인해 보세요)</p>
+            <p className="text-gray-500 font-black italic uppercase tracking-widest">해당 조건의 업소가 아직 등록되지 않았습니다.</p>
           </div>
         ) : (
           <>
@@ -135,6 +125,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
               ))}
             </div>
 
+            {/* 하단 페이지네이션 (totalPages 에러 해결 지점) */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-3 mt-20">
                 <button
