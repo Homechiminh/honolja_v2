@@ -1,65 +1,51 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 
 const AuthContext = createContext<any>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [initialized, setInitialized] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      return null;
-    }
-  }, []);
-
-  const syncUserSession = useCallback(async (session: any) => {
-    // 🔴 1. 세션이 없으면 즉시 초기화 완료하고 종료
-    if (!session?.user) {
-      setCurrentUser(null);
-      setLoading(false);
-      setInitialized(true);
-      return;
-    }
-
-    // 🔴 2. 세션이 있으면 일단 기본 정보라도 넣어서 화면이 멈추지 않게 함
-    setCurrentUser(session.user);
-    
-    // 🔴 3. 그 다음 프로필을 가져옴 (이 동안 loading은 true)
-    setLoading(true);
-    const profile = await fetchProfile(session.user.id);
-    
-    if (profile) {
-      setCurrentUser({ ...session.user, ...profile });
-    }
-    
-    // 🔴 4. 모든 로드가 끝나면 최종 완료 선언
-    setLoading(false);
-    setInitialized(true);
-  }, [fetchProfile]);
+  const [loading, setLoading] = useState(true); // 처음엔 무조건 '확인 중'
 
   useEffect(() => {
-    const initialize = async () => {
+    // 🔴 세션과 프로필을 한 번에 싱크하는 함수
+    const syncUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      await syncUserSession(session);
+      
+      if (session?.user) {
+        // 프로필 정보를 가져올 때까지 loading은 true 유지 (이게 핵심)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        setCurrentUser(profile ? { ...session.user, ...profile } : session.user);
+      } else {
+        setCurrentUser(null);
+      }
+      setLoading(false); // 모든 확인이 끝난 후에야 '확인 끝'
     };
-    initialize();
 
+    syncUser();
+
+    // 인증 상태 변화 감지 (로그아웃 등)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // 탭 전환 시 이미 initialized가 true라면 굳이 다시 false로 만들지 않음 (깜빡임 방지)
-      await syncUserSession(session);
+      // 탭 전환 시 불필요하게 loading을 true로 바꾸지 않음 (튕김 방지)
+      if (session?.user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        setCurrentUser(profile ? { ...session.user, ...profile } : session.user);
+      } else {
+        setCurrentUser(null);
+      }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [syncUserSession]);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, initialized, loading }}>
+    <AuthContext.Provider value={{ currentUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
