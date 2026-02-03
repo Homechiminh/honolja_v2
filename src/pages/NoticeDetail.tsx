@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; //
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
@@ -13,7 +13,7 @@ const NoticeDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchNotice = async () => {
-    if (!id) return;
+    if (!id || !initialized) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
@@ -27,13 +27,14 @@ const NoticeDetail: React.FC = () => {
     }
   };
 
-  useFetchGuard(fetchNotice, [id]);
+  useFetchGuard(fetchNotice, [id, initialized]);
 
-  if (!initialized || loading || !notice) return (
-    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
-      Decrypting HQ Intel...
-    </div>
+  // 🔴 튕김 방지 핵심
+  if (!initialized || (loading && !notice)) return (
+    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">Decrypting HQ Intel...</div>
   );
+
+  if (!notice) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
@@ -63,7 +64,7 @@ const NoticeDetail: React.FC = () => {
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-14 border-b border-white/5">
             <div className="flex items-center gap-4 mb-6">
-              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-900/20">OFFICIAL BULLETIN</span>
+              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">OFFICIAL BULLETIN</span>
               <span className="text-gray-500 font-black text-[10px] uppercase italic tracking-[0.2em]">{new Date(notice.created_at).toLocaleDateString()}</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
