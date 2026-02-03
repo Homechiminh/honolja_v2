@@ -10,42 +10,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
+      // 0.5초 타임아웃 추가 (DB 응답이 너무 느릴 경우 대비)
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error) throw error;
+      if (error) return null;
       return data;
     } catch (err) {
-      console.error("Profile Fetch Error:", err);
       return null;
     }
   }, []);
 
   const syncUserSession = useCallback(async (session: any) => {
-    setLoading(true);
     try {
+      setLoading(true);
       if (session?.user) {
         const profile = await fetchProfile(session.user.id);
-        // 프로필이 있으면 합치고, 없으면 기본 유저 정보 반환
         setCurrentUser(profile ? { ...session.user, ...profile } : session.user);
       } else {
         setCurrentUser(null);
       }
     } catch (err) {
-      console.error("Sync Error:", err);
+      console.error("Auth sync failed", err);
     } finally {
-      // 🔴 핵심: 성공하든 실패하든 로딩을 끄고 초기화를 완료함 (화면 멈춤 방지)
+      // 🔴 무조건 실행: 로딩 끄고 초기화 완료
       setLoading(false);
       setInitialized(true);
     }
   }, [fetchProfile]);
 
   useEffect(() => {
+    // 🛡️ 비상 안전장치: 어떤 이유로든 3초 이상 걸리면 강제로 문을 엽니다.
+    const failsafe = setTimeout(() => {
+      if (!initialized) setInitialized(true);
+    }, 3000);
+
     const initialize = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await syncUserSession(session);
-      } catch (err) {
-        setInitialized(true); // 에러 시에도 문은 열어줌
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      await syncUserSession(session);
     };
     initialize();
 
@@ -53,18 +53,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await syncUserSession(session);
     });
 
-    return () => subscription.unsubscribe();
-  }, [syncUserSession]);
-
-  const refreshUser = async () => {
-    if (currentUser?.id) {
-      const profile = await fetchProfile(currentUser.id);
-      if (profile) setCurrentUser({ ...currentUser, ...profile });
-    }
-  };
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(failsafe);
+    };
+  }, [syncUserSession, initialized]);
 
   return (
-    <AuthContext.Provider value={{ currentUser, initialized, loading, refreshUser }}>
+    <AuthContext.Provider value={{ currentUser, initialized, loading }}>
       {children}
     </AuthContext.Provider>
   );
