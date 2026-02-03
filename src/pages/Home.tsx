@@ -8,7 +8,8 @@ import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth(); // 🔴 authLoading 제거
+  // 🔴 initialized뿐만 아니라 loading도 가져와서 상태를 체크합니다.
+  const { currentUser, initialized, loading: authLoading } = useAuth(); 
   const { stores, loading: storesLoading } = useStores('all');
   
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
@@ -69,8 +70,15 @@ const Home: React.FC = () => {
     }
   };
 
-  // 🔴 수정: initialized(세션 체크)만 확인하여 블랙홀 현상 방지
-  if (!initialized) return null;
+  // 🔴 수정: null 대신 로딩 애니메이션을 보여줍니다. (블랙홀 방지)
+  if (!initialized) return (
+    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
+      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <div className="text-red-600 font-black animate-pulse italic uppercase tracking-widest text-sm">
+        Initializing Ho Nolja...
+      </div>
+    </div>
+  );
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
@@ -111,7 +119,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 인기 업소 */}
+      {/* 실시간 인기 업소 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -125,7 +133,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SNS & 게시판 */}
+      {/* Community / VIP / Notice */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
@@ -209,7 +217,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 하단 배너 */}
+      {/* 하단 광고 배너 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
