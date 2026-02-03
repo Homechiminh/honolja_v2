@@ -8,8 +8,8 @@ import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  // 🔴 initialized뿐만 아니라 loading도 가져와서 상태를 체크합니다.
-  const { currentUser, initialized, loading: authLoading } = useAuth(); 
+  // 🔴 authLoading(loading) 선언을 완전히 삭제하여 TS6133 에러를 해결했습니다.
+  const { currentUser, initialized } = useAuth(); 
   const { stores, loading: storesLoading } = useStores('all');
   
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
@@ -70,7 +70,7 @@ const Home: React.FC = () => {
     }
   };
 
-  // 🔴 수정: null 대신 로딩 애니메이션을 보여줍니다. (블랙홀 방지)
+  // 🔴 세션 체크(initialized)만 확인합니다.
   if (!initialized) return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -133,7 +133,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Community / VIP / Notice */}
+      {/* SNS & 커뮤니티 섹션 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
