@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // SEO용
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
@@ -31,7 +31,7 @@ const PostDetail: React.FC = () => {
       if (comms) setComments(comms);
 
       // 조회수 증가
-      supabase.rpc('increment_views', { post_id: id });
+      await supabase.rpc('increment_views', { post_id: id });
     } catch (err: any) {
       if (err.message?.includes("Post not found")) {
          alert('삭제되었거나 존재하지 않는 게시글입니다.');
@@ -126,44 +126,31 @@ const PostDetail: React.FC = () => {
 
   if (!initialized || loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">데이터를 불러오는 중...</div>
+      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">데이터를 분석 중...</div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30 text-white">
-      {/* 🔴 SEO 최적화 */}
       <Helmet>
         <title>호놀자 | {post.title}</title>
-        <meta name="description" content={`${post.category} - ${post.title}. 호치민 여행 및 밤문화 리얼 커뮤니티.`} />
-        <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민 관광, 호치민 커뮤니티" />
       </Helmet>
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
         
-        {/* 게시글 본문 영역 */}
-        <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl relative">
-          
+        {/* 게시글 본문 */}
+        <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <div className="flex justify-between items-start mb-10">
               <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-900/20">
                 #{post.category.toUpperCase()}
               </span>
-              
-              {/* 🔴 게시글 수정 버튼 추가 (작성자/관리자 전용) */}
               {(currentUser?.id === post.author_id || currentUser?.role === 'ADMIN') && (
-                <Link 
-                  to={`/post/edit/${post.id}`}
-                  className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-white hover:border-red-600 font-black text-[10px] uppercase italic transition-all"
-                >
-                  Edit Post
-                </Link>
+                <Link to={`/post/edit/${post.id}`} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-white hover:border-red-600 font-black text-[10px] uppercase italic transition-all">Edit Post</Link>
               )}
             </div>
 
-            <h1 className="text-3xl md:text-5xl font-black text-white mb-10 italic tracking-tighter leading-tight break-keep">
-              {post.title}
-            </h1>
+            <h1 className="text-3xl md:text-5xl font-black text-white mb-10 italic tracking-tighter leading-tight break-keep">{post.title}</h1>
 
             <div className="flex justify-between items-center pt-8 border-t border-white/5">
               <div className="flex items-center gap-4">
@@ -172,12 +159,12 @@ const PostDetail: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white font-black italic text-lg leading-tight">{post.author?.nickname}</p>
-                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest mt-1">Lv.{post.author?.level} 인증 회원</p>
+                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest mt-1">Lv.{post.author?.level} MEMBER</p>
                 </div>
               </div>
               <button onClick={handleLike} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}>
                 <span className="text-2xl">{isLiked ? '❤️' : '🤍'}</span>
-                <span className="text-[9px] font-black uppercase italic tracking-tighter text-center">추천 {post.likes || 0}</span>
+                <span className="text-[9px] font-black uppercase italic tracking-tighter">추천 {post.likes || 0}</span>
               </button>
             </div>
           </header>
@@ -190,17 +177,17 @@ const PostDetail: React.FC = () => {
           </article>
         </div>
 
-        {/* 댓글 영역 */}
+        {/* 댓글 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
-            <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> 
+            <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.4)]"></span> 
             댓글 <span className="text-red-600">({comments.length})</span>
           </h3>
           
           <div className="space-y-12 mb-16">
             {commentTree.map((comm) => (
               <div key={comm.id} className="space-y-6">
-                <div className="flex gap-6 items-start group">
+                <div className="flex gap-6 items-start">
                   <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0">
                     <img src={comm.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comm.author?.nickname}`} alt="avatar" />
                   </div>
@@ -211,7 +198,7 @@ const PostDetail: React.FC = () => {
                       </span>
                       <div className="flex items-center gap-4">
                         <span className="text-[9px] text-gray-600 font-bold italic">{new Date(comm.created_at).toLocaleString()}</span>
-                        <button onClick={() => setReplyToId(comm.id)} className="text-[10px] font-black text-red-600 uppercase hover:underline italic">답글</button>
+                        <button onClick={() => setReplyToId(comm.id)} className="text-[10px] font-black text-red-600 uppercase italic">답글</button>
                         {(currentUser?.id === comm.author_id || currentUser?.role === 'ADMIN') && (
                           <button onClick={() => handleDeleteComment(comm.id)} className="text-[10px] font-black text-gray-600 uppercase hover:text-red-600 transition-colors italic">삭제</button>
                         )}
@@ -221,10 +208,10 @@ const PostDetail: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 대댓글 리스트 */}
+                {/* 대댓글 영역 */}
                 <div className="ml-16 space-y-8 border-l-2 border-white/5 pl-8">
                   {comm.replies.map((reply: any) => (
-                    <div key={reply.id} className="flex gap-4 items-start group">
+                    <div key={reply.id} className="flex gap-4 items-start">
                       <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 overflow-hidden shrink-0">
                         <img src={reply.author?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.author?.nickname}`} alt="avatar" />
                       </div>
@@ -245,18 +232,18 @@ const PostDetail: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* 대댓글 입력 상자 */}
+                  {/* 대댓글 입력창 */}
                   {replyToId === comm.id && (
                     <div className="mt-4 animate-in slide-in-from-top-2">
                       <textarea 
                         value={newComment} 
                         onChange={(e) => setNewComment(e.target.value)} 
-                        placeholder="답글을 남겨보세요." 
-                        className="w-full bg-[#050505] border border-red-600/30 rounded-2xl px-5 py-4 text-white text-sm outline-none focus:border-red-600 transition-all shadow-inner italic font-bold"
+                        placeholder="답글 내용을 입력하세요..." 
+                        className="w-full bg-[#050505] border-2 border-red-600/30 rounded-2xl px-6 py-5 text-white text-sm outline-none focus:border-red-600 transition-all italic font-bold placeholder:text-gray-800"
                       />
-                      <div className="flex justify-end gap-2 mt-2">
-                        <button onClick={() => {setReplyToId(null); setNewComment('');}} className="px-4 py-2 text-[10px] font-black text-gray-500 uppercase italic">취소</button>
-                        <button onClick={(e) => handleCommentSubmit(e, comm.id)} className="bg-red-600 text-white px-6 py-2 rounded-xl font-black uppercase text-[10px] italic shadow-lg">답글 등록</button>
+                      <div className="flex justify-end gap-3 mt-3">
+                        <button onClick={() => {setReplyToId(null); setNewComment('');}} className="px-5 py-2 text-[10px] font-black text-gray-600 uppercase italic">취소</button>
+                        <button onClick={(e) => handleCommentSubmit(e, comm.id)} className="bg-red-600 text-white px-8 py-2.5 rounded-xl font-black uppercase text-[10px] italic shadow-xl">답글 등록</button>
                       </div>
                     </div>
                   )}
@@ -265,36 +252,44 @@ const PostDetail: React.FC = () => {
             ))}
           </div>
 
-          {/* 메인 댓글 입력 영역 (가시성 대폭 강화) */}
+          {/* 메인 댓글 입력창 (🔴 가시성 대폭 강화) */}
           {!replyToId && (
-            <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-12">
+            <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-20">
               <div className="relative group">
                 <textarea 
                   value={newComment} 
                   onChange={(e) => setNewComment(e.target.value)} 
-                  placeholder={currentUser ? "댓글을 남겨보세요." : "로그인이 필요한 구역입니다."} 
+                  placeholder={currentUser ? "여기에 댓글을 입력하세요..." : "로그인이 필요한 구역입니다."} 
                   disabled={!currentUser} 
-                  className="w-full bg-[#050505] border border-white/20 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/50 min-h-[160px] transition-all resize-none italic font-bold shadow-2xl placeholder:text-gray-700" 
+                  className="w-full bg-[#050505] border-2 border-white/10 rounded-[2.5rem] px-8 py-8 text-white text-lg outline-none focus:border-red-600 focus:bg-black transition-all resize-none italic font-bold shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] placeholder:text-gray-700 min-h-[180px]" 
                 />
                 <button 
                   type="submit" 
-                  disabled={commenting || !currentUser} 
-                  className="absolute bottom-6 right-8 bg-red-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs hover:bg-white hover:text-red-600 transition-all shadow-[0_10px_30px_rgba(220,38,38,0.3)] disabled:opacity-20 active:scale-95 italic"
+                  disabled={commenting || !currentUser || !newComment.trim()} 
+                  className="absolute bottom-6 right-8 bg-red-600 text-white px-12 py-5 rounded-2xl font-black uppercase text-sm hover:bg-white hover:text-red-600 transition-all shadow-[0_10px_40px_rgba(220,38,38,0.4)] disabled:opacity-10 active:scale-95 italic"
                 >
-                  {commenting ? '전송 중...' : '등록'}
+                  {commenting ? '전송 중...' : '댓글 등록'}
                 </button>
               </div>
             </form>
           )}
         </div>
 
-        {/* 하단 네비게이션 */}
-        <div className="flex justify-center pt-10">
+        {/* 🔴 게시판 돌아가기 네비게이션 */}
+        <div className="flex justify-between items-center px-10 pt-10">
           <button 
-            onClick={() => navigate(-1)} 
-            className="text-gray-700 hover:text-white font-black uppercase italic text-xs tracking-[0.3em] transition-all border-b border-transparent hover:border-white pb-1"
+            onClick={() => navigate('/community')} 
+            className="flex items-center gap-3 text-gray-600 hover:text-red-600 transition-all group"
           >
-            ← 게시판으로 돌아가기
+            <span className="text-xl group-hover:-translate-x-2 transition-transform">←</span>
+            <span className="font-black uppercase italic text-xs tracking-[0.2em]">List Archive</span>
+          </button>
+          
+          <button 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="font-black uppercase italic text-[10px] text-gray-800 hover:text-white transition-all"
+          >
+            Back to Top ↑
           </button>
         </div>
       </div>
