@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // 🔴 SEO용 추가
 import { supabase } from '../supabase';
 import { Region } from '../types';
 import type { Store } from '../types';
@@ -16,19 +17,17 @@ const NhatrangHome: React.FC = () => {
 
   /**
    * 🔴 [방탄 fetch] 나트랑 전용 업소 데이터 로드
-   * 어떤 네트워크 지연이나 에러(406)가 발생해도 finally가 로딩을 풉니다.
    */
   const fetchNhatrangStores = async () => {
-    setLoading(true); // 로딩 시작
+    setLoading(true); 
     try {
       const { data, error } = await supabase
         .from('stores')
         .select('*')
-        .eq('region', Region.NHA_TRANG) // 나트랑 필터 고정
+        .eq('region', Region.NHA_TRANG) 
         .limit(8);
 
       if (error) {
-        // 🔴 서버 거절 또는 406 에러 발생 시 catch 블록으로 즉시 이동
         throw error;
       }
 
@@ -37,21 +36,18 @@ const NhatrangHome: React.FC = () => {
       }
     } catch (err: any) {
       console.error("나트랑 데이터 동기화 실패 (406 등):", err.message);
-      // 에러 시 빈 리스트로 초기화하여 잘못된 데이터 노출 방지
       setStores([]); 
     } finally {
-      // 🔴 핵심: 성공하든 실패하든 무조건 로딩 상태 해제
       setLoading(false);
     }
   };
 
   /**
    * 🔴 [데이터 가드 적용] 
-   * 인증 확인 후 나트랑 전용 데이터를 최적의 타이밍에 호출합니다.
    */
   useFetchGuard(fetchNhatrangStores, []);
 
-  // 2. 전체 로딩 가드 (나트랑 전용 에메랄드 테마 적용)
+  // 2. 전체 로딩 가드
   if (authLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
@@ -60,6 +56,19 @@ const NhatrangHome: React.FC = () => {
 
   return (
     <div className="w-full bg-[#050505] selection:bg-emerald-600/30 font-sans">
+      {/* 🔴 SEO 최적화 Helmet 섹션 */}
+      <Helmet>
+        <title>호놀자 나트랑 | 나트랑 유흥 · 밤문화 · 마사지 · 가라오케 완벽 가이드</title>
+        <meta name="description" content="동양의 나폴리 나트랑의 모든 것! 나트랑 마사지, 가라오케, 밤문화, 이발소 등 호놀자가 직접 검증한 핫플레이스 정보와 실시간 후기를 확인하세요." />
+        <meta name="keywords" content="나트랑여행, 나트랑 유흥, 나트랑 밤문화, 베트남여행, 베트남 여자, 나트랑 가라오케, 나트랑 마사지, 나트랑 불건, 나트랑 이발소, 나트랑 클럽, 나트랑 자유여행" />
+        
+        {/* Open Graph (SNS 공유 최적화) */}
+        <meta property="og:title" content="나트랑 NEW WORLD - 호놀자 프리미엄 가이드" />
+        <meta property="og:description" content="나트랑 여행의 모든 즐거움, 검증된 업소 정보와 특별 혜택을 호놀자에서 만나보세요." />
+        <meta property="og:image" content="https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?q=80&w=1200" />
+        <meta property="og:url" content="https://honolja.com/nhatrang" />
+      </Helmet>
+
       {/* Hero: 나트랑 전용 비주얼 */}
       <section className="relative h-[60vh] md:h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-emerald-900/20 to-transparent">
         <div className="absolute inset-0 z-0 opacity-40">
