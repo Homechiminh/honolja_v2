@@ -1,171 +1,202 @@
-import React, { useState, useEffect } from 'react'; // 🔴 useEffect 추가됨
-import { useNavigate } from 'react-router-dom'; 
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { UserRole } from '../types'; 
-import type { Store } from '../types';
+import { LEVEL_NAMES, UserRole } from '../types'; 
+import type { User } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
-const AdminManageStores: React.FC = () => {
+const AdminManageUsers: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, initialized } = useAuth();
 
-  const [stores, setStores] = useState<Store[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inputAmounts, setInputAmounts] = useState<{ [key: string]: string }>({});
 
-  // 업소 데이터 호출 함수
-  const fetchStores = async () => {
+  /**
+   * 🔴 [방탄 fetch] 유저 데이터베이스 동기화
+   */
+  const fetchUsers = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('stores')
+        .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      if (data) setStores(data as Store[]);
+      if (data) setUsers(data as User[]);
     } catch (err: any) {
-      console.error('Inventory Sync Failed:', err.message);
+      console.error('User Archive Sync Failed:', err.message);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useFetchGuard(fetchStores, []);
-
-  // 🔴 새로고침 시 홈으로 튕김 방지 로직 (initialized 확인)
-  useEffect(() => {
-    if (initialized) {
-      if (!currentUser || currentUser.role !== UserRole.ADMIN) {
-        navigate('/', { replace: true });
-      }
-    }
-  }, [initialized, currentUser, navigate]);
+  useFetchGuard(fetchUsers, []);
 
   /**
-   * HOT 설정 토글 - 즉시 UI 반영 (Optimistic UI)
+   * 🔴 [튕김 방지] 
+   * App.tsx의 AdminRoute가 이미 권한을 지키고 있으므로, 
+   * 페이지 내부에서 강제로 navigate('/')를 호출하는 로직을 제거하여 탭 전환 시 안정성을 높였습니다.
    */
-  const toggleHotStatus = async (storeId: string, currentStatus: boolean) => {
-    // 로컬 상태 먼저 변경
-    const updatedStores = stores.map(s => 
-      s.id === storeId ? { ...s, is_hot: !currentStatus } : s
-    );
-    setStores(updatedStores);
 
+  const handleUpdatePoints = async (userId: string, currentPoints: number, amount: number) => {
+    if (isNaN(amount) || amount === 0) return;
     try {
       const { error } = await supabase
-        .from('stores')
-        .update({ is_hot: !currentStatus })
-        .eq('id', storeId);
+        .from('profiles')
+        .update({ points: currentPoints + amount })
+        .eq('id', userId);
       
-      if (error) {
-        setStores(stores); // 에러 시 롤백
-        throw error;
-      }
-    } catch (err) {
-      alert('상태 변경에 실패했습니다. 관리자 권한을 확인하세요.');
-    }
-  };
-
-  const deleteStore = async (storeId: string) => {
-    if (!window.confirm('이 업소를 정말 삭제하시겠습니까?')) return;
-    try {
-      const { error } = await supabase.from('stores').delete().eq('id', storeId);
       if (error) throw error;
-      alert('삭제되었습니다.');
-      fetchStores(); 
+      
+      setInputAmounts({ ...inputAmounts, [userId]: '' });
+      await fetchUsers(); 
     } catch (err) {
-      alert('삭제 중 오류가 발생했습니다.');
+      alert('포인트 업데이트에 실패했습니다.');
     }
   };
 
-  if (!initialized || (loading && stores.length === 0)) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse tracking-widest uppercase text-xl">
-        Accessing Store Inventory...
+  const updateLevel = async (userId: string, newLevel: number) => {
+    try {
+      const { error } = await supabase.from('profiles').update({ level: newLevel }).eq('id', userId);
+      if (error) throw error;
+      await fetchUsers();
+    } catch (err) {
+      alert('등급 변경에 실패했습니다.');
+    }
+  };
+
+  const toggleBlock = async (userId: string, currentStatus: boolean) => {
+    const actionText = currentStatus ? '차단 해제' : '계정 차단';
+    if (!confirm(`이 유저를 ${actionText} 하시겠습니까?`)) return;
+    try {
+      const { error } = await supabase.from('profiles').update({ is_blocked: !currentStatus }).eq('id', userId);
+      if (error) throw error;
+      await fetchUsers();
+    } catch (err) {
+      alert('상태 변경에 실패했습니다.');
+    }
+  };
+
+  // 세션 확인 중일 때는 대기 화면 노출
+  if (!initialized || (loading && users.length === 0)) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-emerald-500 font-black italic animate-pulse tracking-widest uppercase text-xl">
+          회원 데이터베이스 분석 중...
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // 관리자가 아닐 경우 렌더링 차단 (보안 유지)
+  if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-emerald-600/30">
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none">
-              Store <span className="text-red-600">Inventory</span>
-            </h2>
-            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-4 ml-1 italic">
-              업소 현황 및 HOT 섹션 제어
-            </p>
-          </div>
-          <button onClick={() => navigate('/admin/create-store')} className="px-8 py-4 bg-red-600 text-white text-xs font-black rounded-xl uppercase italic hover:bg-red-700 transition-all shadow-2xl active:scale-95 shadow-red-900/20">
-            + Add New Intelligence
+        
+        {/* 🔴 상단 네비게이션: 관리자 대시보드 이동 버튼 추가 */}
+        <div className="flex items-center gap-6 mb-10">
+          <button 
+            onClick={() => navigate('/admin')}
+            className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+          >
+            관리자 대시보드
           </button>
+          <button 
+            onClick={() => navigate('/')}
+            className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+          >
+            홈으로 이동
+          </button>
+        </div>
+
+        <header className="mb-12">
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">
+            회원 <span className="text-emerald-500">관리 센터</span>
+          </h2>
+          <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-4 ml-1 italic">
+            전체 유저 권한 제어 및 등급/포인트 정밀 조정 시스템
+          </p>
         </header>
 
-        <div className="bg-[#111] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl text-white">
+        <div className="bg-[#111] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500 italic tracking-widest">
-                  <th className="p-6">업소 정보</th>
-                  <th className="p-6">카테고리</th>
-                  <th className="p-6 text-center">HOT 설정</th>
-                  <th className="p-6 text-right">관리 액션</th>
+                  <th className="p-6">회원 정보</th>
+                  <th className="p-6 text-center">등급 변경</th>
+                  <th className="p-6">포인트 제어</th>
+                  <th className="p-6 text-right">상태 제어</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {stores.map((store) => (
-                  <tr key={store.id} className="hover:bg-white/[0.02] transition-colors group">
+                {users.map((user) => (
+                  <tr key={user.id} className={`hover:bg-white/[0.02] transition-colors ${user.is_blocked ? 'opacity-30 grayscale' : ''}`}>
                     <td className="p-6">
-                      <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-xl bg-slate-800 overflow-hidden border border-white/10 shrink-0 shadow-lg">
-                          <img src={store.image_url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black italic border border-white/5 text-emerald-500 shadow-inner">
+                          {user.nickname?.[0].toUpperCase()}
                         </div>
-                        <div className="max-w-[300px]">
-                          <p className="font-black text-white text-sm mb-1 italic tracking-tight uppercase leading-tight">{store.name}</p>
-                          <p className="text-gray-600 text-[10px] font-bold italic truncate tracking-tighter">{store.address}</p>
+                        <div>
+                          <p className="font-black text-white italic">{user.nickname}</p>
+                          <p className="text-gray-600 text-[10px] font-bold italic tracking-tight">{user.email}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="p-6">
-                      <span className="text-[9px] font-black uppercase bg-white/5 px-2.5 py-1 rounded-md text-gray-400 border border-white/5 italic">#{store.category}</span>
                     </td>
                     <td className="p-6 text-center">
-                      <button 
-                        onClick={() => toggleHotStatus(store.id, store.is_hot)}
-                        className={`px-5 py-2 rounded-full text-[9px] font-black uppercase italic transition-all active:scale-90 ${
-                          store.is_hot 
-                          ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]' 
-                          : 'bg-white/5 text-gray-500 border border-white/10 hover:border-red-600/30'
-                        }`}
+                      <select 
+                        value={user.level} 
+                        onChange={(e) => updateLevel(user.id, parseInt(e.target.value))}
+                        className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] font-black outline-none focus:border-emerald-500 italic"
                       >
-                        {store.is_hot ? '🔥 Hot Active' : 'Set Hot'}
-                      </button>
+                        {[1, 2, 3, 4].map(lv => (
+                          <option key={lv} value={lv}>Lv.{lv} {LEVEL_NAMES[lv]}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-6">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-emerald-500 font-black text-sm w-20 text-right italic">{user.points.toLocaleString()} P</span>
+                          <div className="flex gap-1">
+                            {[-100, -10, 10, 100].map(val => (
+                              <button key={val} onClick={() => handleUpdatePoints(user.id, user.points, val)} className="px-2 py-1 bg-white/5 text-[9px] font-black rounded hover:bg-emerald-600 hover:text-white transition-all">{val > 0 ? `+${val}` : val}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="number" placeholder="금액" value={inputAmounts[user.id] || ''} onChange={(e) => setInputAmounts({...inputAmounts, [user.id]: e.target.value})} className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] w-20 outline-none placeholder:text-gray-800 font-bold shadow-inner text-white" />
+                          <button onClick={() => handleUpdatePoints(user.id, user.points, parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-emerald-600 text-[10px] font-black rounded-lg uppercase italic hover:bg-emerald-500 transition-colors shadow-lg">지급</button>
+                          <button onClick={() => handleUpdatePoints(user.id, user.points, -parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-red-600 text-[10px] font-black rounded-lg uppercase italic hover:bg-red-500 transition-colors shadow-lg">차감</button>
+                        </div>
+                      </div>
                     </td>
                     <td className="p-6 text-right">
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => navigate(`/store/${store.id}`)} className="p-3 bg-white/5 rounded-xl text-gray-500 hover:text-white transition-all border border-white/5 shadow-md">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        </button>
-                        <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="p-3 bg-emerald-600/5 rounded-xl text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-600/10">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        </button>
-                        <button onClick={() => deleteStore(store.id)} className="p-3 bg-red-600/5 rounded-xl text-red-600 hover:bg-red-600 hover:text-white transition-all border border-red-600/10">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
+                      <button onClick={() => toggleBlock(user.id, user.is_blocked)} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${user.is_blocked ? 'bg-white text-black shadow-xl scale-105' : 'bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white'}`}>
+                        {user.is_blocked ? '차단 해제' : '접속 차단'}
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {users.length === 0 && !loading && (
+            <div className="py-32 text-center">
+              <p className="text-gray-700 font-black italic uppercase tracking-widest">등록된 회원 정보가 없습니다.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-export default AdminManageStores;
+export default AdminManageUsers;
