@@ -18,6 +18,7 @@ const PostDetail: React.FC = () => {
   const [commenting, setCommenting] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
+  // 🔴 데이터 호출 로직
   const fetchPostData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -123,7 +124,8 @@ const PostDetail: React.FC = () => {
     replies: comments.filter(child => child.parent_id === parent.id)
   }));
 
-  if (!initialized || loading || !post) return (
+  // 🔴 튕김 방지: 초기화 대기 UI
+  if (!initialized || (loading && !post)) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-white font-black italic animate-pulse uppercase tracking-widest">데이터 로딩 중...</div>
     </div>
@@ -207,7 +209,6 @@ const PostDetail: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 대댓글 영역 */}
                 <div className="ml-16 space-y-8 border-l-2 border-white/5 pl-8">
                   {comm.replies.map((reply: any) => (
                     <div key={reply.id} className="flex gap-4 items-start">
@@ -231,7 +232,6 @@ const PostDetail: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* 답글 입력창 (가시성 강화) */}
                   {replyToId === comm.id && (
                     <div className="mt-4 animate-in slide-in-from-top-2">
                       <textarea 
@@ -251,7 +251,6 @@ const PostDetail: React.FC = () => {
             ))}
           </div>
 
-          {/* 메인 댓글 입력창 (🔴 테두리 가시성 대폭 강화) */}
           {!replyToId && (
             <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-20">
               <div className="relative group">
@@ -260,7 +259,6 @@ const PostDetail: React.FC = () => {
                   onChange={(e) => setNewComment(e.target.value)} 
                   placeholder={currentUser ? "여기에 댓글을 입력하세요..." : "로그인이 필요한 구역입니다."} 
                   disabled={!currentUser} 
-                  // border-white/20와 shadow-inner를 강화하여 어두운 배경에서 경계선을 확실히 함
                   className="w-full bg-[#111] border-2 border-white/20 rounded-[2.5rem] px-8 py-8 text-white text-lg outline-none focus:border-red-600 focus:bg-[#050505] transition-all resize-none italic font-bold shadow-[inset_0_4px_15px_rgba(0,0,0,0.6)] placeholder:text-gray-700 min-h-[180px]" 
                 />
                 <button 
@@ -275,20 +273,20 @@ const PostDetail: React.FC = () => {
           )}
         </div>
 
-        {/* 🔴 하단 네비게이션: 한글화 적용 */}
+        {/* 🔴 하단 네비게이션: 가시성 대폭 강화 */}
         <div className="flex justify-between items-center px-10 pt-10">
           <button 
             onClick={() => navigate('/community')} 
-            className="flex items-center gap-3 text-gray-600 hover:text-red-600 transition-all group"
+            className="flex items-center gap-3 text-white/70 hover:text-white transition-all group"
           >
-            <span className="text-xl group-hover:-translate-x-2 transition-transform">←</span>
-            {/* 버튼명을 '목록으로'로 수정 */}
+            <span className="text-xl group-hover:-translate-x-2 transition-transform text-red-600">←</span>
+            {/* 텍스트 밝기 강화 (목록으로) */}
             <span className="font-black uppercase italic text-xs tracking-[0.2em]">목록으로</span>
           </button>
           
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="font-black uppercase italic text-[10px] text-gray-800 hover:text-white transition-all"
+            className="font-black uppercase italic text-[11px] text-white/70 hover:text-red-500 transition-all"
           >
             맨 위로 ↑
           </button>
