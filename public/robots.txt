@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+# 수집 제외 대상 (보안 및 중복 수집 방지)
+Disallow: /admin/
+Disallow: /mypage/
+Disallow: /login
+Disallow: /signup
+Disallow: /post/edit/
+Disallow: /notice/create
+Disallow: /notice/edit/
+
+# 사이트맵 위치 정의
+Sitemap: https://honolja.com/sitemap.xml
