@@ -9,9 +9,10 @@ const VipLounge: React.FC = () => {
   const { initialized } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubMenu, setActiveSubMenu] = useState('시크릿 꿀정보');
+  const [activeSubMenu, setActiveSubMenu] = useState('전체피드');
 
   const subMenus = [
+    { id: '전체피드', icon: '🌍' }, // 🔴 전체피드 추가
     { id: '시크릿 꿀정보', icon: '💎' },
     { id: '업소후기', icon: '📸' },
     { id: '실시간 현황', icon: '📡' },
@@ -21,15 +22,20 @@ const VipLounge: React.FC = () => {
   const fetchVipPosts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('posts')
         .select('*, author:profiles(nickname, level)')
-        .eq('category', 'vip') // 🔴 오직 VIP 글만
-        .eq('sub_category', activeSubMenu)
+        .eq('category', 'vip')
         .order('created_at', { ascending: false });
 
+      // 🔴 "전체피드"가 아닐 때만 서브 카테고리 필터링
+      if (activeSubMenu !== '전체피드') {
+        query = query.eq('sub_category', activeSubMenu);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      if (data) setPosts(data);
+      setPosts(data || []);
     } catch (err: any) {
       console.error("VIP Lounge Fetch Failed:", err.message);
       setPosts([]); 
@@ -72,6 +78,7 @@ const VipLounge: React.FC = () => {
                   <h3 className="text-2xl md:text-3xl font-black text-white italic group-hover:text-yellow-500 mb-4 tracking-tight">{post.title}</h3>
                   <div className="flex items-center gap-6 text-[10px] text-gray-500 font-black italic uppercase">
                     <span className="text-yellow-600">Verified by {post.author?.nickname}</span>
+                    <span className="text-white/30 ml-2">#{post.sub_category}</span>
                     <span>{new Date(post.created_at).toLocaleDateString()}</span>
                   </div>
                 </Link>
