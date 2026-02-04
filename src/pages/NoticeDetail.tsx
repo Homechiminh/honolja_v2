@@ -1,9 +1,8 @@
-import React, { useState } from 'react'; //
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const NoticeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,23 +11,36 @@ const NoticeDetail: React.FC = () => {
   const [notice, setNotice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotice = async () => {
+  // 🔴 데이터를 가져오는 로직을 useCallback으로 감싸서 신뢰도 향상
+  const fetchNotice = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
+      console.log(`📡 [NoticeDetail] Fetching record: ${id}`);
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       if (error) throw error;
-      setNotice(data);
+      if (data) {
+        setNotice(data);
+      }
     } catch (err: any) {
       console.error('Notice Fetch Error:', err.message);
       navigate('/notice');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
-  useFetchGuard(fetchNotice, [id]);
+  // 🔴 페이지에 들어올 때마다 최신 데이터를 가져옵니다.
+  useEffect(() => {
+    fetchNotice();
+  }, [fetchNotice]);
 
+  // 로딩 및 초기화 대기
   if (!initialized || loading || !notice) return (
     <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
       Decrypting HQ Intel...
@@ -50,6 +62,7 @@ const NoticeDetail: React.FC = () => {
             ← 목록으로 돌아가기
           </button>
           
+          {/* 🔴 관리자 전용 수정 버튼 */}
           {currentUser?.role === 'ADMIN' && (
             <button 
               onClick={() => navigate(`/notice/edit/${id}`)} 
@@ -63,12 +76,19 @@ const NoticeDetail: React.FC = () => {
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-14 border-b border-white/5">
             <div className="flex items-center gap-4 mb-6">
-              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-900/20">OFFICIAL BULLETIN</span>
-              <span className="text-gray-500 font-black text-[10px] uppercase italic tracking-[0.2em]">{new Date(notice.created_at).toLocaleDateString()}</span>
+              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-900/20">
+                OFFICIAL BULLETIN
+              </span>
+              <span className="text-gray-500 font-black text-[10px] uppercase italic tracking-[0.2em]">
+                {new Date(notice.created_at).toLocaleDateString()}
+              </span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
+            <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">
+              {notice.title}
+            </h1>
           </header>
           
+          {/* 🔴 수정된 내용이 확실히 보이는 article 영역 */}
           <article className="p-10 md:p-14 text-slate-100 text-lg md:text-xl leading-[1.8] whitespace-pre-wrap font-medium italic">
             {notice.content}
           </article>
