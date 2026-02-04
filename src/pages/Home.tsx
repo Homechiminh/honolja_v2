@@ -89,10 +89,10 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [Hero 섹션] 느낌표 간격 ml-2 및 Vivid Red 적용 */}
+      {/* [Hero 섹션] 🔴 모바일 느낌표 간격 ml-2 -> ml-5로 대폭 강화 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
-          호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">놀자<span className="ml-2 md:ml-3">!</span></span>
+          호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">놀자<span className="ml-5 md:ml-3">!</span></span>
         </h2>
         <div className="space-y-4 mb-16 z-10 px-4 flex flex-col items-center">
           <p className="text-[17px] sm:text-2xl md:text-4xl font-black tracking-tight uppercase whitespace-nowrap leading-tight">남성들을 위한 호치민의 모든 것</p>
@@ -182,7 +182,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS - 이미지 잘림 해결 (배경 블러 + Contain 전략) */}
+      {/* [섹션 4] PREMIUM STAYS - 🔴 이미지 잘림 해결을 위한 가로형 고해상도 레이아웃 */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -194,16 +194,34 @@ const Home: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
-            {storesLoading ? [1, 2].map(i => <div key={i} className="h-[200px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
+            {storesLoading ? [1, 2].map(i => <div key={i} className="h-[250px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
-                <div key={store.id} className="block group w-full h-[200px] md:h-[260px] overflow-hidden rounded-[2.5rem] border border-white/5 relative shadow-2xl">
-                  {/* 잘림 방지용 컨테이너: h-full 설정 및 StoreCard 내부 이미지 강제 Contain 유도 */}
-                  <div className="w-full h-full flex items-center justify-center bg-black/50">
-                    <div className="w-full h-full transform transition-transform duration-700 group-hover:scale-105">
-                      <StoreCard store={store} />
+                <Link to={`/store/${store.id}`} key={store.id} className="group relative block w-full h-[250px] md:h-[350px] overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl transition-all">
+                  {/* 빌라 이미지: object-cover로 컨테이너를 가득 채우되 높이를 충분히 확보 */}
+                  <img 
+                    src={store.image_url} 
+                    alt={store.name} 
+                    className="w-full h-full object-cover transform transition-transform duration-1000 group-hover:scale-110"
+                  />
+                  {/* 이미지 가독성을 위한 하단 그라데이션 오버레이 */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                  
+                  {/* 상단 뱃지 섹션 */}
+                  <div className="absolute top-6 left-6 flex gap-2">
+                    <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase italic shadow-lg">Hot Pick</span>
+                    <span className="bg-black/50 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-lg border border-white/10">⭐ {(store.rating ?? 4.5).toFixed(1)}</span>
+                  </div>
+
+                  {/* 하단 정보 섹션 */}
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">
+                      {store.name}
+                    </h4>
+                    <div className="flex items-center gap-4 text-gray-300">
+                       <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">Ho Chi Minh Villa</span>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))
             }
           </div>
