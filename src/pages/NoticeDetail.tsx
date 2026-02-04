@@ -11,12 +11,12 @@ const NoticeDetail: React.FC = () => {
   const [notice, setNotice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 데이터를 가져오는 로직을 useCallback으로 감싸서 신뢰도 향상
+  // 🔴 데이터를 가져오는 로직을 최적화하여 갱신 지연 방지
   const fetchNotice = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      console.log(`📡 [NoticeDetail] Fetching record: ${id}`);
+      console.log(`📡 [NoticeDetail] 데이터 갱신 요청: ${id}`);
       const { data, error } = await supabase
         .from('notices')
         .select('*')
@@ -35,12 +35,11 @@ const NoticeDetail: React.FC = () => {
     }
   }, [id, navigate]);
 
-  // 🔴 페이지에 들어올 때마다 최신 데이터를 가져옵니다.
+  // 🔴 페이지 진입 및 ID 변경 시 마다 최신 데이터 패칭 실행
   useEffect(() => {
     fetchNotice();
   }, [fetchNotice]);
 
-  // 로딩 및 초기화 대기
   if (!initialized || loading || !notice) return (
     <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
       Decrypting HQ Intel...
@@ -49,25 +48,16 @@ const NoticeDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
-      <Helmet>
-        <title>호놀자 | {notice.title}</title>
-      </Helmet>
+      <Helmet><title>호놀자 | {notice.title}</title></Helmet>
 
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
         <div className="flex justify-between items-center px-4">
-          <button 
-            onClick={() => navigate('/notice')} 
-            className="text-gray-500 hover:text-white font-black uppercase italic text-xs tracking-[0.2em] transition-all"
-          >
+          <button onClick={() => navigate('/notice')} className="text-gray-500 hover:text-white font-black uppercase italic text-xs tracking-[0.2em] transition-all">
             ← 목록으로 돌아가기
           </button>
           
-          {/* 🔴 관리자 전용 수정 버튼 */}
           {currentUser?.role === 'ADMIN' && (
-            <button 
-              onClick={() => navigate(`/notice/edit/${id}`)} 
-              className="px-6 py-2.5 bg-red-600/10 border border-red-600/30 rounded-xl text-red-500 hover:bg-red-600 hover:text-white font-black text-[10px] uppercase italic transition-all shadow-lg"
-            >
+            <button onClick={() => navigate(`/notice/edit/${id}`)} className="px-6 py-2.5 bg-red-600/10 border border-red-600/30 rounded-xl text-red-500 hover:bg-red-600 hover:text-white font-black text-[10px] uppercase italic transition-all shadow-lg">
               Edit Record
             </button>
           )}
@@ -76,19 +66,13 @@ const NoticeDetail: React.FC = () => {
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-14 border-b border-white/5">
             <div className="flex items-center gap-4 mb-6">
-              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-900/20">
-                OFFICIAL BULLETIN
-              </span>
-              <span className="text-gray-500 font-black text-[10px] uppercase italic tracking-[0.2em]">
-                {new Date(notice.created_at).toLocaleDateString()}
-              </span>
+              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest shadow-lg shadow-red-900/20">OFFICIAL BULLETIN</span>
+              <span className="text-gray-500 font-black text-[10px] uppercase italic tracking-[0.2em]">{new Date(notice.created_at).toLocaleDateString()}</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">
-              {notice.title}
-            </h1>
+            <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
           </header>
           
-          {/* 🔴 수정된 내용이 확실히 보이는 article 영역 */}
+          {/* 🔴 수정한 내용이 확실히 반영되는 본문 구역 */}
           <article className="p-10 md:p-14 text-slate-100 text-lg md:text-xl leading-[1.8] whitespace-pre-wrap font-medium italic">
             {notice.content}
           </article>
