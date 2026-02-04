@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 
 const AuthContext = createContext<any>(null);
@@ -6,50 +6,56 @@ const AuthContext = createContext<any>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [initialized, setInitialized] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error) return null;
-      return data;
-    } catch (err) { return null; }
-  }, []);
+  useEffect(() => {
+    const getProfile = async (userId: string) => {
+      try {
+        const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        return data;
+      } catch (err) {
+        return null;
+      }
+    };
 
-  const syncUserSession = useCallback(async (session: any) => {
-    setLoading(true); // 🔴 프로필 싱크 시작
-    try {
+    const initialize = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // 🔴 일단 기본 유저 정보를 넣고 문부터 엽니다.
+          setCurrentUser(session.user); 
+          
+          // 프로필은 백그라운드에서 조용히 가져옵니다.
+          getProfile(session.user.id).then(profile => {
+            if (profile) setCurrentUser(profile);
+          });
+        }
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+      } finally {
+        // 🔴 세션 확인만 끝나면 무조건 초기화 완료!
+        setInitialized(true); 
+      }
+    };
+
+    initialize();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setCurrentUser(profile ? { ...session.user, ...profile } : session.user);
+        setCurrentUser(session.user);
+        getProfile(session.user.id).then(profile => {
+          if (profile) setCurrentUser(profile);
+        });
       } else {
         setCurrentUser(null);
       }
-    } finally {
-      setLoading(false); // 🔴 프로필 싱크 완료
-      setInitialized(true); // 🔴 초기 세션 확인 완료 (이게 true가 되어야 Header가 뜸)
-    }
-  }, [fetchProfile]);
-
-  useEffect(() => {
-    // 🛡️ 강제 초기화 장치 (3초 후 무조건 문 열기)
-    const timer = setTimeout(() => { if (!initialized) setInitialized(true); }, 3000);
-
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      await syncUserSession(session);
-    };
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      await syncUserSession(session);
+      setInitialized(true);
     });
 
-    return () => { subscription.unsubscribe(); clearTimeout(timer); };
-  }, [syncUserSession, initialized]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, initialized, loading }}>
+    <AuthContext.Provider value={{ currentUser, initialized }}>
       {children}
     </AuthContext.Provider>
   );
