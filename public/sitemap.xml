@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://honolja.com/</loc>
+    <lastmod>2024-03-21</lastmod>
+    <priority>1.0</priority>
+  </url>
+
+  <url><loc>https://honolja.com/danang</loc><priority>0.9</priority></url>
+  <url><loc>https://honolja.com/nhatrang</loc><priority>0.9</priority></url>
+
+  <url><loc>https://honolja.com/stores/massage</loc><priority>0.8</priority></url>
+  <url><loc>https://honolja.com/stores/barber</loc><priority>0.8</priority></url>
+  <url><loc>https://honolja.com/stores/karaoke</loc><priority>0.8</priority></url>
+  <url><loc>https://honolja.com/stores/barclub</loc><priority>0.8</priority></url>
+  <url><loc>https://honolja.com/stores/villa</loc><priority>0.8</priority></url>
+
+  <url><loc>https://honolja.com/community</loc><priority>0.7</priority></url>
+  <url><loc>https://honolja.com/notice</loc><priority>0.7</priority></url>
+  <url><loc>https://honolja.com/booking</loc><priority>0.7</priority></url>
+  <url><loc>https://honolja.com/partnership</loc><priority>0.6</priority></url>
+  <url><loc>https://honolja.com/policies</loc><priority>0.4</priority></url>
+</urlset>
