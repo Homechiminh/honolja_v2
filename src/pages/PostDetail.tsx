@@ -30,7 +30,6 @@ const PostDetail: React.FC = () => {
       if (commErr) throw commErr;
       if (comms) setComments(comms);
 
-      // 조회수 증가
       await supabase.rpc('increment_views', { post_id: id });
     } catch (err: any) {
       if (err.message?.includes("Post not found")) {
@@ -126,7 +125,7 @@ const PostDetail: React.FC = () => {
 
   if (!initialized || loading || !post) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">데이터를 분석 중...</div>
+      <div className="text-white font-black italic animate-pulse uppercase tracking-widest">데이터 로딩 중...</div>
     </div>
   );
 
@@ -138,7 +137,7 @@ const PostDetail: React.FC = () => {
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
         
-        {/* 게시글 본문 */}
+        {/* 게시글 영역 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <header className="p-10 md:p-16 border-b border-white/5">
             <div className="flex justify-between items-start mb-10">
@@ -146,7 +145,7 @@ const PostDetail: React.FC = () => {
                 #{post.category.toUpperCase()}
               </span>
               {(currentUser?.id === post.author_id || currentUser?.role === 'ADMIN') && (
-                <Link to={`/post/edit/${post.id}`} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-white hover:border-red-600 font-black text-[10px] uppercase italic transition-all">Edit Post</Link>
+                <Link to={`/post/edit/${post.id}`} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-white hover:border-red-600 font-black text-[10px] uppercase italic transition-all">글 수정하기</Link>
               )}
             </div>
 
@@ -159,7 +158,7 @@ const PostDetail: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white font-black italic text-lg leading-tight">{post.author?.nickname}</p>
-                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest mt-1">Lv.{post.author?.level} MEMBER</p>
+                  <p className="text-yellow-500 text-[10px] font-black uppercase tracking-widest mt-1">Lv.{post.author?.level} 멤버</p>
                 </div>
               </div>
               <button onClick={handleLike} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${isLiked ? 'text-red-500 scale-110' : 'text-gray-500 hover:text-red-500'}`}>
@@ -177,7 +176,7 @@ const PostDetail: React.FC = () => {
           </article>
         </div>
 
-        {/* 댓글 섹션 */}
+        {/* 댓글 영역 */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 shadow-2xl border border-white/5">
           <h3 className="text-2xl font-black text-white italic mb-12 uppercase tracking-widest flex items-center gap-4">
             <span className="w-2 h-8 bg-red-600 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.4)]"></span> 
@@ -232,14 +231,14 @@ const PostDetail: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* 대댓글 입력창 */}
+                  {/* 답글 입력창 (가시성 강화) */}
                   {replyToId === comm.id && (
                     <div className="mt-4 animate-in slide-in-from-top-2">
                       <textarea 
                         value={newComment} 
                         onChange={(e) => setNewComment(e.target.value)} 
-                        placeholder="답글 내용을 입력하세요..." 
-                        className="w-full bg-[#050505] border-2 border-red-600/30 rounded-2xl px-6 py-5 text-white text-sm outline-none focus:border-red-600 transition-all italic font-bold placeholder:text-gray-800"
+                        placeholder="답글을 남겨보세요..." 
+                        className="w-full bg-[#111] border-2 border-red-600/50 rounded-2xl px-6 py-5 text-white text-sm outline-none focus:border-red-600 transition-all italic font-bold placeholder:text-gray-700 shadow-[0_0_15px_rgba(220,38,38,0.1)]"
                       />
                       <div className="flex justify-end gap-3 mt-3">
                         <button onClick={() => {setReplyToId(null); setNewComment('');}} className="px-5 py-2 text-[10px] font-black text-gray-600 uppercase italic">취소</button>
@@ -252,7 +251,7 @@ const PostDetail: React.FC = () => {
             ))}
           </div>
 
-          {/* 메인 댓글 입력창 (🔴 가시성 대폭 강화) */}
+          {/* 메인 댓글 입력창 (🔴 테두리 가시성 대폭 강화) */}
           {!replyToId && (
             <form onSubmit={(e) => handleCommentSubmit(e, null)} className="relative mt-20">
               <div className="relative group">
@@ -261,7 +260,8 @@ const PostDetail: React.FC = () => {
                   onChange={(e) => setNewComment(e.target.value)} 
                   placeholder={currentUser ? "여기에 댓글을 입력하세요..." : "로그인이 필요한 구역입니다."} 
                   disabled={!currentUser} 
-                  className="w-full bg-[#050505] border-2 border-white/10 rounded-[2.5rem] px-8 py-8 text-white text-lg outline-none focus:border-red-600 focus:bg-black transition-all resize-none italic font-bold shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)] placeholder:text-gray-700 min-h-[180px]" 
+                  // border-white/20와 shadow-inner를 강화하여 어두운 배경에서 경계선을 확실히 함
+                  className="w-full bg-[#111] border-2 border-white/20 rounded-[2.5rem] px-8 py-8 text-white text-lg outline-none focus:border-red-600 focus:bg-[#050505] transition-all resize-none italic font-bold shadow-[inset_0_4px_15px_rgba(0,0,0,0.6)] placeholder:text-gray-700 min-h-[180px]" 
                 />
                 <button 
                   type="submit" 
@@ -275,21 +275,22 @@ const PostDetail: React.FC = () => {
           )}
         </div>
 
-        {/* 🔴 게시판 돌아가기 네비게이션 */}
+        {/* 🔴 하단 네비게이션: 한글화 적용 */}
         <div className="flex justify-between items-center px-10 pt-10">
           <button 
             onClick={() => navigate('/community')} 
             className="flex items-center gap-3 text-gray-600 hover:text-red-600 transition-all group"
           >
             <span className="text-xl group-hover:-translate-x-2 transition-transform">←</span>
-            <span className="font-black uppercase italic text-xs tracking-[0.2em]">List Archive</span>
+            {/* 버튼명을 '목록으로'로 수정 */}
+            <span className="font-black uppercase italic text-xs tracking-[0.2em]">목록으로</span>
           </button>
           
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="font-black uppercase italic text-[10px] text-gray-800 hover:text-white transition-all"
           >
-            Back to Top ↑
+            맨 위로 ↑
           </button>
         </div>
       </div>
