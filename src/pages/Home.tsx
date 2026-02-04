@@ -20,13 +20,11 @@ const Home: React.FC = () => {
   // 🔴 [자동 출석 시스템] 1일 1회 5P 지급 로직
   useEffect(() => {
     const checkAttendance = async () => {
-      // 로그인 완료 및 초기화 확인
       if (!initialized || !currentUser) return;
 
-      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD 형식
+      const today = new Date().toLocaleDateString('en-CA'); 
       
       try {
-        // 1. 오늘 이미 출석했는지 attendance 테이블 조회
         const { data: existing, error: fetchError } = await supabase
           .from('attendance')
           .select('*')
@@ -34,32 +32,25 @@ const Home: React.FC = () => {
           .eq('check_in_date', today)
           .maybeSingle();
 
-        // 2. 기록이 없는 경우에만 지급 로직 실행
         if (!existing && !fetchError) {
-          // A. 출석 기록 추가
           const { error: insertError } = await supabase
             .from('attendance')
             .insert([{ user_id: currentUser.id, check_in_date: today }]);
 
           if (!insertError) {
-            const rewardPoints = 5; // 보상 포인트: 5P
-
-            // B. 프로필 포인트 합산 업데이트
+            const rewardPoints = 5; 
             await supabase
               .from('profiles')
               .update({ points: (currentUser.points || 0) + rewardPoints })
               .eq('id', currentUser.id);
 
-            // C. 포인트 히스토리 생성 (증빙용)
             await supabase.from('point_history').insert([{
               user_id: currentUser.id,
               amount: rewardPoints,
               reason: '일일 자동 출석 보상 (5P)'
             }]);
 
-            // D. 헤더 등에 즉시 반영되도록 유저 상태 갱신
             await refreshUser();
-
             alert(`✨ 반가워요! 오늘의 출석 보상 ${rewardPoints}P가 지급되었습니다.`);
           }
         }
@@ -127,9 +118,17 @@ const Home: React.FC = () => {
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
+      {/* 🔴 SEO 최적화 메타 태그 (HCMC 통합 키워드 팩) */}
       <Helmet>
-        <title>호놀자 | 베트남 호치민 밤문화 & 여행의 모든 것</title>
-        <meta name="description" content="베트남 호치민 밤문화, 유흥, 관광지 정보부터 풀빌라 예약까지 한 번에 해결하세요." />
+        <title>호놀자 | 베트남 호치민 유흥 · 밤문화 · 마사지 · 가라오케 · 맛집 프리미엄 가이드</title>
+        <meta name="description" content="베트남 호치민 여행의 모든 것! 마사지, 가라오케, 이발소, 클럽, 맛집, 카페 등 검증된 업소 정보와 실시간 후기를 제공하는 호치민 No.1 밤문화 커뮤니티 호놀자입니다." />
+        <meta name="keywords" content="호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 이발소, 호치민 바, 호치민 클럽, 호치민 맛집, 호치민 카페, 호치민 자유여행" />
+        
+        {/* Open Graph (SNS 공유 최적화) */}
+        <meta property="og:title" content="호놀자 - 호치민 밤문화 & 여행 프리미엄 가이드" />
+        <meta property="og:description" content="실시간 정보와 검증된 업소, 그 이상의 즐거움. 호치민 여행은 호놀자와 함께하세요." />
+        <meta property="og:url" content="https://honolja.com" />
+        <meta property="og:type" content="website" />
       </Helmet>
 
       {showLevelModal && (
@@ -143,7 +142,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* [Hero 섹션] 🔴 모바일 느낌표 간격 강화 (ml-5) */}
+      {/* Hero 섹션 - 🔴 모바일 느낌표 간격 강화 반영 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] tracking-tighter">놀자<span className="ml-5 md:ml-3">!</span></span>
@@ -236,7 +235,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS - 🔴 이미지 잘림 해결 (가로형 전용 레이아웃) */}
+      {/* [섹션 4] PREMIUM STAYS - 🔴 이미지 잘림 해결 반영 */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -251,19 +250,16 @@ const Home: React.FC = () => {
             {storesLoading ? [1, 2].map(i => <div key={i} className="h-[250px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
                 <Link to={`/store/${store.id}`} key={store.id} className="group relative block w-full h-[250px] md:h-[350px] overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl transition-all">
-                  {/* 빌라 이미지: object-cover로 꽉 채우되 높이를 md:h-[350px]로 충분히 확보 */}
                   <img 
                     src={store.image_url} 
                     alt={store.name} 
                     className="w-full h-full object-cover transform transition-transform duration-1000 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                  
                   <div className="absolute top-6 left-6 flex gap-2">
                     <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase italic shadow-lg">Hot Pick</span>
                     <span className="bg-black/50 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-lg border border-white/10">⭐ {(store.rating ?? 4.5).toFixed(1)}</span>
                   </div>
-
                   <div className="absolute bottom-8 left-8 right-8">
                     <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">
                       {store.name}
