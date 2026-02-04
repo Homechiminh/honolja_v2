@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // 🔴 SEO용 추가
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 
@@ -13,7 +14,6 @@ const Community: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'created_at' | 'likes' | 'views'>('created_at');
 
-  // --- 페이지네이션 상태 추가 ---
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const ITEMS_PER_PAGE = 10;
@@ -27,10 +27,14 @@ const Community: React.FC = () => {
     { id: 'business', name: '부동산/비즈니스', icon: '🏢' },
   ];
 
+  // 🔴 SEO용 카테고리 한글명 추출 함수
+  const getCategoryName = (id: string) => {
+    return categories.find(c => c.id === id)?.name || '커뮤니티';
+  };
+
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      // 1. 전체 개수 쿼리 (페이지네이션 계산용)
       let countQuery = supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
@@ -42,7 +46,6 @@ const Community: React.FC = () => {
       const { count } = await countQuery;
       setTotalCount(count || 0);
 
-      // 2. 실제 데이터 쿼리 (범위 지정)
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
@@ -51,7 +54,7 @@ const Community: React.FC = () => {
         .select('*, author:profiles(nickname, avatar_url, level)')
         .neq('category', 'vip')
         .order(sortBy, { ascending: false })
-        .range(from, to); // 🔴 페이지네이션 핵심
+        .range(from, to); 
 
       if (activeCategory !== 'all') query = query.eq('category', activeCategory);
       if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
@@ -60,7 +63,6 @@ const Community: React.FC = () => {
       if (error) throw error;
       setPosts(data || []);
       
-      // 페이지 전환 시 상단으로 이동
       window.scrollTo(0, 0);
     } catch (err: any) {
       console.error('Community Fetch Failed:', err.message);
@@ -73,7 +75,6 @@ const Community: React.FC = () => {
     if (initialized) fetchPosts();
   }, [initialized, activeCategory, sortBy, currentPage]);
 
-  // 카테고리나 검색어 변경 시 1페이지로 초기화
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, sortBy]);
@@ -96,13 +97,25 @@ const Community: React.FC = () => {
     }
   };
 
-  // 페이지네이션 렌더링 함수
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   if (!initialized) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
+      {/* 🔴 SEO 최적화 메타 태그 (동적 카테고리 반영) */}
+      <Helmet>
+        <title>호놀자 커뮤니티 | {getCategoryName(activeCategory)} - 호치민 유흥 · 밤문화 · 여행 리얼 후기</title>
+        <meta name="description" content={`베트남 호치민 여행의 생생한 현장! ${getCategoryName(activeCategory)} 채널에서 마사지, 가라오케, 맛집, 밤문화 정보를 공유하세요. 호놀자 대원들의 리얼한 후기가 가득합니다.`} />
+        <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 맛집, 호치민 카페, 호치민 자유여행, ${getCategoryName(activeCategory)}`} />
+        
+        {/* Open Graph (SNS 공유용) */}
+        <meta property="og:title" content={`호놀자 커뮤니티 - ${getCategoryName(activeCategory)}`} />
+        <meta property="og:description" content="호치민 여행자들을 위한 프리미엄 정보 공유 플랫폼. 지금 리얼 후기를 확인하세요." />
+        <meta property="og:url" content="https://honolja.com/community" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
         
         <aside className="lg:w-72 space-y-6">
@@ -182,7 +195,6 @@ const Community: React.FC = () => {
                 >
                   <div className="flex justify-between items-center relative z-10">
                     <div className="flex-1">
-                      {/* 🔴 제목 크기 축소: text-xl md:text-2xl */}
                       <h3 className="text-xl md:text-2xl font-black text-white italic group-hover:text-red-500 mb-4 transition-colors leading-tight break-keep">
                         {post.title}
                       </h3>
@@ -197,14 +209,12 @@ const Community: React.FC = () => {
                       <p className="text-red-600 font-black text-xl italic group-hover:scale-110 transition-transform">+{post.likes || 0}</p>
                     </div>
                   </div>
-                  {/* 배경 장식 */}
                   <div className="absolute right-0 bottom-0 opacity-[0.02] font-black italic text-6xl pointer-events-none uppercase">FEED</div>
                 </Link>
               ))
             )}
           </div>
 
-          {/* 🔴 페이지네이션 컨트롤러 추가 */}
           {totalPages > 1 && (
             <div className="mt-16 flex justify-center items-center gap-2">
               <button 
@@ -218,7 +228,6 @@ const Community: React.FC = () => {
               <div className="flex gap-2">
                 {[...Array(totalPages)].map((_, i) => {
                   const pageNum = i + 1;
-                  // 모바일에서는 현재 페이지 주변만 노출하도록 로직을 확장할 수 있습니다.
                   return (
                     <button
                       key={pageNum}
