@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 const NoticeEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 인증 초기화 상태만 가져옵니다. (권한 체크는 App.tsx가 수행)
-  const { initialized, loading: authLoading } = useAuth(); 
+  // 1. 전역 인증 정보 가져오기
+  const { loading: authLoading } = useAuth(); 
   
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -20,39 +20,46 @@ const NoticeEdit: React.FC = () => {
   });
 
   /**
-   * 🔴 표준 useEffect 데이터 로딩
-   * 세션 초기화가 끝난 시점(initialized)에 즉시 실행됩니다.
+   * 🔴 [방탄 fetch] 기존 공지사항 데이터 로드
+   * 에러가 발생해도 finally 블록을 통해 로딩 스피너를 확실히 해제합니다.
    */
-  useEffect(() => {
-    const fetchNotice = async () => {
-      if (!id || !initialized) return; 
-      
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('notices')
-          .select('*')
-          .eq('id', id)
-          .single();
+  const fetchNotice = async () => {
+    if (!id) return;
+    setLoading(true); // 로딩 시작
+    try {
+      const { data, error } = await supabase
+        .from('notices')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-        if (error) throw error;
-        if (data) {
-          setFormData({ 
-            title: data.title, 
-            content: data.content, 
-            is_important: data.is_important 
-          });
-        }
-      } catch (err: any) {
-        console.error('Data loading error:', err.message);
-        navigate('/notice');
-      } finally {
-        setLoading(false);
+      if (error) {
+        // 🔴 406 에러 또는 데이터 없음 발생 시 catch로 던짐
+        throw error;
       }
-    };
 
-    fetchNotice();
-  }, [id, initialized, navigate]);
+      if (data) {
+        setFormData({ 
+          title: data.title, 
+          content: data.content, 
+          is_important: data.is_important 
+        });
+      }
+    } catch (err: any) {
+      console.error('HQ Archive Sync Error (406 등):', err.message);
+      alert('데이터 아카이브를 불러올 수 없습니다. 권한 혹은 네트워크를 확인하세요.');
+      navigate('/notice');
+    } finally {
+      // 🔴 핵심: 어떤 상황에서도 로딩 상태 해제
+      setLoading(false);
+    }
+  };
+
+  /**
+   * 🔴 [데이터 가드 적용] 
+   * 인증 로딩이 끝난 직후에만 fetchNotice를 실행하여 엇박자를 원천 차단합니다.
+   */
+  useFetchGuard(fetchNotice, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +73,7 @@ const NoticeEdit: React.FC = () => {
         .eq('id', id);
 
       if (error) throw error;
+
       alert('아카이브 수정이 완료되었습니다.');
       navigate('/notice');
     } catch (err) {
@@ -75,11 +83,8 @@ const NoticeEdit: React.FC = () => {
     }
   };
 
-  /**
-   * 🔴 렌더링 가드
-   * 세션이 로드 중이거나 데이터가 로딩 중일 때 로딩 화면 유지
-   */
-  if (!initialized || authLoading || loading) return (
+  // 🔴 전체 로딩 처리 (인증 확인 + 데이터 로딩 동기화)
+  if (authLoading || loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-red-600 font-black animate-pulse uppercase tracking-widest italic text-xl">
         Syncing HQ Archives...
@@ -91,12 +96,7 @@ const NoticeEdit: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      <Helmet>
-        <title>호놀자 관리자 | 공지사항 수정</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-
-      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
+      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <header className="mb-12 border-l-8 border-red-600 pl-8">
           <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none">
             Modify <span className="text-red-600">Bulletin</span>
@@ -104,6 +104,7 @@ const NoticeEdit: React.FC = () => {
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-10 animate-in fade-in duration-700">
+          {/* 중요 공지 토글 섹션 */}
           <div className="bg-black/40 p-10 rounded-[2.5rem] border border-white/5 flex items-center justify-between shadow-inner">
             <p className="text-xl font-black text-red-600 italic uppercase tracking-tight">🔥 Priority Override</p>
             <button 
@@ -115,6 +116,7 @@ const NoticeEdit: React.FC = () => {
             </button>
           </div>
 
+          {/* 입력 섹션 */}
           <div className="space-y-6">
             <input 
               required 
@@ -133,6 +135,7 @@ const NoticeEdit: React.FC = () => {
             />
           </div>
 
+          {/* 버튼 섹션 */}
           <div className="flex gap-6">
             <button 
               type="button" 
