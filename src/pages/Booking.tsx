@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'; // 🔴 useEffect 추가
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // 🔴 Helmet 추가
 import { supabase } from '../supabase';
 import type { Store } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
@@ -62,6 +63,18 @@ const Booking: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
+      {/* 🔴 SEO 최적화 메타 태그 */}
+      <Helmet>
+        <title>호놀자 | 베트남 투어 · 차량 렌트 · 가이드 예약 서비스</title>
+        <meta name="description" content="호놀자가 검증한 베트남 현지 투어, 전용 차량 렌트, 전문 가이드 서비스를 만나보세요. 안전하고 편리한 호치민 여행의 동반자, 호놀자 예약 서비스입니다." />
+        <meta name="keywords" content="베트남 투어, 호치민 투어, 베트남 차량 렌트, 호치민 가이드, 베트남 여행, 호놀자 예약, 호치민 공항 픽업" />
+        
+        {/* Open Graph (SNS 공유용) */}
+        <meta property="og:title" content="호놀자 | 베트남 투어 & 차량 예약 서비스" />
+        <meta property="og:description" content="베트남 현지 투어부터 전용 차량까지, 호놀자에서 한 번에 예약하세요." />
+        <meta property="og:url" content="https://honolja.com/booking" />
+      </Helmet>
+
       <div className="max-w-7xl mx-auto">
         <header className="mb-16">
           <span className="text-red-600 font-black text-xs uppercase tracking-[0.3em] block mb-4 italic">Premium Selection</span>
