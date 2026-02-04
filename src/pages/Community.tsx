@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // 🔴 SEO용 추가
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 
@@ -27,7 +27,6 @@ const Community: React.FC = () => {
     { id: 'business', name: '부동산/비즈니스', icon: '🏢' },
   ];
 
-  // 🔴 SEO용 카테고리 한글명 추출 함수
   const getCategoryName = (id: string) => {
     return categories.find(c => c.id === id)?.name || '커뮤니티';
   };
@@ -103,28 +102,27 @@ const Community: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
-      {/* 🔴 SEO 최적화 메타 태그 (동적 카테고리 반영) */}
       <Helmet>
         <title>호놀자 커뮤니티 | {getCategoryName(activeCategory)} - 호치민 유흥 · 밤문화 · 여행 리얼 후기</title>
-        <meta name="description" content={`베트남 호치민 여행의 생생한 현장! ${getCategoryName(activeCategory)} 채널에서 마사지, 가라오케, 맛집, 밤문화 정보를 공유하세요. 호놀자 대원들의 리얼한 후기가 가득합니다.`} />
+        <meta name="description" content={`베트남 호치민 여행의 생생한 현장! ${getCategoryName(activeCategory)} 채널에서 마사지, 가라오케, 맛집, 밤문화 정보를 공유하세요.`} />
         <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 맛집, 호치민 카페, 호치민 자유여행, ${getCategoryName(activeCategory)}`} />
-        
-        {/* Open Graph (SNS 공유용) */}
         <meta property="og:title" content={`호놀자 커뮤니티 - ${getCategoryName(activeCategory)}`} />
         <meta property="og:description" content="호치민 여행자들을 위한 프리미엄 정보 공유 플랫폼. 지금 리얼 후기를 확인하세요." />
         <meta property="og:url" content="https://honolja.com/community" />
         <meta property="og:type" content="website" />
       </Helmet>
 
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
+      {/* 모바일에서 순서를 바꾸기 위해 flex-col-reverse(모바일) -> flex-row(PC) 적용 */}
+      <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row gap-10">
         
+        {/* 메뉴 사이드바: 모바일에서는 하단에 위치 */}
         <aside className="lg:w-72 space-y-6">
           <button 
             onClick={handleVIPAccess}
             className="w-full py-5 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-[1.5rem] border border-yellow-400/30 flex items-center justify-center gap-3 group hover:scale-[1.02] transition-all shadow-2xl"
           >
             <span className="text-xl">👑</span>
-            <span className="text-black font-black italic uppercase tracking-tighter text-sm">VIP LOUNGE ACCESS</span>
+            <span className="text-black font-black italic uppercase tracking-tighter text-sm">VIP 라운지 이동</span>
           </button>
 
           <div className="bg-[#111] p-6 rounded-[2rem] border border-white/5 shadow-2xl">
@@ -145,19 +143,20 @@ const Community: React.FC = () => {
           </div>
         </aside>
 
+        {/* 메인 게시글 영역: 모바일에서 상단에 위치 */}
         <main className="flex-1">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
             <div>
               <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-2">
-                {activeCategory} <span className="text-red-600">Feed</span>
+                {getCategoryName(activeCategory)} <span className="text-red-600">피드</span>
               </h2>
-              <p className="text-gray-600 text-[10px] font-black uppercase italic tracking-widest">Total {totalCount} Intelligence Logged</p>
+              <p className="text-gray-600 text-[11px] font-bold uppercase italic tracking-widest">전체 게시글 {totalCount}개</p>
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
               <input 
                 type="text" 
-                placeholder="검색..." 
+                placeholder="검색어 입력..." 
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)} 
                 onKeyDown={(e) => e.key === 'Enter' && fetchPosts()} 
@@ -183,15 +182,20 @@ const Community: React.FC = () => {
 
           <div className="space-y-4">
             {loading ? (
-              <div className="py-20 text-center"><div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin inline-block"></div></div>
+              <div className="py-20 text-center">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin inline-block"></div>
+                <p className="text-gray-500 text-xs mt-4 italic">데이터를 불러오고 있습니다...</p>
+              </div>
             ) : posts.length === 0 ? (
-              <div className="py-32 text-center text-gray-700 font-black italic uppercase tracking-widest">No Intelligence Found</div>
+              <div className="py-32 text-center text-gray-700 font-black italic uppercase tracking-widest border border-dashed border-white/5 rounded-3xl">
+                등록된 게시글이 없습니다.
+              </div>
             ) : (
               posts.map(post => (
                 <Link 
                   key={post.id} 
                   to={`/post/${post.id}`} 
-                  className="block bg-[#111] p-6 md:p-8 rounded-[1.8rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden"
+                  className="block bg-[#111] p-6 md:p-8 rounded-[1.8rem] border border-white/5 hover:border-red-600/30 transition-all group relative overflow-hidden shadow-lg"
                 >
                   <div className="flex justify-between items-center relative z-10">
                     <div className="flex-1">
@@ -199,8 +203,8 @@ const Community: React.FC = () => {
                         {post.title}
                       </h3>
                       <div className="flex items-center gap-4 text-[9px] text-gray-500 font-black uppercase italic tracking-widest">
-                        <span className="text-red-600 bg-red-600/10 px-2 py-0.5 rounded">#{post.category}</span>
-                        <span className="text-gray-300">{post.author?.nickname || 'Guest'}</span>
+                        <span className="text-red-600 bg-red-600/10 px-2 py-0.5 rounded">#{getCategoryName(post.category)}</span>
+                        <span className="text-gray-300">{post.author?.nickname || '익명'}</span>
                         <span className="opacity-50">👁️ {post.views || 0}</span>
                         <span className="opacity-50">{new Date(post.created_at).toLocaleDateString()}</span>
                       </div>
@@ -209,7 +213,7 @@ const Community: React.FC = () => {
                       <p className="text-red-600 font-black text-xl italic group-hover:scale-110 transition-transform">+{post.likes || 0}</p>
                     </div>
                   </div>
-                  <div className="absolute right-0 bottom-0 opacity-[0.02] font-black italic text-6xl pointer-events-none uppercase">FEED</div>
+                  <div className="absolute right-0 bottom-0 opacity-[0.02] font-black italic text-6xl pointer-events-none uppercase">COMMUNITY</div>
                 </Link>
               ))
             )}
