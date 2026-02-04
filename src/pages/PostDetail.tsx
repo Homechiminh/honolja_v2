@@ -34,8 +34,8 @@ const PostDetail: React.FC = () => {
       await supabase.rpc('increment_views', { post_id: id });
     } catch (err: any) {
       if (err.message?.includes("Post not found")) {
-         alert('삭제되었거나 존재하지 않는 게시글입니다.');
-         navigate('/community');
+          alert('삭제되었거나 존재하지 않는 게시글입니다.');
+          navigate('/community');
       }
     } finally {
       setLoading(false);
@@ -133,15 +133,15 @@ const PostDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30 text-white">
-      {/* 🔴 SEO 최적화 메타 태그 (동적 데이터 반영) */}
+      {/* 🔴 SEO 최적화 메타 태그 */}
       <Helmet>
-        <title>{post.title} | 호놀자 - 호치민 유흥 밤문화 여행 정보</title>
-        <meta name="description" content={`${post.content.substring(0, 140)}... 베트남 호치민 여행, 밤문화, 맛집, 카페, 가라오케, 마사지 등 리얼 후기를 확인하세요.`} />
-        <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 맛집, 호치민 카페, 호치민 여행후기, ${post.title.substring(0, 20)}`} />
+        <title>{post.title} | 호놀자 - 베트남 호치민 여행 & 밤문화 정보</title>
+        <meta name="description" content={`${post.content.substring(0, 150)}... 호놀자에서 더 많은 호치민 여행 후기와 밤문화 정보를 확인하세요.`} />
+        <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 맛집, 호치민 카페, ${post.category}, ${post.title.substring(0, 10)}`} />
         
-        {/* Open Graph (SNS 공유 시 노출 카드) */}
-        <meta property="og:title" content={`${post.title} - 호놀자 커뮤니티`} />
-        <meta property="og:description" content={`${post.content.substring(0, 80)}...`} />
+        {/* Open Graph (SNS 공유 및 노출 최적화) */}
+        <meta property="og:title" content={`${post.title} - 호놀자`} />
+        <meta property="og:description" content={`${post.content.substring(0, 100)}...`} />
         {post.image_urls?.[0] && <meta property="og:image" content={post.image_urls[0]} />}
         <meta property="og:url" content={`https://honolja.com/post/${post.id}`} />
         <meta property="og:type" content="article" />
