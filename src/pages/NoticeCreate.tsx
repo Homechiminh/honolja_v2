@@ -20,8 +20,6 @@ const NoticeCreate: React.FC = () => {
     if (initialized) {
       const savedDraft = sessionStorage.getItem('notice_create_draft');
       if (savedDraft) {
-        // 별도의 confirm 창 없이 즉시 복구하거나, 필요 시 넣을 수 있습니다.
-        // 여기서는 사용자 편의를 위해 즉시 복구 로직을 넣었습니다.
         setFormData(JSON.parse(savedDraft));
       }
     }
@@ -35,7 +33,7 @@ const NoticeCreate: React.FC = () => {
   }, [formData, initialized]);
 
   // 3. 🔴 [튕김 방지] 내부 navigate('/') 로직을 제거했습니다.
-  // App.tsx의 AdminRoute가 이미 문을 지키고 있으므로, 페이지 내부 가드는 튕김만 유발할 뿐입니다.
+  // App.tsx의 AdminRoute가 이미 관리자임을 보장하므로 중복 체크를 하지 않습니다.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
