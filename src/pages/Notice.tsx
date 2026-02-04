@@ -29,6 +29,7 @@ const Notice: React.FC = () => {
     }
   };
 
+  // 🔴 목록에 들어올 때마다 가드를 통해 최신 데이터 요청
   useFetchGuard(fetchNotices, []);
 
   if (!initialized || (loading && notices.length === 0)) return (
