@@ -121,86 +121,75 @@ const MyPage: React.FC = () => {
     );
   }
 
-  // 🔴 등업 조건 수치화
-  const nextLevelCriteria = { 
-    1: { points: 100, reviews: 1 }, 
-    2: { points: 300, reviews: 3 }, 
-    3: { points: 1000, reviews: 8 } 
-  };
+  const nextLevelCriteria = { 1: { points: 100, reviews: 1 }, 2: { points: 300, reviews: 3 }, 3: { points: 1000, reviews: 8 } };
   const currentCriteria = (nextLevelCriteria as any)[currentUser.level] || null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-red-600/30 relative">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-6 font-sans text-white selection:bg-red-600/30 relative">
       <Helmet><title>호놀자 | 마이페이지</title></Helmet>
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
-        <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-14 border border-white/5 relative shadow-2xl overflow-hidden">
+        {/* 상단 프로필 섹션 */}
+        <div className="bg-[#0f0f0f] rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-14 border border-white/5 relative shadow-2xl overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-          <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
-            <div className="relative group w-40 h-40 shrink-0">
-              <div className="w-full h-full rounded-[3rem] bg-gradient-to-br from-[#1a1a1a] to-black border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-2xl">
+          <div className="flex flex-col lg:flex-row items-center gap-8 md:gap-12 relative z-10">
+            <div className="relative group w-32 h-32 md:w-40 md:h-40 shrink-0">
+              <div className="w-full h-full rounded-[2.5rem] md:rounded-[3rem] bg-gradient-to-br from-[#1a1a1a] to-black border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-2xl">
                 {currentUser.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover" alt="Profile" /> : 
-                <span className="text-6xl text-red-600 italic font-black">{currentUser.nickname?.[0].toUpperCase()}</span>}
+                <span className="text-5xl md:text-6xl text-red-600 italic font-black">{currentUser.nickname?.[0].toUpperCase()}</span>}
               </div>
-              <label className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-[3rem] backdrop-blur-sm">
+              <label className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-[2.5rem] md:rounded-[3rem] backdrop-blur-sm">
                 <span className="text-[10px] font-black uppercase italic">사진 변경</span>
                 <input type="file" className="hidden" onChange={handleAvatarUpload} disabled={loading} />
               </label>
             </div>
 
-            <div className="flex-grow text-center md:text-left">
-              <div className="inline-block bg-red-600 text-[10px] font-black px-4 py-1.5 rounded-full uppercase italic mb-4 shadow-lg">
+            <div className="flex-grow text-center lg:text-left">
+              <div className="inline-block bg-red-600 text-[9px] md:text-[10px] font-black px-4 py-1.5 rounded-full uppercase italic mb-4 shadow-lg">
                 LV.{currentUser.level} {LEVEL_NAMES[currentUser.level]}
               </div>
-              <div className="flex items-center justify-center md:justify-start gap-4 mb-4">
+              <div className="flex items-center justify-center lg:justify-start gap-4 mb-4">
                 {isEditing ? (
                   <div className="flex items-center gap-3">
-                    <input value={newNickname} onChange={(e) => setNewNickname(e.target.value)} className="bg-black border-2 border-red-600/50 rounded-2xl px-5 py-2 text-2xl font-black w-48 outline-none shadow-inner" />
-                    <button onClick={handleUpdateNickname} disabled={loading} className="bg-emerald-600 p-2.5 rounded-xl">✔️</button>
-                    <button onClick={() => setIsEditing(false)} className="bg-white/5 p-2.5 rounded-xl">❌</button>
+                    <input value={newNickname} onChange={(e) => setNewNickname(e.target.value)} className="bg-black border-2 border-red-600/50 rounded-2xl px-4 py-2 text-xl md:text-2xl font-black w-40 md:w-48 outline-none shadow-inner" />
+                    <button onClick={handleUpdateNickname} disabled={loading} className="bg-emerald-600 p-2 rounded-xl text-sm">✔️</button>
+                    <button onClick={() => setIsEditing(false)} className="bg-white/5 p-2 rounded-xl text-sm">❌</button>
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-5xl font-black italic tracking-tighter uppercase leading-none">{currentUser.nickname}님</h2>
-                    <button onClick={() => setIsEditing(true)} className="text-gray-600 hover:text-white transition-colors text-xl p-2 bg-white/5 rounded-xl">✏️</button>
+                    <h2 className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">{currentUser.nickname}님</h2>
+                    <button onClick={() => setIsEditing(true)} className="text-gray-600 hover:text-white transition-colors text-lg p-2 bg-white/5 rounded-xl">✏️</button>
                   </>
                 )}
               </div>
-              <div className="flex gap-4 mt-6">
-                <div className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">포인트</p>
-                  <p className="text-2xl font-black text-red-600">{currentUser.points?.toLocaleString()}P</p>
+              <div className="flex justify-center lg:justify-start gap-4 mt-6">
+                <div className="bg-black/50 px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-white/5">
+                  <p className="text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">포인트</p>
+                  <p className="text-xl md:text-2xl font-black text-red-600">{currentUser.points?.toLocaleString()}P</p>
                 </div>
-                <div className="bg-black/50 px-6 py-4 rounded-2xl border border-white/5">
-                  <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">후기 수</p>
-                  <p className="text-2xl font-black text-emerald-500">{currentUser.review_count || 0}건</p>
+                <div className="bg-black/50 px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-white/5">
+                  <p className="text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">후기 수</p>
+                  <p className="text-xl md:text-2xl font-black text-emerald-500">{currentUser.review_count || 0}건</p>
                 </div>
               </div>
             </div>
 
-            {/* 🔴 [한국어/수치화 보강] 등업 목표 게이지 구역 */}
             {currentCriteria && (
-              <div className="w-full md:w-72 bg-black/60 p-8 rounded-[2.5rem] border border-white/5 shadow-inner">
-                <p className="text-[10px] font-black text-yellow-500 uppercase mb-8 italic tracking-widest text-center border-b border-white/5 pb-2">
-                  다음 목표: {LEVEL_NAMES[currentUser.level + 1]}
-                </p>
-                
-                <div className="space-y-6">
-                  {/* 포인트 진행도 */}
+              <div className="w-full lg:w-72 bg-black/60 p-6 md:p-8 rounded-[2.5rem] border border-white/5 shadow-inner">
+                <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 italic tracking-widest text-center">다음 목표: {LEVEL_NAMES[currentUser.level + 1]}</p>
+                <div className="space-y-5">
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[9px] font-black uppercase">
-                      <span className="text-gray-400">포인트 달성률</span>
+                    <div className="flex justify-between text-[9px] font-black uppercase text-gray-400">
+                      <span>포인트 달성률</span>
                       <span className="text-red-500">{currentUser.points} / {currentCriteria.points}P</span>
                     </div>
                     <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
                       <div className="bg-red-600 h-full transition-all duration-1000" style={{ width: `${Math.min(100, (currentUser.points / currentCriteria.points) * 100)}%` }}></div>
                     </div>
                   </div>
-
-                  {/* 후기 진행도 */}
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[9px] font-black uppercase">
-                      <span className="text-gray-400">후기 달성률</span>
+                    <div className="flex justify-between text-[9px] font-black uppercase text-gray-400">
+                      <span>후기 달성률</span>
                       <span className="text-emerald-500">{currentUser.review_count || 0} / {currentCriteria.reviews}건</span>
                     </div>
                     <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
@@ -213,59 +202,60 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
-          <div className="flex bg-white/[0.02] p-2 gap-2">
+        {/* 활동 탭 섹션 */}
+        <div className="bg-[#0f0f0f] rounded-[2.5rem] md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+          <div className="flex bg-white/[0.02] p-2 gap-1 md:gap-2">
             {(['activity', 'points', 'coupons'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-5 rounded-2xl font-black uppercase italic transition-all ${activeTab === tab ? 'bg-red-600 text-white shadow-xl' : 'text-gray-600 hover:text-white'}`}>
-                {tab === 'activity' ? '📝 내 작성글' : tab === 'points' ? '📋 활동 기록' : '🎟️ 내 쿠폰함'}
+              <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-4 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic text-[10px] md:text-sm transition-all ${activeTab === tab ? 'bg-red-600 text-white shadow-xl' : 'text-gray-600 hover:text-white'}`}>
+                {tab === 'activity' ? '📝 작성글' : tab === 'points' ? '📋 기록' : '🎟️ 쿠폰함'}
               </button>
             ))}
           </div>
 
-          <div className="p-10 min-h-[450px]">
-            {dataLoading ? <div className="text-center py-20 animate-pulse">데이터 로딩 중...</div> : (
+          <div className="p-6 md:p-10 min-h-[400px]">
+            {dataLoading ? <div className="text-center py-20 animate-pulse text-gray-500 font-bold">데이터 로딩 중...</div> : (
               <div className="animate-in fade-in duration-500">
                 {activeTab === 'activity' && (
                   <div className="space-y-4">
                     {myPosts.length > 0 ? myPosts.map(post => (
-                      <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-8 bg-white/[0.03] rounded-[2.5rem] border border-white/5 hover:border-red-600/40 transition-all group">
-                        <div className="flex items-center gap-6">
-                          <span className="text-red-600 font-black text-[9px] px-3 py-1.5 bg-red-600/10 rounded-full italic tracking-widest border border-red-600/10">#{post.category}</span>
-                          <span className="text-xl font-bold group-hover:text-red-500 transition-colors italic tracking-tight">{post.title}</span>
+                      <Link key={post.id} to={`/post/${post.id}`} className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 md:p-8 bg-white/[0.03] rounded-[2rem] md:rounded-[2.5rem] border border-white/5 hover:border-red-600/40 transition-all group gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-6 w-full">
+                          <span className="text-red-600 font-black text-[9px] px-3 py-1 bg-red-600/10 rounded-full italic w-fit">#{post.category}</span>
+                          {/* 🔴 모바일 세로 꺾임 방지: truncate 해제 및 유연한 너비 설정 */}
+                          <span className="text-lg md:text-xl font-bold group-hover:text-red-500 transition-colors italic tracking-tight break-keep">{post.title}</span>
                         </div>
-                        <span className="text-[10px] text-gray-600 font-black uppercase italic shrink-0 ml-4">{new Date(post.created_at).toLocaleDateString()}</span>
+                        <span className="text-[9px] text-gray-600 font-black uppercase italic shrink-0">{new Date(post.created_at).toLocaleDateString()}</span>
                       </Link>
-                    )) : <div className="py-32 text-center opacity-40 italic font-black uppercase tracking-widest">작성된 게시글이 없습니다.</div>}
+                    )) : <div className="py-32 text-center opacity-30 italic font-black uppercase">작성된 게시글이 없습니다.</div>}
                   </div>
                 )}
 
                 {activeTab === 'points' && (
                   <div className="space-y-4">
                     {pointHistory.length > 0 ? pointHistory.map(item => (
-                      <div key={item.id} className="p-8 bg-white/[0.03] rounded-[2.5rem] flex justify-between items-center border border-white/5">
+                      <div key={item.id} className="p-6 md:p-8 bg-white/[0.03] rounded-[2rem] flex justify-between items-center border border-white/5">
                         <div className="space-y-1">
-                          <span className="font-black block italic text-xl uppercase tracking-tighter">{item.reason}</span>
-                          <span className="text-[10px] text-gray-600 font-bold uppercase italic">{new Date(item.created_at).toLocaleString()}</span>
+                          <span className="font-black block italic text-lg md:text-xl uppercase tracking-tighter">{item.reason}</span>
+                          <span className="text-[9px] text-gray-600 font-bold italic">{new Date(item.created_at).toLocaleString()}</span>
                         </div>
-                        <span className={`text-3xl font-black italic ${item.amount > 0 ? 'text-emerald-500' : 'text-red-600'}`}>{item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}P</span>
+                        <span className={`text-2xl md:text-3xl font-black italic ${item.amount > 0 ? 'text-emerald-500' : 'text-red-600'}`}>{item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}P</span>
                       </div>
-                    )) : <div className="py-32 text-center opacity-40 italic font-black uppercase tracking-widest">활동 기록이 없습니다.</div>}
+                    )) : <div className="py-32 text-center opacity-30 italic font-black uppercase">활동 기록이 없습니다.</div>}
                   </div>
                 )}
 
                 {activeTab === 'coupons' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                     {myCoupons.length > 0 ? myCoupons.map(coupon => (
-                      <div key={coupon.id} className="p-10 bg-gradient-to-br from-[#1a1a1a] to-black rounded-[3.5rem] border border-red-600/20 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform blur-2xl"></div>
-                        <h4 className="text-3xl font-black text-white italic mb-4 tracking-tighter uppercase leading-none">{coupon.title}</h4>
-                        <p className="text-gray-500 text-sm font-bold leading-relaxed mb-10 italic">{coupon.content}</p>
-                        <div className="pt-8 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-[9px] text-gray-600 font-black italic uppercase tracking-[0.2em]">만료일: {new Date(coupon.expired_at).toLocaleDateString()}</span>
-                            <button onClick={() => openCouponModal(coupon)} className="bg-red-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase italic shadow-xl hover:bg-red-500 transition-all">사용하기</button>
+                      <div key={coupon.id} className="p-8 md:p-10 bg-gradient-to-br from-[#1a1a1a] to-black rounded-[2.5rem] md:rounded-[3.5rem] border border-red-600/20 shadow-2xl relative overflow-hidden group">
+                        <h4 className="text-2xl md:text-3xl font-black text-white italic mb-3 tracking-tighter uppercase">{coupon.title}</h4>
+                        <p className="text-gray-500 text-xs md:text-sm font-bold leading-relaxed mb-8 italic">{coupon.content}</p>
+                        <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                            <span className="text-[9px] text-gray-600 font-black italic">만료: {new Date(coupon.expired_at).toLocaleDateString()}</span>
+                            <button onClick={() => openCouponModal(coupon)} className="bg-red-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase italic shadow-xl hover:bg-red-500 transition-all">사용하기</button>
                         </div>
                       </div>
-                    )) : <div className="col-span-2 py-32 text-center opacity-40 italic font-black uppercase tracking-widest">보유한 쿠폰이 없습니다.</div>}
+                    )) : <div className="col-span-2 py-32 text-center opacity-30 italic font-black uppercase">보유한 쿠폰이 없습니다.</div>}
                   </div>
                 )}
               </div>
@@ -273,13 +263,14 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center px-10">
-          <Link to="/" className="text-gray-400 hover:text-white text-[11px] font-black uppercase italic tracking-[0.3em] transition-all">← 메인으로 이동</Link>
-          <div className="flex gap-4">
+        {/* 🔴 하단 버튼 레이아웃 수정: 모바일에서 버튼이 겹치지 않도록 flex-col/flex-row 조정 */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-8 px-6 md:px-10">
+          <Link to="/" className="text-gray-500 hover:text-white text-[10px] md:text-[11px] font-black uppercase italic tracking-[0.3em] transition-all">← 메인으로 이동</Link>
+          <div className="flex gap-4 w-full sm:w-auto">
             {currentUser.role === UserRole.ADMIN && (
-              <button onClick={() => navigate('/admin')} className="px-10 py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase border border-white/10 italic shadow-xl hover:bg-white/10 transition-all">관리자 도구</button>
+              <button onClick={() => navigate('/admin')} className="flex-1 sm:flex-none px-6 md:px-10 py-4 md:py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase border border-white/10 italic shadow-xl">관리자 도구</button>
             )}
-            <button onClick={handleLogout} className="px-10 py-5 bg-red-600/10 border border-red-600/30 text-red-500 rounded-2xl text-[10px] font-black uppercase italic shadow-2xl hover:bg-red-600 hover:text-white transition-all tracking-[0.2em]">로그아웃</button>
+            <button onClick={handleLogout} className="flex-1 sm:flex-none px-6 md:px-10 py-4 md:py-5 bg-red-600/10 border border-red-600/30 text-red-500 rounded-2xl text-[10px] font-black uppercase italic shadow-2xl hover:bg-red-600 hover:text-white transition-all tracking-[0.2em]">로그아웃</button>
           </div>
         </div>
       </div>
@@ -287,21 +278,21 @@ const MyPage: React.FC = () => {
       {/* QR 모달 */}
       {selectedCoupon && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative bg-[#0a0a0a] border border-red-600/30 p-10 rounded-[3.5rem] max-w-[400px] w-full text-center">
-            <button onClick={() => setSelectedCoupon(null)} className="absolute top-8 right-8 w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-all group">
-              <span className="text-gray-500 group-hover:text-white text-xl">✕</span>
+          <div className="relative bg-[#0a0a0a] border border-red-600/30 p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] max-w-[400px] w-full text-center">
+            <button onClick={() => setSelectedCoupon(null)} className="absolute top-6 right-6 md:top-8 md:right-8 w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-all">
+              <span className="text-gray-500 text-xl">✕</span>
             </button>
-            <h3 className="text-2xl font-black text-white italic mb-2 uppercase tracking-tighter">Coupon Authentication</h3>
-            <p className="text-gray-500 text-[10px] font-bold mb-8 uppercase tracking-widest italic">QR을 저장하면 해당 쿠폰은 즉시 사용 처리됩니다.</p>
-            <div ref={couponRef} className="bg-black p-8 rounded-[2rem] border border-white/5 mb-8 flex flex-col items-center">
-              <p className="text-red-600 font-black italic text-sm mb-6 uppercase tracking-widest">{selectedCoupon.title}</p>
-              <div className="bg-white p-4 rounded-3xl mb-6 shadow-2xl">
-                <QRCodeCanvas value={`${selectedCoupon.id}|${generatedSerial}`} size={180} level="H" />
+            <h3 className="text-xl md:text-2xl font-black text-white italic mb-2 uppercase">Coupon Auth</h3>
+            <p className="text-gray-500 text-[9px] font-bold mb-8 italic">QR 저장 시 쿠폰은 즉시 사용 완료 처리됩니다.</p>
+            <div ref={couponRef} className="bg-black p-6 md:p-8 rounded-[2rem] border border-white/5 mb-8 flex flex-col items-center">
+              <p className="text-red-600 font-black italic text-xs mb-6 uppercase">{selectedCoupon.title}</p>
+              <div className="bg-white p-3 md:p-4 rounded-2xl md:rounded-3xl mb-6 shadow-2xl">
+                <QRCodeCanvas value={`${selectedCoupon.id}|${generatedSerial}`} size={160} level="H" />
               </div>
-              <p className="text-white font-black text-lg tracking-[0.2em] italic mb-2">{generatedSerial}</p>
-              <p className="text-gray-600 text-[9px] font-bold uppercase italic tracking-widest">소유자: {currentUser.nickname}</p>
+              <p className="text-white font-black text-base md:text-lg tracking-[0.2em] italic mb-2">{generatedSerial}</p>
+              <p className="text-gray-600 text-[8px] font-bold uppercase italic">Owner: {currentUser.nickname}</p>
             </div>
-            <button onClick={handleDownloadAndDispose} disabled={loading} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-xs uppercase italic shadow-xl hover:bg-red-500 transition-all">
+            <button onClick={handleDownloadAndDispose} disabled={loading} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase italic hover:bg-red-500 transition-all">
               {loading ? '처리 중...' : 'QR 저장 및 사용완료'}
             </button>
           </div>
