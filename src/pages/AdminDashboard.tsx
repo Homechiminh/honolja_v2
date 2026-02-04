@@ -1,18 +1,17 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
 
 const AdminDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  // 🔴 initialized와 currentUser를 가져옵니다.
+  // 🔴 TS6133 에러 해결: 사용하지 않는 navigate 선언 삭제
   const { currentUser, initialized } = useAuth(); 
 
   /**
-   * 🔴 [튕김 방지 수정]
-   * 기존의 useEffect 내 navigate('/') 로직을 삭제했습니다.
-   * 이유: App.tsx의 AdminRoute가 이미 권한을 지키고 있으므로, 
-   * 페이지 내부에서 또 체크하면 탭 전환 시 찰나의 세션 체크 순간에 홈으로 튕기게 됩니다.
+   * [튕김 방지 로직]
+   * App.tsx의 AdminRoute가 권한을 지키고 있으므로, 
+   * 페이지 내부에서는 세션 초기화(initialized) 대기 화면만 제공합니다.
    */
 
   // 세션 확인 중일 때는 대기 화면 노출
@@ -62,6 +61,10 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
+      <Helmet>
+        <title>관리자 | 시스템 대시보드</title>
+      </Helmet>
+
       <div className="max-w-6xl mx-auto">
         <header className="mb-16">
           <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter mb-4 leading-none">
@@ -82,8 +85,12 @@ const AdminDashboard: React.FC = () => {
                 <div className={`${item.color} w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-8 shadow-2xl group-hover:scale-110 transition-transform`}>
                   {item.icon}
                 </div>
-                <h3 className="text-2xl font-black text-white italic mb-4 uppercase tracking-tighter leading-tight">{item.title}</h3>
-                <p className="text-gray-500 text-xs font-medium leading-relaxed opacity-80">{item.desc}</p>
+                <h3 className="text-2xl font-black text-white italic mb-4 uppercase tracking-tighter leading-tight break-keep">
+                  {item.title}
+                </h3>
+                <p className="text-gray-500 text-xs font-medium leading-relaxed opacity-80 break-keep">
+                  {item.desc}
+                </p>
                 <div className="mt-auto pt-10 flex justify-between items-center border-t border-white/5">
                   <span className="text-[10px] font-black text-white/10 group-hover:text-red-600 transition-colors uppercase tracking-[0.2em] italic">Access Module</span>
                   <span className="text-white/5 group-hover:text-red-600 transition-colors text-xl">→</span>
