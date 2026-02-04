@@ -6,6 +6,7 @@ import './index.css';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop'; // 🔴 추가된 임포트
 import Home from './pages/Home';
 import DanangHome from './pages/DanangHome';
 import NhatrangHome from './pages/NhatrangHome';
@@ -42,7 +43,6 @@ const AdminRoute = () => {
   if (!initialized && loading) return <div className="min-h-screen bg-black" />;
   
   // 🔴 핵심: 이미 관리자인 게 확인되었다면, 백그라운드 로딩 중이라도 화면을 지우지 않습니다.
-  // 이래야 탭 전환 시 작성 중인 데이터가 날아가지 않습니다.
   if (currentUser?.role === 'ADMIN') return <Outlet />;
   
   // 로딩이 완전히 끝났는데 관리자가 아니라면 홈으로 보냅니다.
@@ -66,6 +66,8 @@ function App() {
   return (
     <HelmetProvider>
       <Router>
+        {/* 🔴 상위 페이지 간 이동 시 상단 스크롤 실행 */}
+        <ScrollToTop /> 
         <div className="min-h-screen bg-[#050505] flex flex-col font-sans text-white">
           <Header />
           <main className="flex-grow pt-[80px]">
