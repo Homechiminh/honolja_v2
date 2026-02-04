@@ -73,7 +73,6 @@ const AdminManageCoupons: React.FC = () => {
 
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
         
-        {/* 🔴 상단 네비게이션: 관리자 대시보드 이동 버튼 추가 */}
         <div className="flex items-center gap-6 mb-10">
           <button 
             onClick={() => navigate('/admin')}
