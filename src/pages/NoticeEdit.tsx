@@ -17,7 +17,7 @@ const NoticeEdit: React.FC = () => {
     is_important: false
   });
 
-  // 1. 초기 데이터 로드
+  // 1. 초기 데이터 로드 및 임시 저장 데이터 복구
   useEffect(() => {
     const fetchNotice = async () => {
       if (!id || !initialized) return;
@@ -29,7 +29,12 @@ const NoticeEdit: React.FC = () => {
           .single();
 
         if (error) throw error;
-        if (data) {
+
+        // 🔴 데이터 보존 로직: 탭 전환 시 작업 내역이 있으면 우선 적용
+        const savedDraft = sessionStorage.getItem(`notice_edit_draft_${id}`);
+        if (savedDraft) {
+          setFormData(JSON.parse(savedDraft));
+        } else if (data) {
           setFormData({ 
             title: data.title, 
             content: data.content, 
@@ -46,6 +51,13 @@ const NoticeEdit: React.FC = () => {
     fetchNotice();
   }, [id, initialized, navigate]);
 
+  // 2. 🔴 실시간 자동 저장 (데이터 유실 방지)
+  useEffect(() => {
+    if (!loading && id) {
+      sessionStorage.setItem(`notice_edit_draft_${id}`, JSON.stringify(formData));
+    }
+  }, [formData, loading, id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.content.trim()) {
@@ -55,22 +67,22 @@ const NoticeEdit: React.FC = () => {
 
     setUpdating(true);
     try {
-      // 🔴 데이터 업데이트 실행
       const { error } = await supabase
         .from('notices')
         .update({
           title: formData.title,
           content: formData.content,
           is_important: formData.is_important,
-          updated_at: new Date().toISOString() // 수정 시간 갱신
+          updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
       if (error) throw error;
 
+      // ✅ 성공 시 임시 저장 삭제
+      sessionStorage.removeItem(`notice_edit_draft_${id}`);
+
       alert('성공적으로 수정되었습니다.');
-      
-      // 🔴 핵심: 목록(/notice)이 아니라 수정한 상세 페이지로 이동하여 즉시 확인
       navigate(`/notice/${id}`, { replace: true });
       
     } catch (err: any) {
@@ -91,9 +103,12 @@ const NoticeEdit: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
       <Helmet><title>공지사항 수정 | 관리자</title></Helmet>
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[2rem] p-10 md:p-14 border border-white/5 shadow-2xl">
-        <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter italic text-white">
-          Edit <span className="text-red-600">Notice</span>
-        </h2>
+        <div className="flex justify-between items-center mb-10">
+          <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter italic text-white leading-none">
+            Edit <span className="text-red-600">Notice</span>
+          </h2>
+          <span className="text-[10px] text-emerald-500 font-bold animate-pulse italic">● 자동 저장 활성화됨</span>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           <input 
             className="w-full bg-black border border-white/10 rounded-xl px-6 py-4 outline-none focus:border-red-600 text-white font-bold italic"
@@ -107,7 +122,7 @@ const NoticeEdit: React.FC = () => {
             onChange={e => setFormData({...formData, content: e.target.value})} 
             placeholder="내용"
           />
-          <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl">
+          <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
             <input 
               type="checkbox" 
               id="important"
@@ -118,7 +133,16 @@ const NoticeEdit: React.FC = () => {
             <label htmlFor="important" className="text-sm font-bold text-gray-400 italic">중요 공지사항으로 설정</label>
           </div>
           <div className="flex gap-4 pt-4">
-            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-4 bg-white/5 text-gray-500 font-black rounded-xl italic">취소</button>
+            <button 
+              type="button" 
+              onClick={() => {
+                sessionStorage.removeItem(`notice_edit_draft_${id}`);
+                navigate(-1);
+              }} 
+              className="flex-1 py-4 bg-white/5 text-gray-500 font-black rounded-xl italic border border-white/5"
+            >
+              취소
+            </button>
             <button type="submit" disabled={updating} className="flex-[2] py-4 bg-red-600 text-white font-black rounded-xl hover:bg-red-700 transition-all shadow-xl">
               {updating ? '수정 중...' : '수정 완료'}
             </button>
