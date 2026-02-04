@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
 import { Helmet } from 'react-helmet-async';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -11,7 +11,7 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const couponRef = useRef<HTMLDivElement>(null);
-  const { currentUser, loading: authLoading, refreshUser } = useAuth(); 
+  const { currentUser, loading: authLoading, initialized, refreshUser } = useAuth(); 
 
   const [activeTab, setActiveTab] = useState<'activity' | 'points' | 'coupons'>('activity');
   const [isEditing, setIsEditing] = useState(false);
@@ -26,6 +26,7 @@ const MyPage: React.FC = () => {
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   const [generatedSerial, setGeneratedSerial] = useState('');
 
+  // 🔴 데이터 로드 로직
   const fetchMyData = async () => {
     if (!currentUser?.id) return;
     setDataLoading(true);
@@ -39,7 +40,7 @@ const MyPage: React.FC = () => {
       const { data: coupons } = await supabase.from('coupons').select('*').eq('user_id', currentUser.id).eq('is_used', false).order('created_at', { ascending: false });
       if (coupons) setMyCoupons(coupons);
     } catch (err: any) {
-      console.error('Data Sync Failed:', err.message);
+      console.error('데이터 동기화 실패:', err.message);
     } finally {
       setDataLoading(false);
     }
@@ -48,6 +49,7 @@ const MyPage: React.FC = () => {
   useFetchGuard(fetchMyData, []);
 
   const handleLogout = async () => {
+    if (!window.confirm("로그아웃 하시겠습니까?")) return;
     await supabase.auth.signOut();
     localStorage.clear();
     navigate('/');
@@ -92,7 +94,7 @@ const MyPage: React.FC = () => {
       const canvas = await html2canvas(couponRef.current, { backgroundColor: '#000' });
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
-      link.download = `Honolja_QR_${selectedCoupon.id}.png`;
+      link.download = `호놀자_쿠폰_${selectedCoupon.id}.png`;
       link.click();
 
       const { error } = await supabase
@@ -105,33 +107,32 @@ const MyPage: React.FC = () => {
         .eq('id', selectedCoupon.id);
 
       if (error) throw error;
-      alert('QR 저장이 완료되었습니다. 쿠폰은 자동 소멸됩니다.');
+      alert('QR 저장이 완료되었습니다. 해당 쿠폰은 사용 완료 처리됩니다.');
       setSelectedCoupon(null);
       await fetchMyData(); 
-    } catch (err) { alert('처리 오류 발생'); } finally { setLoading(false); }
+    } catch (err) { alert('처리 중 오류가 발생했습니다.'); } finally { setLoading(false); }
   };
 
-  if (authLoading || !currentUser) {
+  // 🔴 튕김 방지: 초기화가 완료될 때까지 대기
+  if (!initialized || (authLoading && !currentUser)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center font-black italic text-red-600 animate-pulse uppercase tracking-widest">
-        Data Syncing...
+        정보 동기화 중...
       </div>
     );
   }
 
-  // 🔴 에러 해결 지점: UI에서 사용할 criteria 정의
   const nextLevelCriteria = { 1: { points: 100, reviews: 1 }, 2: { points: 300, reviews: 3 }, 3: { points: 1000, reviews: 8 } };
   const currentCriteria = (nextLevelCriteria as any)[currentUser.level] || null;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-red-600/30 relative">
       <Helmet>
-        <title>호놀자 | 마이페이지 - 활동 & 쿠폰 관리</title>
-        <meta name="description" content="베트남여행, 호치민여행 필수 커뮤니티 호놀자 마이페이지입니다." />
-        <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민 관광, 호치민 커뮤니티" />
+        <title>호놀자 | 마이페이지</title>
       </Helmet>
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
+        {/* 상단 프로필 섹션 (image_29b3ea.png 구성 반영) */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-14 border border-white/5 relative shadow-2xl overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
           <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
@@ -176,10 +177,10 @@ const MyPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 🔴 currentCriteria를 사용하여 에러 해결 및 UI 렌더링 */}
+            {/* 등업 목표 게이지 */}
             {currentCriteria && (
               <div className="w-full md:w-64 bg-black/40 p-8 rounded-[2.5rem] border border-white/5">
-                <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 italic tracking-widest">Next Goal: {LEVEL_NAMES[currentUser.level + 1]}</p>
+                <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 italic tracking-widest">NEXT GOAL: {LEVEL_NAMES[currentUser.level + 1]}</p>
                 <div className="space-y-4">
                   <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
                     <div className="bg-red-600 h-full transition-all" style={{ width: `${Math.min(100, (currentUser.points / currentCriteria.points) * 100)}%` }}></div>
@@ -193,18 +194,18 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 활동 탭 구역 */}
+        {/* 활동 탭 구역 (한국어 텍스트 복구) */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <div className="flex bg-white/[0.02] p-2 gap-2">
             {(['activity', 'points', 'coupons'] as const).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-5 rounded-2xl font-black uppercase italic transition-all ${activeTab === tab ? 'bg-red-600 text-white shadow-xl' : 'text-gray-600 hover:text-white'}`}>
-                {tab === 'activity' ? '📝 Posts' : tab === 'points' ? '📋 Log' : '🎟️ Coupons'}
+                {tab === 'activity' ? '📝 내 작성글' : tab === 'points' ? '📋 활동 기록' : '🎟️ 내 쿠폰함'}
               </button>
             ))}
           </div>
 
           <div className="p-10 min-h-[450px]">
-            {dataLoading ? <div className="text-center py-20 animate-pulse">Loading Data...</div> : (
+            {dataLoading ? <div className="text-center py-20 animate-pulse">데이터 로딩 중...</div> : (
               <div className="animate-in fade-in duration-500">
                 {activeTab === 'activity' && (
                   <div className="space-y-4">
@@ -216,7 +217,7 @@ const MyPage: React.FC = () => {
                         </div>
                         <span className="text-[10px] text-gray-600 font-black uppercase italic shrink-0 ml-4">{new Date(post.created_at).toLocaleDateString()}</span>
                       </Link>
-                    )) : <div className="py-32 text-center opacity-40 italic font-black uppercase tracking-widest">No Posts Found</div>}
+                    )) : <div className="py-32 text-center opacity-40 italic font-black uppercase tracking-widest">작성된 게시글이 없습니다.</div>}
                   </div>
                 )}
 
@@ -230,7 +231,7 @@ const MyPage: React.FC = () => {
                         </div>
                         <span className={`text-3xl font-black italic ${item.amount > 0 ? 'text-emerald-500' : 'text-red-600'}`}>{item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}P</span>
                       </div>
-                    )) : <div className="py-32 text-center opacity-40 italic font-black uppercase tracking-widest">No Logs Found</div>}
+                    )) : <div className="py-32 text-center opacity-40 italic font-black uppercase tracking-widest">활동 기록이 없습니다.</div>}
                   </div>
                 )}
 
@@ -242,11 +243,11 @@ const MyPage: React.FC = () => {
                         <h4 className="text-3xl font-black text-white italic mb-4 tracking-tighter uppercase leading-none">{coupon.title}</h4>
                         <p className="text-gray-500 text-sm font-bold leading-relaxed mb-10 italic">{coupon.content}</p>
                         <div className="pt-8 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-[9px] text-gray-600 font-black italic uppercase tracking-[0.2em]">Exp: {new Date(coupon.expired_at).toLocaleDateString()}</span>
-                            <button onClick={() => openCouponModal(coupon)} className="bg-red-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase italic shadow-xl hover:bg-red-500 transition-all">Redeem</button>
+                            <span className="text-[9px] text-gray-600 font-black italic uppercase tracking-[0.2em]">만료일: {new Date(coupon.expired_at).toLocaleDateString()}</span>
+                            <button onClick={() => openCouponModal(coupon)} className="bg-red-600 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase italic shadow-xl hover:bg-red-500 transition-all">사용하기</button>
                         </div>
                       </div>
-                    )) : <div className="col-span-2 py-32 text-center opacity-40 italic font-black uppercase tracking-widest">No Coupons Left</div>}
+                    )) : <div className="col-span-2 py-32 text-center opacity-40 italic font-black uppercase tracking-widest">보유한 쿠폰이 없습니다.</div>}
                   </div>
                 )}
               </div>
@@ -254,18 +255,19 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
+        {/* 하단 버튼 구역 */}
         <div className="flex justify-between items-center px-10">
-          <Link to="/" className="text-gray-600 hover:text-white text-[10px] font-black uppercase italic tracking-[0.3em] transition-all">← Home</Link>
+          <Link to="/" className="text-gray-400 hover:text-white text-[11px] font-black uppercase italic tracking-[0.3em] transition-all">← 메인으로 이동</Link>
           <div className="flex gap-4">
             {currentUser.role === UserRole.ADMIN && (
-              <button onClick={() => navigate('/admin')} className="px-10 py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase border border-white/10 italic shadow-xl">Admin</button>
+              <button onClick={() => navigate('/admin')} className="px-10 py-5 bg-white/5 rounded-2xl text-[10px] font-black uppercase border border-white/10 italic shadow-xl hover:bg-white/10 transition-all">관리자 도구</button>
             )}
-            <button onClick={handleLogout} className="px-10 py-5 bg-red-600 rounded-2xl text-[10px] font-black uppercase italic shadow-2xl hover:bg-red-700 transition-all tracking-[0.2em]">Logout</button>
+            <button onClick={handleLogout} className="px-10 py-5 bg-red-600/10 border border-red-600/30 text-red-500 rounded-2xl text-[10px] font-black uppercase italic shadow-2xl hover:bg-red-600 hover:text-white transition-all tracking-[0.2em]">로그아웃</button>
           </div>
         </div>
       </div>
 
-      {/* 🔴 QR 모달 (닫기 버튼 포함) */}
+      {/* QR 모달 (한국어 가이드 적용) */}
       {selectedCoupon && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative bg-[#0a0a0a] border border-red-600/30 p-10 rounded-[3.5rem] max-w-[400px] w-full text-center">
@@ -274,8 +276,8 @@ const MyPage: React.FC = () => {
               <span className="text-gray-500 group-hover:text-white text-xl">✕</span>
             </button>
 
-            <h3 className="text-2xl font-black text-white italic mb-2 uppercase tracking-tighter">Security Pass</h3>
-            <p className="text-gray-500 text-[10px] font-bold mb-8 uppercase tracking-widest italic">Download to finalize & dispose</p>
+            <h3 className="text-2xl font-black text-white italic mb-2 uppercase tracking-tighter">Coupon Authentication</h3>
+            <p className="text-gray-500 text-[10px] font-bold mb-8 uppercase tracking-widest italic">QR을 저장하면 해당 쿠폰은 즉시 사용 처리됩니다.</p>
             
             <div ref={couponRef} className="bg-black p-8 rounded-[2rem] border border-white/5 mb-8 flex flex-col items-center">
               <p className="text-red-600 font-black italic text-sm mb-6 uppercase tracking-widest">{selectedCoupon.title}</p>
@@ -283,11 +285,11 @@ const MyPage: React.FC = () => {
                 <QRCodeCanvas value={`${selectedCoupon.id}|${generatedSerial}`} size={180} level="H" />
               </div>
               <p className="text-white font-black text-lg tracking-[0.2em] italic mb-2">{generatedSerial}</p>
-              <p className="text-gray-600 text-[9px] font-bold uppercase italic tracking-widest">OWNER: {currentUser.nickname}</p>
+              <p className="text-gray-600 text-[9px] font-bold uppercase italic tracking-widest">소유자: {currentUser.nickname}</p>
             </div>
 
             <button onClick={handleDownloadAndDispose} disabled={loading} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-xs uppercase italic shadow-xl hover:bg-red-500 transition-all">
-              {loading ? 'Processing...' : 'Download & Burn'}
+              {loading ? '처리 중...' : 'QR 저장 및 사용완료'}
             </button>
           </div>
         </div>
