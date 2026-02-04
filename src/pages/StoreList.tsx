@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { Region } from '../types'; 
 import type { Store } from '../types';
 import StoreCard from '../components/StoreCard';
 import { useAuth } from '../contexts/AuthContext'; 
+import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 interface StoreListProps {
   forcedRegion?: Region; 
@@ -15,37 +15,27 @@ const ITEMS_PER_PAGE = 9;
 
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
-  // 🔴 에러 수정 1: 사용하지 않는 initialized 제거
-  useAuth(); 
+  const { loading: authLoading } = useAuth(); 
   
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
   const currentRegion = forcedRegion || Region.HCMC;
 
-  // 🔴 에러 수정 2: totalPages 계산식 추가 (반드시 return 위쪽에 위치해야 함)
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
   useEffect(() => {
     setCurrentPage(1);
   }, [category, currentRegion]);
 
+  /**
+   * 🔴 카테고리 명칭 변환 함수
+   */
   const getCategoryDisplay = (cat: string | undefined) => {
     if (!cat || cat === 'all') return 'PREMIUM LIST';
-    if (cat === 'villa') return '숙소 / 풀빌라';
+    if (cat === 'villa') return '숙소 / 풀빌라'; // 🔴 Villa -> 숙소/풀빌라 변경
     return cat.replace('_', ' ').toUpperCase();
-  };
-
-  const getCategoryKR = (cat: string | undefined) => {
-    if (!cat || cat === 'all') return '전체 업소';
-    if (cat === 'massage') return '마사지 스파';
-    if (cat === 'barber') return '이발소';
-    if (cat === 'karaoke') return '가라오케';
-    if (cat === 'barclub') return '바 클럽';
-    if (cat === 'villa') return '풀빌라 숙소';
-    return cat;
   };
 
   const fetchStores = async () => {
@@ -59,9 +49,12 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
+      // 🔴 필터링 로직 수정
       if (category && category !== 'all') {
         query = query.eq('category', category);
       } else if (category === 'all') {
+        // 🔴 전체보기(all)일 때: 숙소, 차량, 가이드 등 제외하고 '업장'만 노출
+        // DB 카테고리 명칭에 맞게 'villa', 'car', 'guide' 등을 제외 리스트에 넣으세요.
         query = query.not('category', 'in', '("villa", "car", "guide")');
       }
 
@@ -84,16 +77,18 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     }
   };
 
-  useEffect(() => {
-    fetchStores();
-  }, [category, currentRegion, currentPage]); 
+  useFetchGuard(fetchStores, [category, currentRegion, currentPage]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  if (authLoading) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      <Helmet>
-        <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 여행 정보</title>
-      </Helmet>
-
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 border-l-4 border-red-600 pl-6">
           <h2 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none">
@@ -113,46 +108,59 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
             <p className="text-gray-600 font-black italic uppercase tracking-widest text-xs">Syncing Store Database...</p>
           </div>
         ) : stores.length === 0 ? (
-          <div className="py-32 text-center bg-[#111] rounded-[3.5rem] border border-dashed border-white/5">
+          <div className="py-32 text-center bg-[#111] rounded-[3.5rem] border border-dashed border-white/5 animate-in fade-in duration-500">
             <span className="text-5xl mb-6 block">🏙️</span>
             <p className="text-gray-500 font-black italic uppercase tracking-widest">해당 조건의 업소가 아직 등록되지 않았습니다.</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 animate-in fade-in duration-700">
               {stores.map((store) => (
                 <StoreCard key={store.id} store={store} />
               ))}
             </div>
 
-            {/* 하단 페이지네이션 (totalPages 에러 해결 지점) */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-3 mt-20">
                 <button
                   disabled={currentPage === 1}
-                  onClick={() => { setCurrentPage(prev => prev - 1); window.scrollTo(0, 0); }}
+                  onClick={() => {
+                    setCurrentPage(prev => prev - 1);
+                    window.scrollTo(0, 0);
+                  }}
                   className="px-6 py-3 rounded-2xl border border-white/5 bg-white/5 text-gray-400 font-black text-xs uppercase italic hover:bg-white/10 disabled:opacity-20 transition-all shadow-xl"
                 >
                   PREV
                 </button>
+                
                 <div className="flex gap-2 mx-4">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => { setCurrentPage(i + 1); window.scrollTo(0, 0); }}
-                      className={`w-12 h-12 rounded-2xl font-black italic transition-all border-2 ${
-                        currentPage === i + 1 
-                        ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-600/30 scale-110' 
-                        : 'bg-[#111] border-white/5 text-gray-600 hover:text-white hover:border-white/20'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                  {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => {
+                          setCurrentPage(pageNum);
+                          window.scrollTo(0, 0);
+                        }}
+                        className={`w-12 h-12 rounded-2xl font-black italic transition-all border-2 ${
+                          currentPage === pageNum 
+                          ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-600/30 scale-110' 
+                          : 'bg-[#111] border-white/5 text-gray-600 hover:text-white hover:border-white/20'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                 </div>
+
                 <button
                   disabled={currentPage === totalPages}
-                  onClick={() => { setCurrentPage(prev => prev + 1); window.scrollTo(0, 0); }}
+                  onClick={() => {
+                    setCurrentPage(prev => prev + 1);
+                    window.scrollTo(0, 0);
+                  }}
                   className="px-6 py-3 rounded-2xl border border-white/5 bg-white/5 text-gray-400 font-black text-xs uppercase italic hover:bg-white/10 disabled:opacity-20 transition-all shadow-xl"
                 >
                   NEXT
