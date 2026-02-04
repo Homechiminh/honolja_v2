@@ -5,7 +5,6 @@ import { UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
 
 const AdminDashboard: React.FC = () => {
-  // 🔴 TS6133 에러 해결: 사용하지 않는 navigate 선언 삭제
   const { currentUser, initialized } = useAuth(); 
 
   /**
