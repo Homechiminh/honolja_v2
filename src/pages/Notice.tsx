@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // 🔴 Helmet 추가
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const Notice: React.FC = () => {
   const navigate = useNavigate();
@@ -29,8 +29,16 @@ const Notice: React.FC = () => {
     }
   };
 
-  // 🔴 목록에 들어올 때마다 가드를 통해 최신 데이터 요청
-  useFetchGuard(fetchNotices, []);
+  /**
+   * 🔴 [핵심 수정] 
+   * useFetchGuard 대신 useEffect를 사용합니다.
+   * 이렇게 하면 로그인 여부와 관계없이 초기화(initialized)만 되면 공지사항을 불러옵니다.
+   */
+  useEffect(() => {
+    if (initialized) {
+      fetchNotices();
+    }
+  }, [initialized]);
 
   if (!initialized || (loading && notices.length === 0)) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -40,6 +48,16 @@ const Notice: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
+      {/* 🔴 SEO 최적화 메타 태그 */}
+      <Helmet>
+        <title>호놀자 | 공지사항 - 베트남 호치민 여행 및 유흥 이용 안내</title>
+        <meta name="description" content="호놀자의 최신 소식과 서비스 이용 안내를 확인하세요. 베트남 호치민 밤문화, 유흥, 마사지, 가라오케 예약 및 이용에 관한 필수 공지사항을 제공합니다." />
+        <meta name="keywords" content="호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 공지사항, 이용안내" />
+        <meta property="og:title" content="호놀자 | 공지사항 - 실시간 소식 및 이용 가이드" />
+        <meta property="og:description" content="베트남 호치민 여행의 시작, 호놀자 공지사항에서 최신 업데이트를 확인하세요." />
+        <meta property="og:url" content="https://honolja.com/notice" />
+      </Helmet>
+
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-end mb-12">
           <div>
