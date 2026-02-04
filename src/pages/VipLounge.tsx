@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // 🔴 추가
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
@@ -12,7 +13,7 @@ const VipLounge: React.FC = () => {
   const [activeSubMenu, setActiveSubMenu] = useState('전체피드');
 
   const subMenus = [
-    { id: '전체피드', icon: '🌍' }, // 🔴 전체피드 추가
+    { id: '전체피드', icon: '🌍' }, 
     { id: '시크릿 꿀정보', icon: '💎' },
     { id: '업소후기', icon: '📸' },
     { id: '실시간 현황', icon: '📡' },
@@ -28,7 +29,6 @@ const VipLounge: React.FC = () => {
         .eq('category', 'vip')
         .order('created_at', { ascending: false });
 
-      // 🔴 "전체피드"가 아닐 때만 서브 카테고리 필터링
       if (activeSubMenu !== '전체피드') {
         query = query.eq('sub_category', activeSubMenu);
       }
@@ -50,6 +50,15 @@ const VipLounge: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+      {/* 🔴 SEO 최적화 Helmet 섹션 */}
+      <Helmet>
+        <title>호놀자 VIP 라운지 | {activeSubMenu} - 호치민 유흥 & 밤문화 시크릿 정보</title>
+        <meta name="description" content={`호놀자 베테랑 회원 전용 VIP 라운지. ${activeSubMenu} 카테고리의 호치민 가라오케, 마사지, 밤문화 시크릿 꿀정보와 실시간 현황, 블랙리스트를 확인하세요.`} />
+        <meta name="keywords" content="호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 VIP정보" />
+        <meta property="og:title" content={`호놀자 VIP 라운지 - ${activeSubMenu}`} />
+        <meta property="og:description" content="호치민 밤문화의 정점, 베테랑 회원들만 아는 시크릿 정보를 공유합니다." />
+      </Helmet>
+
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12">
         <aside className="lg:w-80">
           <div className="bg-[#0f0f0f] border border-yellow-600/10 rounded-[3rem] p-10 space-y-4 shadow-2xl">
