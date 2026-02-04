@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // 🔴 Link 제거 (에러 해결)
-import { Helmet } from 'react-helmet-async';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const Notice: React.FC = () => {
   const navigate = useNavigate();
@@ -10,9 +10,7 @@ const Notice: React.FC = () => {
   const [notices, setNotices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 튕김 방지: initialized 체크 후 데이터 호출
   const fetchNotices = async () => {
-    if (!initialized) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -31,20 +29,16 @@ const Notice: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchNotices();
-  }, [initialized]);
+  useFetchGuard(fetchNotices, []);
 
-  // 🔴 튕김 방지 가드: 세션 확인 전에는 렌더링을 멈춤
-  if (!initialized) return null;
+  if (!initialized || (loading && notices.length === 0)) return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="text-red-600 font-black animate-pulse uppercase tracking-[0.3em] italic">Syncing HQ...</div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30 text-white">
-      <Helmet>
-        <title>호놀자 | 공식 공지사항</title>
-        <meta name="description" content="호놀자의 최신 공지사항 및 커뮤니티 이용 가이드를 확인하세요." />
-      </Helmet>
-      
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-end mb-12">
           <div>
@@ -54,19 +48,12 @@ const Notice: React.FC = () => {
             <p className="text-gray-600 font-bold uppercase text-[9px] mt-2 italic tracking-[0.3em]">HQ Intelligence & Guidelines</p>
           </div>
           {currentUser?.role === 'ADMIN' && (
-            <button 
-              onClick={() => navigate('/notice/create')} 
-              className="px-6 py-3 bg-white text-black font-black text-[10px] rounded-xl uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95"
-            >
-              + Create
-            </button>
+            <button onClick={() => navigate('/notice/create')} className="px-6 py-3 bg-white text-black font-black text-[10px] rounded-xl uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-xl active:scale-95">+ Create</button>
           )}
         </header>
 
         <div className="space-y-4">
-          {loading && notices.length === 0 ? (
-            <div className="py-40 text-center text-red-600 font-black animate-pulse italic uppercase tracking-widest">Syncing Archives...</div>
-          ) : notices.length === 0 ? (
+          {notices.length === 0 ? (
             <div className="py-20 text-center bg-[#0f0f0f] rounded-[2.5rem] border border-dashed border-white/5 italic opacity-30 text-white">No Bulletins Issued.</div>
           ) : (
             notices.map((notice) => (
@@ -83,9 +70,7 @@ const Notice: React.FC = () => {
                       {notice.is_important && (
                         <span className="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase italic animate-pulse">Important</span>
                       )}
-                      <span className="text-gray-600 font-black text-[9px] uppercase italic tracking-widest">
-                        {new Date(notice.created_at).toLocaleDateString()}
-                      </span>
+                      <span className="text-gray-600 font-black text-[9px] uppercase italic tracking-widest">{new Date(notice.created_at).toLocaleDateString()}</span>
                     </div>
                     <h3 className={`text-xl md:text-2xl font-black italic tracking-tight group-hover:text-red-500 transition-colors truncate ${notice.is_important ? 'text-white' : 'text-gray-400'}`}>
                       {notice.title}
