@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'; // 🔴 useEffect 추가
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { CategoryType, Region, UserRole } from '../types'; // UserRole 추가
+import { CategoryType, Region, UserRole } from '../types'; 
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
@@ -9,7 +9,6 @@ const AdminStoreEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // 1. 전역 인증 상태 구독 (initialized, currentUser 추가)
   const { currentUser, initialized } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -24,14 +23,13 @@ const AdminStoreEdit: React.FC = () => {
     image_url: '',
     promo_images: [] as string[],
     rating: 4.5,
-    tags: '',
+    tags: '', // 문자열로 관리
     benefits: '',
     kakao_url: '',
     telegram_url: '',
     is_hot: false
   });
 
-  // 🔴 튕김 방지 가드: 세션 복구 전에는 판단을 유보합니다.
   useEffect(() => {
     if (initialized) {
       if (!currentUser || currentUser.role !== UserRole.ADMIN) {
@@ -40,9 +38,6 @@ const AdminStoreEdit: React.FC = () => {
     }
   }, [initialized, currentUser, navigate]);
 
-  /**
-   * 🔴 업소 데이터 호출
-   */
   const fetchStore = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -61,8 +56,9 @@ const AdminStoreEdit: React.FC = () => {
           image_url: data.image_url || '',
           promo_images: data.promo_images || [],
           rating: data.rating ?? 4.5,
-          tags: data.tags?.join(', ') || '',
-          benefits: data.benefits?.join(', ') || '',
+          // 🔴 배열로 저장된 태그를 쉼표 문자열로 변환하여 노출
+          tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
+          benefits: Array.isArray(data.benefits) ? data.benefits.join(', ') : (data.benefits || ''),
           kakao_url: data.kakao_url || '',
           telegram_url: data.telegram_url || '',
           is_hot: data.is_hot ?? false
@@ -78,9 +74,6 @@ const AdminStoreEdit: React.FC = () => {
 
   useFetchGuard(fetchStore, [id]);
 
-  /**
-   * 🔴 이미지 다중 업로드
-   */
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -109,9 +102,6 @@ const AdminStoreEdit: React.FC = () => {
     }
   };
 
-  /**
-   * 🔴 정보 수정 제출
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdating(true);
@@ -125,8 +115,9 @@ const AdminStoreEdit: React.FC = () => {
         image_url: formData.image_url,
         promo_images: formData.promo_images,
         rating: Number(formData.rating),
-        tags: formData.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
-        benefits: formData.benefits.split(',').map(b => b.trim()).filter(b => b !== ''),
+        // 🔴 문자열을 다시 배열로 변환하여 저장
+        tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
+        benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
         kakao_url: formData.kakao_url,
         telegram_url: formData.telegram_url,
         is_hot: formData.is_hot
@@ -144,7 +135,6 @@ const AdminStoreEdit: React.FC = () => {
     }
   };
 
-  // 🔴 초기화 및 데이터 로딩 가드
   if (!initialized || loading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse font-black uppercase tracking-widest text-xl">
       업소 데이터 분석 중...
@@ -152,84 +142,107 @@ const AdminStoreEdit: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-emerald-600/30">
-      <div className="max-w-5xl mx-auto bg-[#111] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl text-white animate-in fade-in duration-700">
-        <header className="text-center mb-16">
-          <h2 className="text-5xl font-black italic uppercase tracking-tighter inline-block border-b-8 border-emerald-500 pb-4 leading-none">
-            업소 <span className="text-emerald-500">정보 수정</span>
-          </h2>
-        </header>
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-emerald-600/30 text-white">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* 🔴 상단 네비게이션: 관리 페이지로 돌아가기 버튼 추가 */}
+        <button 
+          onClick={() => navigate('/admin/manage-stores')}
+          className="mb-8 flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all font-black uppercase italic text-sm group"
+        >
+          <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Management
+        </button>
 
-        <form onSubmit={handleSubmit} className="space-y-12">
-          {/* 상단: HOT & 별점 설정 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between shadow-inner">
-              <p className="text-xl font-black text-emerald-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
-              <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
-                className={`w-20 h-10 rounded-full relative transition-all duration-500 ${formData.is_hot ? 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-800'}`}>
-                <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_hot ? 'left-11' : 'left-1'}`} />
-              </button>
-            </div>
-            <div className="bg-yellow-600/10 p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between shadow-inner">
-              <p className="text-xl font-black text-yellow-500 italic uppercase tracking-tight">⭐ 별점 설정</p>
-              <input type="number" step="0.1" value={formData.rating} 
-                onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} 
-                className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600 italic" />
-            </div>
-          </div>
+        <div className="bg-[#111] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl animate-in fade-in duration-700">
+          <header className="text-center mb-16">
+            <h2 className="text-5xl font-black italic uppercase tracking-tighter inline-block border-b-8 border-emerald-500 pb-4 leading-none">
+              업소 <span className="text-emerald-500">정보 수정</span>
+            </h2>
+          </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🏢 업소 명칭</label>
-              <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" />
-            </div>
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📂 카테고리</label>
-              <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none font-bold shadow-inner italic">
-                {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
-              </select>
+          <form onSubmit={handleSubmit} className="space-y-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between shadow-inner">
+                <p className="text-xl font-black text-emerald-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
+                <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
+                  className={`w-20 h-10 rounded-full relative transition-all duration-500 ${formData.is_hot ? 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-800'}`}>
+                  <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_hot ? 'left-11' : 'left-1'}`} />
+                </button>
+              </div>
+              <div className="bg-yellow-600/10 p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between shadow-inner">
+                <p className="text-xl font-black text-yellow-500 italic uppercase tracking-tight">⭐ 별점 설정</p>
+                <input type="number" step="0.1" value={formData.rating} 
+                  onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} 
+                  className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600 italic" />
+              </div>
             </div>
 
-            {/* 사진 관리 갤러리 */}
-            <div className="md:col-span-2 space-y-4">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🖼️ 갤러리 이미지 관리 (대표 사진 선택)</label>
-              <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner">
-                <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} 
-                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-xs text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white file:font-black file:uppercase file:border-none file:hover:bg-emerald-500 cursor-pointer shadow-xl" />
-                
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6">
-                  {formData.promo_images.map((url, idx) => (
-                    <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
-                      className={`relative aspect-square rounded-[1.5rem] overflow-hidden cursor-pointer border-4 transition-all shadow-xl ${formData.image_url === url ? 'border-red-600 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
-                      <img src={url} className="w-full h-full object-cover" alt="gallery" />
-                      <button type="button" onClick={(e) => {
-                        e.stopPropagation();
-                        setFormData({...formData, promo_images: formData.promo_images.filter(img => img !== url)});
-                      }} className="absolute top-2 right-2 bg-black/80 text-white w-7 h-7 rounded-full text-[10px] flex items-center justify-center hover:bg-red-600 transition-colors">✕</button>
-                      {formData.image_url === url && (
-                        <div className="absolute inset-0 bg-red-600/10 flex items-center justify-center">
-                          <span className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase italic tracking-tighter shadow-lg">대표</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🏢 업소 명칭</label>
+                <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" />
+              </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📂 카테고리</label>
+                <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none font-bold shadow-inner italic">
+                  {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
+                </select>
+              </div>
+
+              {/* 🔴 해시태그 수정란 추가 */}
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">#️⃣ 해시태그 (쉼표로 구분)</label>
+                <input 
+                  value={formData.tags} 
+                  onChange={(e) => setFormData({...formData, tags: e.target.value})} 
+                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" 
+                  placeholder="태그1, 태그2, 태그3"
+                />
+              </div>
+
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🖼️ 갤러리 이미지 관리 (대표 사진 선택)</label>
+                <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner">
+                  <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} 
+                    className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-xs text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white file:font-black file:uppercase file:border-none file:hover:bg-emerald-500 cursor-pointer shadow-xl" />
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6">
+                    {formData.promo_images.map((url, idx) => (
+                      <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
+                        className={`relative aspect-square rounded-[1.5rem] overflow-hidden cursor-pointer border-4 transition-all shadow-xl ${formData.image_url === url ? 'border-red-600 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
+                        <img src={url} className="w-full h-full object-cover" alt="gallery" />
+                        <button type="button" onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData({...formData, promo_images: formData.promo_images.filter(img => img !== url)});
+                        }} className="absolute top-2 right-2 bg-black/80 text-white w-7 h-7 rounded-full text-[10px] flex items-center justify-center hover:bg-red-600 transition-colors">✕</button>
+                        {formData.image_url === url && (
+                          <div className="absolute inset-0 bg-red-600/10 flex items-center justify-center">
+                            <span className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase italic tracking-tighter shadow-lg">대표</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4">
-             <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📝 업소 상세 설명</label>
-             <textarea rows={8} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-emerald-500 font-medium leading-relaxed resize-none italic shadow-inner" placeholder="상세 내용을 입력하세요..." />
-          </div>
+            <div className="space-y-4">
+               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📝 업소 상세 설명</label>
+               <textarea rows={8} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-[2.5rem] px-8 py-7 text-white outline-none focus:border-emerald-500 font-medium leading-relaxed resize-none italic shadow-inner" placeholder="상세 내용을 입력하세요..." />
+            </div>
 
-          <div className="flex gap-6 pt-10">
-            <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-7 bg-white/5 text-gray-500 font-black text-xl rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all active:scale-95">취소</button>
-            <button type="submit" disabled={updating} className="flex-[2] py-7 bg-emerald-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-emerald-900/40 uppercase italic hover:bg-emerald-500 active:scale-95 transition-all">
-              {updating ? '데이터 전송 중...' : '수정 완료'}
-            </button>
-          </div>
-        </form>
+            <div className="flex gap-6 pt-10">
+              <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-7 bg-white/5 text-gray-500 font-black text-xl rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all active:scale-95">취소</button>
+              <button type="submit" disabled={updating} className="flex-[2] py-7 bg-emerald-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-emerald-900/40 uppercase italic hover:bg-emerald-500 active:scale-95 transition-all">
+                {updating ? '데이터 전송 중...' : '수정 완료'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
