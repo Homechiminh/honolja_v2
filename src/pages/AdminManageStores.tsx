@@ -1,128 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { LEVEL_NAMES, UserRole } from '../types'; 
-import type { User } from '../types';
+import { CategoryType, UserRole } from '../types'; 
+import type { Store } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
 import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
-const AdminManageUsers: React.FC = () => {
+const AdminManageStores: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, initialized } = useAuth();
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inputAmounts, setInputAmounts] = useState<{ [key: string]: string }>({});
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   /**
-   * 🔴 [방탄 fetch] 유저 데이터베이스 동기화
+   * 🔴 업소 데이터베이스 동기화
    */
-  const fetchUsers = async () => {
+  const fetchStores = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('stores').select('*').order('created_at', { ascending: false });
       
+      if (filterCategory !== 'all') {
+        query = query.eq('category', filterCategory);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      if (data) setUsers(data as User[]);
+      if (data) setStores(data as Store[]);
     } catch (err: any) {
-      console.error('User Archive Sync Failed:', err.message);
-      setUsers([]);
+      console.error('Store Archive Sync Failed:', err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterCategory]);
 
-  useFetchGuard(fetchUsers, []);
+  useFetchGuard(fetchStores, [filterCategory]);
 
   /**
-   * 🔴 [튕김 방지] 
-   * App.tsx의 AdminRoute가 이미 권한을 지키고 있으므로, 
-   * 페이지 내부에서 강제로 navigate('/')를 호출하는 로직을 제거하여 탭 전환 시 안정성을 높였습니다.
+   * 🔴 업소 삭제 핸들러
    */
-
-  const handleUpdatePoints = async (userId: string, currentPoints: number, amount: number) => {
-    if (isNaN(amount) || amount === 0) return;
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`[${name}] 업소를 정말로 삭제하시겠습니까? 관련 데이터가 모두 소멸됩니다.`)) return;
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ points: currentPoints + amount })
-        .eq('id', userId);
-      
+      const { error } = await supabase.from('stores').delete().eq('id', id);
       if (error) throw error;
-      
-      setInputAmounts({ ...inputAmounts, [userId]: '' });
-      await fetchUsers(); 
-    } catch (err) {
-      alert('포인트 업데이트에 실패했습니다.');
+      alert('업소가 성공적으로 삭제되었습니다.');
+      setStores(prev => prev.filter(s => s.id !== id));
+    } catch (err: any) {
+      alert('삭제 처리 중 오류가 발생했습니다.');
     }
   };
 
-  const updateLevel = async (userId: string, newLevel: number) => {
+  /**
+   * 🔴 인기 업소(HOT) 토글 핸들러
+   */
+  const toggleHot = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase.from('profiles').update({ level: newLevel }).eq('id', userId);
+      const { error } = await supabase.from('stores').update({ is_hot: !currentStatus }).eq('id', id);
       if (error) throw error;
-      await fetchUsers();
-    } catch (err) {
-      alert('등급 변경에 실패했습니다.');
+      setStores(prev => prev.map(s => s.id === id ? { ...s, is_hot: !currentStatus } : s));
+    } catch (err: any) {
+      alert('상태 변경 실패');
     }
   };
 
-  const toggleBlock = async (userId: string, currentStatus: boolean) => {
-    const actionText = currentStatus ? '차단 해제' : '계정 차단';
-    if (!confirm(`이 유저를 ${actionText} 하시겠습니까?`)) return;
-    try {
-      const { error } = await supabase.from('profiles').update({ is_blocked: !currentStatus }).eq('id', userId);
-      if (error) throw error;
-      await fetchUsers();
-    } catch (err) {
-      alert('상태 변경에 실패했습니다.');
-    }
-  };
-
-  // 세션 확인 중일 때는 대기 화면 노출
-  if (!initialized || (loading && users.length === 0)) {
+  // 세션 확인 및 권한 가드
+  if (!initialized || (loading && stores.length === 0)) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-emerald-500 font-black italic animate-pulse tracking-widest uppercase text-xl">
-          회원 데이터베이스 분석 중...
+        <div className="text-orange-500 font-black italic animate-pulse tracking-widest uppercase text-xl">
+          업소 데이터베이스 로딩 중...
         </div>
       </div>
     );
   }
 
-  // 관리자가 아닐 경우 렌더링 차단 (보안 유지)
+  // 관리자 권한 확인
   if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-emerald-600/30">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-orange-600/30">
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
         
-        {/* 🔴 상단 네비게이션: 관리자 대시보드 이동 버튼 추가 */}
-        <div className="flex items-center gap-6 mb-10">
+        {/* 🔴 상단 네비게이션 섹션 */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => navigate('/admin')}
+              className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+            >
+              관리자 대시보드
+            </button>
+            <button 
+              onClick={() => navigate('/')}
+              className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+            >
+              홈으로 이동
+            </button>
+          </div>
+
           <button 
-            onClick={() => navigate('/admin')}
-            className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+            onClick={() => navigate('/admin/create-store')}
+            className="w-full md:w-auto px-8 py-3.5 bg-white text-black font-black text-[11px] rounded-2xl uppercase italic hover:bg-orange-600 hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
           >
-            관리자 대시보드
-          </button>
-          <button 
-            onClick={() => navigate('/')}
-            className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
-          >
-            홈으로 이동
+            <span className="text-lg">+</span> 신규 업소 추가
           </button>
         </div>
 
-        <header className="mb-12">
-          <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">
-            회원 <span className="text-emerald-500">관리 센터</span>
-          </h2>
-          <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-4 ml-1 italic">
-            전체 유저 권한 제어 및 등급/포인트 정밀 조정 시스템
-          </p>
+        <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div>
+            <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">
+              업소 <span className="text-orange-600">현황 관리</span>
+            </h2>
+            <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-4 ml-1 italic">
+              등록된 모든 제휴 업소의 정보 수정 및 상태 제어 센터
+            </p>
+          </div>
+
+          {/* 카테고리 필터 */}
+          <select 
+            value={filterCategory} 
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="bg-[#111] border border-white/10 rounded-xl px-6 py-3 text-xs font-black uppercase italic outline-none focus:border-orange-600 transition-all cursor-pointer"
+          >
+            <option value="all">전체 카테고리</option>
+            {Object.values(CategoryType).map(cat => (
+              <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+            ))}
+          </select>
         </header>
 
         <div className="bg-[#111] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
@@ -130,67 +137,65 @@ const AdminManageUsers: React.FC = () => {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500 italic tracking-widest">
-                  <th className="p-6">회원 정보</th>
-                  <th className="p-6 text-center">등급 변경</th>
-                  <th className="p-6">포인트 제어</th>
-                  <th className="p-6 text-right">상태 제어</th>
+                  <th className="p-6">업소 정보</th>
+                  <th className="p-6">카테고리 / 지역</th>
+                  <th className="p-6 text-center">인기 설정</th>
+                  <th className="p-6 text-right">관리 작업</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {users.map((user) => (
-                  <tr key={user.id} className={`hover:bg-white/[0.02] transition-colors ${user.is_blocked ? 'opacity-30 grayscale' : ''}`}>
+                {stores.map((store) => (
+                  <tr key={store.id} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="p-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black italic border border-white/5 text-emerald-500 shadow-inner">
-                          {user.nickname?.[0].toUpperCase()}
+                      <div className="flex items-center gap-5">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-lg shrink-0">
+                          <img src={store.image_url} alt={store.name} className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <p className="font-black text-white italic">{user.nickname}</p>
-                          <p className="text-gray-600 text-[10px] font-bold italic tracking-tight">{user.email}</p>
+                          <p className="font-black text-white text-lg italic uppercase tracking-tighter">{store.name}</p>
+                          <p className="text-gray-600 text-[10px] font-bold italic tracking-tight line-clamp-1">{store.address}</p>
                         </div>
+                      </div>
+                    </td>
+                    <td className="p-6">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-orange-500 font-black text-[10px] uppercase italic">#{store.category}</span>
+                        <span className="text-gray-400 font-bold text-[10px] uppercase">{store.region}</span>
                       </div>
                     </td>
                     <td className="p-6 text-center">
-                      <select 
-                        value={user.level} 
-                        onChange={(e) => updateLevel(user.id, parseInt(e.target.value))}
-                        className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] font-black outline-none focus:border-emerald-500 italic"
+                      <button 
+                        onClick={() => toggleHot(store.id, store.is_hot)}
+                        className={`w-14 h-7 rounded-full relative transition-all duration-500 mx-auto ${store.is_hot ? 'bg-orange-600 shadow-[0_0_15px_rgba(234,88,12,0.4)]' : 'bg-gray-800'}`}
                       >
-                        {[1, 2, 3, 4].map(lv => (
-                          <option key={lv} value={lv}>Lv.{lv} {LEVEL_NAMES[lv]}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-6">
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-emerald-500 font-black text-sm w-20 text-right italic">{user.points.toLocaleString()} P</span>
-                          <div className="flex gap-1">
-                            {[-100, -10, 10, 100].map(val => (
-                              <button key={val} onClick={() => handleUpdatePoints(user.id, user.points, val)} className="px-2 py-1 bg-white/5 text-[9px] font-black rounded hover:bg-emerald-600 hover:text-white transition-all">{val > 0 ? `+${val}` : val}</button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <input type="number" placeholder="금액" value={inputAmounts[user.id] || ''} onChange={(e) => setInputAmounts({...inputAmounts, [user.id]: e.target.value})} className="bg-black border border-white/10 rounded-lg px-3 py-1.5 text-[11px] w-20 outline-none placeholder:text-gray-800 font-bold shadow-inner text-white" />
-                          <button onClick={() => handleUpdatePoints(user.id, user.points, parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-emerald-600 text-[10px] font-black rounded-lg uppercase italic hover:bg-emerald-500 transition-colors shadow-lg">지급</button>
-                          <button onClick={() => handleUpdatePoints(user.id, user.points, -parseInt(inputAmounts[user.id] || '0'))} className="px-3 py-1 bg-red-600 text-[10px] font-black rounded-lg uppercase italic hover:bg-red-500 transition-colors shadow-lg">차감</button>
-                        </div>
-                      </div>
+                        <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all duration-300 ${store.is_hot ? 'left-8 shadow-lg' : 'left-1'}`} />
+                      </button>
                     </td>
                     <td className="p-6 text-right">
-                      <button onClick={() => toggleBlock(user.id, user.is_blocked)} className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${user.is_blocked ? 'bg-white text-black shadow-xl scale-105' : 'bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white'}`}>
-                        {user.is_blocked ? '차단 해제' : '접속 차단'}
-                      </button>
+                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => navigate(`/admin/edit-store/${store.id}`)}
+                          className="px-5 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase italic hover:bg-white hover:text-black transition-all"
+                        >
+                          수정
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(store.id, store.name)}
+                          className="px-5 py-2 bg-red-600/10 border border-red-600/20 text-red-500 rounded-xl text-[10px] font-black uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-lg"
+                        >
+                          삭제
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {users.length === 0 && !loading && (
+          
+          {stores.length === 0 && !loading && (
             <div className="py-32 text-center">
-              <p className="text-gray-700 font-black italic uppercase tracking-widest">등록된 회원 정보가 없습니다.</p>
+              <p className="text-gray-700 font-black italic uppercase tracking-widest">검색된 업소 정보가 없습니다.</p>
             </div>
           )}
         </div>
@@ -199,4 +204,4 @@ const AdminManageUsers: React.FC = () => {
   );
 };
 
-export default AdminManageUsers;
+export default AdminManageStores;
