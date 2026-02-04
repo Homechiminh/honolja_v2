@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { HelmetProvider, Helmet } from 'react-helmet-async';
+import { HelmetProvider, Helmet } from 'react-helmet-async'; // 🔴 SEO 라이브러리 추가
 import { useAuth } from './contexts/AuthContext'; 
 import { Region } from './types'; 
 import './index.css';
@@ -43,18 +43,8 @@ import AdminManageCoupons from './pages/AdminManageCoupons';
  * 🔒 [가드 1] 관리자 전용
  */
 const AdminRoute = () => {
-  const { currentUser, initialized, loading } = useAuth();
-  
-  if (!initialized || loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-red-600 font-black animate-pulse italic uppercase tracking-[0.3em]">
-          Verifying Security Clearance...
-        </div>
-      </div>
-    );
-  }
-  
+  const { currentUser, initialized } = useAuth();
+  if (!initialized) return null; 
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
@@ -62,16 +52,8 @@ const AdminRoute = () => {
  * 🔒 [가드 2] 일반 로그인 유저 전용
  */
 const PrivateRoute = () => {
-  const { currentUser, initialized, loading } = useAuth();
-  
-  if (!initialized || loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white italic animate-pulse">
-        Syncing Session...
-      </div>
-    );
-  }
-  
+  const { currentUser, initialized } = useAuth();
+  if (!initialized) return null;
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
@@ -79,25 +61,20 @@ const PrivateRoute = () => {
  * 🔒 [가드 3] 특정 등급(Level) 이상 전용
  */
 const LevelRoute = ({ minLevel }: { minLevel: number }) => {
-  const { currentUser, initialized, loading } = useAuth();
-  
-  if (!initialized || loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-yellow-500 italic animate-pulse">
-        Checking Level...
-      </div>
-    );
-  }
-  
+  const { currentUser, initialized } = useAuth();
+  if (!initialized) return null;
   return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
   return (
-    <HelmetProvider>
+    <HelmetProvider> {/* 🔴 SEO를 위한 전체 감싸기 */}
       <Router>
+        {/* 🔴 기본 SEO 설정 (각 페이지에서 덮어쓰기 가능) */}
         <Helmet>
           <title>호놀자 | 호치민 여행 & 밤문화 정보</title>
+          <meta name="description" content="베트남 호치민 밤문화, 유흥, 커뮤니티 및 숙소 예약 정보 NO.1" />
+          <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민여자, 호치민 관광, 호치민 커뮤니티" />
         </Helmet>
 
         <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30 font-sans">
@@ -114,14 +91,20 @@ function App() {
               <Route path="/booking" element={<Booking />} />
               <Route path="/partnership" element={<Partnership />} />
               <Route path="/policies" element={<Policies />} />
+              
               <Route path="/community" element={<Community />} />
+              
+              {/* 공지사항 라우트 */}
               <Route path="/notice" element={<Notice />} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
+
               <Route path="/store/:id" element={<StoreDetail />} />
               <Route path="/post/:id" element={<PostDetail />} />
+              
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
+              {/* 🔒 인증 필요 구역 */}
               <Route element={<PrivateRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/coupon-shop" element={<CouponShop />} />
@@ -129,10 +112,12 @@ function App() {
                 <Route path="/post/edit/:id" element={<PostEdit />} />
               </Route>
 
+              {/* 🔒 레벨 필요 구역 */}
               <Route element={<LevelRoute minLevel={3} />}>
                 <Route path="/vip-lounge" element={<VipLounge />} />
               </Route>
 
+              {/* 🔒 관리자 전용 구역 */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/create-store" element={<AdminStoreCreate />} />
