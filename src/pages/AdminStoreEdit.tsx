@@ -58,7 +58,6 @@ const AdminStoreEdit: React.FC = () => {
           image_url: data.image_url || '',
           promo_images: data.promo_images || [],
           rating: data.rating ?? 4.5,
-          // 배열 데이터를 쉼표 문자열로 변환하여 에디터에 표시
           tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
           benefits: Array.isArray(data.benefits) ? data.benefits.join(', ') : (data.benefits || ''),
           kakao_url: data.kakao_url || '',
@@ -105,7 +104,7 @@ const AdminStoreEdit: React.FC = () => {
     }
   };
 
-  // 정보 수정 제출 (tags 배열 변환 포함)
+  // 정보 수정 제출
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdating(true);
@@ -119,7 +118,6 @@ const AdminStoreEdit: React.FC = () => {
         image_url: formData.image_url,
         promo_images: formData.promo_images,
         rating: Number(formData.rating),
-        // 다시 배열로 변환하여 저장
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
         kakao_url: formData.kakao_url,
@@ -149,16 +147,33 @@ const AdminStoreEdit: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-emerald-600/30 text-white">
       <div className="max-w-5xl mx-auto">
         
-        {/* 상단 네비게이션: 관리 페이지로 돌아가기 */}
-        <button 
-          onClick={() => navigate('/admin/manage-stores')}
-          className="mb-8 flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all font-black uppercase italic text-sm group"
-        >
-          <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
-          </svg>
-          목록으로 돌아가기
-        </button>
+        {/* 🔴 상단 네비게이션 섹션: 버튼 한글화 및 신규 추가 버튼 배치 */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => navigate('/admin')}
+              className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+            >
+              관리자 대시보드
+            </button>
+            <button 
+              onClick={() => navigate('/admin/manage-stores')}
+              className="flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all font-black uppercase italic text-xs tracking-widest group"
+            >
+              <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
+              </svg>
+              목록으로 돌아가기
+            </button>
+          </div>
+
+          <button 
+            onClick={() => navigate('/admin/create-store')}
+            className="w-full md:w-auto px-8 py-3.5 bg-white text-black font-black text-[11px] rounded-2xl uppercase italic hover:bg-emerald-600 hover:text-white transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">+</span> 신규 업소 추가
+          </button>
+        </div>
 
         <div className="bg-[#111] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl animate-in fade-in duration-700">
           <header className="text-center mb-16">
@@ -196,7 +211,6 @@ const AdminStoreEdit: React.FC = () => {
                 </select>
               </div>
 
-              {/* 해시태그 수정란 */}
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">#️⃣ 해시태그 (쉼표로 구분)</label>
                 <input 
