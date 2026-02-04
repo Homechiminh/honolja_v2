@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { BRAND_NAME } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
@@ -63,7 +64,12 @@ const Signup: React.FC = () => {
   if (authLoading) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-20 relative overflow-hidden font-sans text-white">
+      <Helmet>
+        <title>{BRAND_NAME} | 회원가입 - 호치민 베스트 가이드</title>
+        <meta name="description" content="호놀자 회원가입을 통해 실시간 호치민 여행 및 밤문화 정보를 확인하세요." />
+      </Helmet>
+
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-red-600 rounded-full blur-[160px]"></div>
       </div>
@@ -114,13 +120,7 @@ const Signup: React.FC = () => {
                   <input id="signup-nickname" name="nickname" type="text" placeholder="Nickname" value={formData.nickname} onChange={e => setFormData({...formData, nickname: e.target.value})} className={inputStyle} required />
                   <input id="signup-email" name="email" type="email" placeholder="Email" autoComplete="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className={inputStyle} required />
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => formData.nickname && formData.email && setStep(2)} 
-                  className="w-full py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl uppercase italic active:scale-95"
-                >
-                  다음 단계로
-                </button>
+                <button type="button" onClick={() => formData.nickname && formData.email && setStep(2)} className="w-full py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all shadow-xl uppercase italic active:scale-95">다음 단계로</button>
               </div>
             )}
 
@@ -129,13 +129,7 @@ const Signup: React.FC = () => {
                 <input id="signup-password" name="password" type="password" placeholder="Password" autoComplete="new-password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className={inputStyle} required minLength={6} />
                 <div className="flex space-x-4">
                   <button type="button" onClick={() => setStep(1)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
-                  <button 
-                    type="button" 
-                    onClick={() => formData.password.length >= 6 && setStep(3)} 
-                    className="flex-1 py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all uppercase italic"
-                  >
-                    다음
-                  </button>
+                  <button type="button" onClick={() => formData.password.length >= 6 && setStep(3)} className="flex-1 py-5 bg-white text-black rounded-2xl font-black text-lg hover:bg-red-600 hover:text-white transition-all uppercase italic">다음</button>
                 </div>
               </div>
             )}
@@ -148,13 +142,7 @@ const Signup: React.FC = () => {
                 </div>
                 <div className="flex space-x-4">
                   <button type="button" onClick={() => setStep(2)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black text-lg border border-white/10 transition-all italic uppercase">이전</button>
-                  <button 
-                    type="submit" 
-                    disabled={isLoading} 
-                    className="flex-1 py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 active:scale-95 uppercase italic"
-                  >
-                    {isLoading ? 'Processing...' : '회원가입 완료'}
-                  </button>
+                  <button type="submit" disabled={isLoading} className="flex-1 py-5 bg-red-600 text-white rounded-2xl font-black text-lg hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 active:scale-95 uppercase italic">{isLoading ? 'Processing...' : '회원가입 완료'}</button>
                 </div>
               </div>
             )}
@@ -163,9 +151,7 @@ const Signup: React.FC = () => {
 
         <p className="text-center mt-8 text-slate-500 text-sm font-bold uppercase tracking-widest">
           이미 계정이 있으신가요? 
-          <Link to="/login" className="text-red-500 font-black ml-2 hover:text-red-400 border-b-2 border-transparent hover:border-red-400 transition-all pb-0.5">
-            로그인하기
-          </Link>
+          <Link to="/login" className="text-red-500 font-black ml-2 hover:text-red-400 border-b-2 border-transparent hover:border-red-400 transition-all pb-0.5">로그인하기</Link>
         </p>
       </div>
     </div>
