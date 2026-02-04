@@ -133,8 +133,18 @@ const PostDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30 text-white">
+      {/* 🔴 SEO 최적화 메타 태그 (동적 데이터 반영) */}
       <Helmet>
-        <title>호놀자 | {post.title}</title>
+        <title>{post.title} | 호놀자 - 호치민 유흥 밤문화 여행 정보</title>
+        <meta name="description" content={`${post.content.substring(0, 140)}... 베트남 호치민 여행, 밤문화, 맛집, 카페, 가라오케, 마사지 등 리얼 후기를 확인하세요.`} />
+        <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 맛집, 호치민 카페, 호치민 여행후기, ${post.title.substring(0, 20)}`} />
+        
+        {/* Open Graph (SNS 공유 시 노출 카드) */}
+        <meta property="og:title" content={`${post.title} - 호놀자 커뮤니티`} />
+        <meta property="og:description" content={`${post.content.substring(0, 80)}...`} />
+        {post.image_urls?.[0] && <meta property="og:image" content={post.image_urls[0]} />}
+        <meta property="og:url" content={`https://honolja.com/post/${post.id}`} />
+        <meta property="og:type" content="article" />
       </Helmet>
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
@@ -273,14 +283,13 @@ const PostDetail: React.FC = () => {
           )}
         </div>
 
-        {/* 🔴 하단 네비게이션: 가시성 대폭 강화 */}
+        {/* 하단 네비게이션 */}
         <div className="flex justify-between items-center px-10 pt-10">
           <button 
             onClick={() => navigate('/community')} 
             className="flex items-center gap-3 text-white/70 hover:text-white transition-all group"
           >
             <span className="text-xl group-hover:-translate-x-2 transition-transform text-red-600">←</span>
-            {/* 텍스트 밝기 강화 (목록으로) */}
             <span className="font-black uppercase italic text-xs tracking-[0.2em]">목록으로</span>
           </button>
           
