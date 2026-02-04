@@ -1,21 +1,19 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  // 🔴 핵심: initialized를 가져와서 세션 복구 완료 여부를 확인합니다.
+  // 🔴 initialized와 currentUser를 가져옵니다.
   const { currentUser, initialized } = useAuth(); 
 
-  useEffect(() => {
-    // 🔴 중요: 세션 초기화(initialized)가 완료된 후에만 권한을 체크하여 홈으로 튕기는 것을 방지합니다.
-    if (initialized) {
-      if (!currentUser || currentUser.role !== UserRole.ADMIN) {
-        navigate('/', { replace: true });
-      }
-    }
-  }, [initialized, currentUser, navigate]);
+  /**
+   * 🔴 [튕김 방지 수정]
+   * 기존의 useEffect 내 navigate('/') 로직을 삭제했습니다.
+   * 이유: App.tsx의 AdminRoute가 이미 권한을 지키고 있으므로, 
+   * 페이지 내부에서 또 체크하면 탭 전환 시 찰나의 세션 체크 순간에 홈으로 튕기게 됩니다.
+   */
 
   // 세션 확인 중일 때는 대기 화면 노출
   if (!initialized) {
@@ -28,7 +26,7 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  // 관리자가 아닐 경우 렌더링 차단
+  // 관리자가 아닐 경우 렌더링 차단 (보안 유지)
   if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   const menuItems = [
