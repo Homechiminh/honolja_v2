@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
-import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 const PostDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -42,7 +41,16 @@ const PostDetail: React.FC = () => {
     }
   }, [id, navigate]);
 
-  useFetchGuard(fetchPostData, [id]);
+  /**
+   * 🔴 [핵심 수정] 
+   * useFetchGuard 대신 useEffect를 사용합니다.
+   * 이렇게 하면 로그인 여부와 관계없이 초기화(initialized)만 되면 게시글 내용을 불러옵니다.
+   */
+  useEffect(() => {
+    if (initialized) {
+      fetchPostData();
+    }
+  }, [initialized, fetchPostData]);
 
   useEffect(() => {
     const checkLikeStatus = async () => {
