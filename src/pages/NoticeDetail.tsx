@@ -11,12 +11,11 @@ const NoticeDetail: React.FC = () => {
   const [notice, setNotice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 데이터를 가져오는 로직을 최적화하여 갱신 지연 방지
+  // 데이터 패칭 로직 최적화
   const fetchNotice = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      console.log(`📡 [NoticeDetail] 데이터 갱신 요청: ${id}`);
       const { data, error } = await supabase
         .from('notices')
         .select('*')
@@ -35,10 +34,12 @@ const NoticeDetail: React.FC = () => {
     }
   }, [id, navigate]);
 
-  // 🔴 페이지 진입 및 ID 변경 시 마다 최신 데이터 패칭 실행
+  // 페이지 진입 시 데이터 호출 (initialized 대기 로직 포함)
   useEffect(() => {
-    fetchNotice();
-  }, [fetchNotice]);
+    if (initialized) {
+      fetchNotice();
+    }
+  }, [fetchNotice, initialized]);
 
   if (!initialized || loading || !notice) return (
     <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
@@ -72,7 +73,6 @@ const NoticeDetail: React.FC = () => {
             <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
           </header>
           
-          {/* 🔴 수정한 내용이 확실히 반영되는 본문 구역 */}
           <article className="p-10 md:p-14 text-slate-100 text-lg md:text-xl leading-[1.8] whitespace-pre-wrap font-medium italic">
             {notice.content}
           </article>
