@@ -34,6 +34,7 @@ const AdminManageCoupons: React.FC = () => {
 
   useFetchGuard(fetchAllCoupons, []);
 
+  // 🔴 튕김 방지 및 권한 체크 가드
   useEffect(() => {
     if (initialized) {
       if (!currentUser || currentUser.role !== UserRole.ADMIN) {
@@ -71,6 +72,23 @@ const AdminManageCoupons: React.FC = () => {
       </Helmet>
 
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
+        
+        {/* 🔴 상단 네비게이션: 관리자 대시보드 이동 버튼 추가 */}
+        <div className="flex items-center gap-6 mb-10">
+          <button 
+            onClick={() => navigate('/admin')}
+            className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+          >
+            관리자 대시보드
+          </button>
+          <button 
+            onClick={() => navigate('/')}
+            className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1"
+          >
+            홈으로 이동
+          </button>
+        </div>
+
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
           <div>
             <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter mb-4 leading-none">Coupon <span className="text-red-600">Control</span></h2>
