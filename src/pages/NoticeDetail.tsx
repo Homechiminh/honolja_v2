@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'; // 🔴 실제로 사용합니다.
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useFetchGuard } from '../hooks/useFetchGuard';
 
 const NoticeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -11,51 +11,49 @@ const NoticeDetail: React.FC = () => {
   const [notice, setNotice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 데이터 가드: initialized가 확인된 후에만 실행
-  useEffect(() => {
-    const fetchNotice = async () => {
-      if (!id || !initialized) return;
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('notices')
-          .select('*')
-          .eq('id', id)
-          .single();
+  const fetchNotice = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
+      if (error) throw error;
+      setNotice(data);
+    } catch (err: any) {
+      console.error('Notice Fetch Error:', err.message);
+      navigate('/notice');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        if (error) throw error;
-        setNotice(data);
-      } catch (err: any) {
-        console.error('Notice Fetch Error:', err.message);
-        navigate('/notice');
-      } finally {
-        setLoading(false);
-      }
-    };
+  useFetchGuard(fetchNotice, [id]);
 
-    fetchNotice();
-  }, [id, initialized, navigate]);
-
-  // 🔴 튕김 방지 가드: 초기화 완료 전까지 아무것도 렌더링하지 않음
-  if (!initialized) return null;
-
-  if (loading && !notice) return (
-    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
-      Decrypting HQ Intel...
-    </div>
+  if (!initialized || loading || !notice) return (
+    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic">Decrypting HQ Intel...</div>
   );
 
-  if (!notice) return null;
-
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30 text-white">
-      <Helmet><title>호놀자 | {notice.title}</title></Helmet>
-
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 font-sans selection:bg-red-600/30">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
+        <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+          <header className="p-10 md:p-14 border-b border-white/5">
+            <div className="flex items-center gap-4 mb-6">
+              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">OFFICIAL BULLETIN</span>
+              <span className="text-gray-600 font-black text-[10px] uppercase italic tracking-[0.2em]">{new Date(notice.created_at).toLocaleString()}</span>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep">{notice.title}</h1>
+          </header>
+          
+          <article className="p-10 md:p-14 text-gray-300 text-lg md:text-xl leading-relaxed whitespace-pre-wrap font-medium italic opacity-80">
+            {notice.content}
+          </article>
+        </div>
+
         <div className="flex justify-between items-center px-4">
+          {/* 🔴 문구 수정: Return to Headquarters -> 목록으로 돌아가기 */}
           <button 
             onClick={() => navigate('/notice')} 
-            className="text-gray-500 hover:text-white font-black uppercase italic text-xs tracking-[0.2em] transition-all"
+            className="text-gray-700 hover:text-white font-black uppercase italic text-xs tracking-[0.3em] transition-all"
           >
             ← 목록으로 돌아가기
           </button>
@@ -63,29 +61,11 @@ const NoticeDetail: React.FC = () => {
           {currentUser?.role === 'ADMIN' && (
             <button 
               onClick={() => navigate(`/notice/edit/${id}`)} 
-              className="px-6 py-2.5 bg-red-600/10 border border-red-600/30 rounded-xl text-red-500 hover:bg-red-600 hover:text-white font-black text-[10px] uppercase italic transition-all shadow-lg"
+              className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-500 hover:text-red-500 font-black text-[10px] uppercase italic transition-all"
             >
               Edit Record
             </button>
           )}
-        </div>
-
-        <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
-          <header className="p-10 md:p-14 border-b border-white/5">
-            <div className="flex items-center gap-4 mb-6">
-              <span className="px-4 py-1 bg-red-600 text-white text-[10px] font-black rounded-full uppercase italic tracking-widest">OFFICIAL BULLETIN</span>
-              <span className="text-gray-500 font-black text-[10px] uppercase italic tracking-[0.2em]">{new Date(notice.created_at).toLocaleDateString()}</span>
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight break-keep uppercase">{notice.title}</h1>
-          </header>
-          
-          <article className="p-10 md:p-14 text-slate-100 text-lg md:text-xl leading-[1.8] whitespace-pre-wrap font-medium italic">
-            {notice.content}
-          </article>
-        </div>
-
-        <div className="pt-10 text-center border-t border-white/5">
-           <p className="text-gray-700 text-[9px] font-black uppercase tracking-[0.4em] italic opacity-50">End of Official Document</p>
         </div>
       </div>
     </div>
