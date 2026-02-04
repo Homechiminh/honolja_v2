@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // SEO용 추가
 import { supabase } from '../supabase';
 import { Region } from '../types'; 
 import type { Store } from '../types';
 import StoreCard from '../components/StoreCard';
 import { useAuth } from '../contexts/AuthContext'; 
-import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 interface StoreListProps {
   forcedRegion?: Region; 
@@ -15,7 +15,7 @@ const ITEMS_PER_PAGE = 9;
 
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
-  const { loading: authLoading } = useAuth(); 
+  const { initialized } = useAuth(); // authLoading 대신 initialized 사용
   
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,8 +34,21 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
    */
   const getCategoryDisplay = (cat: string | undefined) => {
     if (!cat || cat === 'all') return 'PREMIUM LIST';
-    if (cat === 'villa') return '숙소 / 풀빌라'; // 🔴 Villa -> 숙소/풀빌라 변경
+    if (cat === 'villa') return '숙소 / 풀빌라';
     return cat.replace('_', ' ').toUpperCase();
+  };
+
+  /**
+   * 🔴 SEO용 카테고리 한글 명칭
+   */
+  const getCategoryKR = (cat: string | undefined) => {
+    if (!cat || cat === 'all') return '전체 업소';
+    if (cat === 'massage') return '마사지 스파';
+    if (cat === 'barber') return '이발소';
+    if (cat === 'karaoke') return '가라오케';
+    if (cat === 'barclub') return '바 클럽';
+    if (cat === 'villa') return '풀빌라 숙소';
+    return cat;
   };
 
   const fetchStores = async () => {
@@ -49,12 +62,10 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
-      // 🔴 필터링 로직 수정
+      // 필터링 로직 유지
       if (category && category !== 'all') {
         query = query.eq('category', category);
       } else if (category === 'all') {
-        // 🔴 전체보기(all)일 때: 숙소, 차량, 가이드 등 제외하고 '업장'만 노출
-        // DB 카테고리 명칭에 맞게 'villa', 'car', 'guide' 등을 제외 리스트에 넣으세요.
         query = query.not('category', 'in', '("villa", "car", "guide")');
       }
 
@@ -77,11 +88,17 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     }
   };
 
-  useFetchGuard(fetchStores, [category, currentRegion, currentPage]);
+  // 🔴 useFetchGuard를 제거하고 useEffect로 직접 호출 (비로그인 접근 허용 핵심)
+  useEffect(() => {
+    if (initialized) {
+      fetchStores();
+    }
+  }, [initialized, category, currentRegion, currentPage]);
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  if (authLoading) return (
+  // 초기화 중일 때만 로딩 표시
+  if (!initialized) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
@@ -89,6 +106,15 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
+      {/* 🔴 SEO 최적화 메타 태그 */}
+      <Helmet>
+        <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 여행 정보</title>
+        <meta name="description" content={`${currentRegion} 지역 ${getCategoryKR(category)}의 실시간 정보와 검증된 업장 정보를 확인하세요. 베트남 호치민 밤문화 & 관광 No.1 가이드.`} />
+        <meta name="keywords" content={`베트남여행, 호치민여행, ${currentRegion}여행, 호치민 밤문화, 호치민 유흥, 호치민 ${getCategoryKR(category)}, 호치민 관광, 호치민 커뮤니티`} />
+        <meta property="og:title" content={`호놀자 | ${currentRegion} ${getCategoryKR(category)}`} />
+        <meta property="og:description" content="남성들을 위한 베트남 호치민 프리미엄 가이드" />
+      </Helmet>
+
       <div className="max-w-7xl mx-auto">
         <header className="mb-12 border-l-4 border-red-600 pl-6">
           <h2 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none">
