@@ -43,7 +43,6 @@ const PostEdit: React.FC = () => {
         return;
       }
 
-      // 🔴 임시 저장 데이터 확인
       const savedDraft = sessionStorage.getItem(`post_edit_draft_${id}`);
       if (savedDraft) {
         const confirmed = window.confirm("작성 중이던 임시 저장 내용이 있습니다. 불러올까요?");
