@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
 import { Helmet } from 'react-helmet-async';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -26,7 +26,7 @@ const MyPage: React.FC = () => {
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   const [generatedSerial, setGeneratedSerial] = useState('');
 
-  // 🔴 데이터 로드 로직
+  // 데이터 로드 로직
   const fetchMyData = async () => {
     if (!currentUser?.id) return;
     setDataLoading(true);
@@ -113,7 +113,6 @@ const MyPage: React.FC = () => {
     } catch (err) { alert('처리 중 오류가 발생했습니다.'); } finally { setLoading(false); }
   };
 
-  // 🔴 튕김 방지: 초기화가 완료될 때까지 대기
   if (!initialized || (authLoading && !currentUser)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center font-black italic text-red-600 animate-pulse uppercase tracking-widest">
@@ -122,17 +121,19 @@ const MyPage: React.FC = () => {
     );
   }
 
-  const nextLevelCriteria = { 1: { points: 100, reviews: 1 }, 2: { points: 300, reviews: 3 }, 3: { points: 1000, reviews: 8 } };
+  // 🔴 등업 조건 수치화
+  const nextLevelCriteria = { 
+    1: { points: 100, reviews: 1 }, 
+    2: { points: 300, reviews: 3 }, 
+    3: { points: 1000, reviews: 8 } 
+  };
   const currentCriteria = (nextLevelCriteria as any)[currentUser.level] || null;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-red-600/30 relative">
-      <Helmet>
-        <title>호놀자 | 마이페이지</title>
-      </Helmet>
+      <Helmet><title>호놀자 | 마이페이지</title></Helmet>
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
-        {/* 상단 프로필 섹션 (image_29b3ea.png 구성 반영) */}
         <div className="bg-[#0f0f0f] rounded-[3rem] p-10 md:p-14 border border-white/5 relative shadow-2xl overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
           <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
@@ -177,16 +178,34 @@ const MyPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 등업 목표 게이지 */}
+            {/* 🔴 [한국어/수치화 보강] 등업 목표 게이지 구역 */}
             {currentCriteria && (
-              <div className="w-full md:w-64 bg-black/40 p-8 rounded-[2.5rem] border border-white/5">
-                <p className="text-[10px] font-black text-yellow-500 uppercase mb-6 italic tracking-widest">NEXT GOAL: {LEVEL_NAMES[currentUser.level + 1]}</p>
-                <div className="space-y-4">
-                  <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
-                    <div className="bg-red-600 h-full transition-all" style={{ width: `${Math.min(100, (currentUser.points / currentCriteria.points) * 100)}%` }}></div>
+              <div className="w-full md:w-72 bg-black/60 p-8 rounded-[2.5rem] border border-white/5 shadow-inner">
+                <p className="text-[10px] font-black text-yellow-500 uppercase mb-8 italic tracking-widest text-center border-b border-white/5 pb-2">
+                  다음 목표: {LEVEL_NAMES[currentUser.level + 1]}
+                </p>
+                
+                <div className="space-y-6">
+                  {/* 포인트 진행도 */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[9px] font-black uppercase">
+                      <span className="text-gray-400">포인트 달성률</span>
+                      <span className="text-red-500">{currentUser.points} / {currentCriteria.points}P</span>
+                    </div>
+                    <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
+                      <div className="bg-red-600 h-full transition-all duration-1000" style={{ width: `${Math.min(100, (currentUser.points / currentCriteria.points) * 100)}%` }}></div>
+                    </div>
                   </div>
-                  <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
-                    <div className="bg-emerald-600 h-full transition-all" style={{ width: `${Math.min(100, ((currentUser.review_count || 0) / currentCriteria.reviews) * 100)}%` }}></div>
+
+                  {/* 후기 진행도 */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[9px] font-black uppercase">
+                      <span className="text-gray-400">후기 달성률</span>
+                      <span className="text-emerald-500">{currentUser.review_count || 0} / {currentCriteria.reviews}건</span>
+                    </div>
+                    <div className="h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
+                      <div className="bg-emerald-600 h-full transition-all duration-1000" style={{ width: `${Math.min(100, ((currentUser.review_count || 0) / currentCriteria.reviews) * 100)}%` }}></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -194,7 +213,6 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 활동 탭 구역 (한국어 텍스트 복구) */}
         <div className="bg-[#0f0f0f] rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <div className="flex bg-white/[0.02] p-2 gap-2">
             {(['activity', 'points', 'coupons'] as const).map(tab => (
@@ -255,7 +273,6 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 하단 버튼 구역 */}
         <div className="flex justify-between items-center px-10">
           <Link to="/" className="text-gray-400 hover:text-white text-[11px] font-black uppercase italic tracking-[0.3em] transition-all">← 메인으로 이동</Link>
           <div className="flex gap-4">
@@ -267,18 +284,15 @@ const MyPage: React.FC = () => {
         </div>
       </div>
 
-      {/* QR 모달 (한국어 가이드 적용) */}
+      {/* QR 모달 */}
       {selectedCoupon && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative bg-[#0a0a0a] border border-red-600/30 p-10 rounded-[3.5rem] max-w-[400px] w-full text-center">
-            
             <button onClick={() => setSelectedCoupon(null)} className="absolute top-8 right-8 w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-all group">
               <span className="text-gray-500 group-hover:text-white text-xl">✕</span>
             </button>
-
             <h3 className="text-2xl font-black text-white italic mb-2 uppercase tracking-tighter">Coupon Authentication</h3>
             <p className="text-gray-500 text-[10px] font-bold mb-8 uppercase tracking-widest italic">QR을 저장하면 해당 쿠폰은 즉시 사용 처리됩니다.</p>
-            
             <div ref={couponRef} className="bg-black p-8 rounded-[2rem] border border-white/5 mb-8 flex flex-col items-center">
               <p className="text-red-600 font-black italic text-sm mb-6 uppercase tracking-widest">{selectedCoupon.title}</p>
               <div className="bg-white p-4 rounded-3xl mb-6 shadow-2xl">
@@ -287,7 +301,6 @@ const MyPage: React.FC = () => {
               <p className="text-white font-black text-lg tracking-[0.2em] italic mb-2">{generatedSerial}</p>
               <p className="text-gray-600 text-[9px] font-bold uppercase italic tracking-widest">소유자: {currentUser.nickname}</p>
             </div>
-
             <button onClick={handleDownloadAndDispose} disabled={loading} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black text-xs uppercase italic shadow-xl hover:bg-red-500 transition-all">
               {loading ? '처리 중...' : 'QR 저장 및 사용완료'}
             </button>
