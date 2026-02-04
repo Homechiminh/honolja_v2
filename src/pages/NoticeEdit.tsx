@@ -17,14 +17,19 @@ const NoticeEdit: React.FC = () => {
     is_important: false
   });
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 + 임시 저장 데이터 확인
   useEffect(() => {
     const fetchNotice = async () => {
       if (!id || !initialized) return;
       try {
         const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
         if (error) throw error;
-        if (data) {
+
+        // 🔴 탭 전환 시 데이터 보존을 위해 세션 스토리지 체크
+        const savedDraft = sessionStorage.getItem(`notice_draft_${id}`);
+        if (savedDraft) {
+          setFormData(JSON.parse(savedDraft));
+        } else if (data) {
           setFormData({ 
             title: data.title, 
             content: data.content, 
@@ -41,6 +46,13 @@ const NoticeEdit: React.FC = () => {
     fetchNotice();
   }, [id, initialized, navigate]);
 
+  // 🔴 작성 중 내용 실시간 임시 저장 (탭 전환 대비)
+  useEffect(() => {
+    if (!loading && id) {
+      sessionStorage.setItem(`notice_draft_${id}`, JSON.stringify(formData));
+    }
+  }, [formData, loading, id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.content.trim()) {
@@ -50,22 +62,22 @@ const NoticeEdit: React.FC = () => {
 
     setUpdating(true);
     try {
-      // 🔴 데이터 업데이트 실행
       const { error } = await supabase
         .from('notices')
         .update({
           title: formData.title,
           content: formData.content,
           is_important: formData.is_important,
-          updated_at: new Date().toISOString() // 수정 시간 명시
+          updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
       if (error) throw error;
 
-      alert('성공적으로 수정되었습니다.');
+      // 성공 시 임시 저장 데이터 삭제
+      sessionStorage.removeItem(`notice_draft_${id}`);
       
-      // 🔴 수정 후 목록이 아닌 '해당 상세 페이지'로 이동하여 즉시 반영 확인
+      alert('성공적으로 수정되었습니다.');
       navigate(`/notice/${id}`, { replace: true });
       
     } catch (err: any) {
@@ -78,7 +90,7 @@ const NoticeEdit: React.FC = () => {
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
-      Loading HQ Archives...
+      데이터 로딩 중...
     </div>
   );
 
@@ -87,12 +99,12 @@ const NoticeEdit: React.FC = () => {
       <Helmet><title>공지사항 수정 | 관리자</title></Helmet>
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[2.5rem] p-10 md:p-14 border border-white/5 shadow-2xl">
         <h2 className="text-4xl font-black mb-10 uppercase tracking-tighter italic text-white">
-          Edit <span className="text-red-600">Bulletin</span>
+          공지사항 <span className="text-red-600">수정</span>
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-500">
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 font-black uppercase italic tracking-widest ml-4">Headline</label>
+            <label className="text-[10px] text-gray-500 font-black uppercase italic tracking-widest ml-4">제목</label>
             <input 
               className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all font-bold text-xl italic"
               value={formData.title} 
@@ -102,7 +114,7 @@ const NoticeEdit: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 font-black uppercase italic tracking-widest ml-4">Content Body</label>
+            <label className="text-[10px] text-gray-500 font-black uppercase italic tracking-widest ml-4">본문 내용</label>
             <textarea 
               className="w-full bg-black border border-white/10 rounded-[2rem] px-8 py-8 h-96 text-white focus:border-red-600 outline-none transition-all font-medium leading-relaxed resize-none italic"
               value={formData.content} 
@@ -120,24 +132,27 @@ const NoticeEdit: React.FC = () => {
               onChange={e => setFormData({...formData, is_important: e.target.checked})} 
             />
             <label htmlFor="important" className="text-white font-black italic cursor-pointer uppercase text-xs tracking-tighter">
-              Priority Override (중요 공지 설정)
+              중요 공지사항으로 설정
             </label>
           </div>
 
           <div className="flex gap-4 pt-6">
             <button 
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                sessionStorage.removeItem(`notice_draft_${id}`);
+                navigate(-1);
+              }}
               className="flex-1 py-5 bg-white/5 text-gray-400 font-black rounded-2xl hover:bg-white/10 transition-all uppercase italic text-xs"
             >
-              Cancel
+              취소
             </button>
             <button 
               type="submit" 
               disabled={updating}
               className="flex-[2] py-5 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 uppercase italic text-lg"
             >
-              {updating ? 'Updating...' : 'Publish Changes'}
+              {updating ? '수정 중...' : '수정 완료'}
             </button>
           </div>
         </form>
