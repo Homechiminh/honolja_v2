@@ -36,10 +36,13 @@ const StoreDetail: React.FC = () => {
     if (initialized) fetchStoreDetail();
   }, [id, initialized]);
 
-  const tagList = useMemo(() => {
+  // 🔴 에러 수정 완료: t와 tag에 명시적 타입 지정 및 tags 타입 가드
+  const tagList = useMemo<string[]>(() => {
     if (!store?.tags) return [];
-    if (Array.isArray(store.tags)) return store.tags;
-    if (typeof store.tags === 'string') return store.tags.split(',').map(t => t.trim()).filter(Boolean);
+    if (Array.isArray(store.tags)) return store.tags as string[];
+    if (typeof store.tags === 'string') {
+      return (store.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
     return [];
   }, [store?.tags]);
 
@@ -48,18 +51,25 @@ const StoreDetail: React.FC = () => {
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
-  const galleryImages = useMemo(() => {
+  const galleryImages = useMemo<string[]>(() => {
     if (!store) return [];
-    return store.promo_images && store.promo_images.length > 0 ? store.promo_images : [store.image_url];
+    return store.promo_images && store.promo_images.length > 0 
+      ? store.promo_images 
+      : [store.image_url].filter(Boolean) as string[];
   }, [store]);
 
   if (!initialized || loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse uppercase font-black">Syncing Intelligence...</div>
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse uppercase font-black tracking-widest">
+      Syncing Intelligence...
+    </div>
   );
 
   if (!store) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-center px-6">
-      <div><p className="text-white font-black italic uppercase text-2xl mb-6 tracking-tighter">Target Not Found</p><button onClick={() => navigate(-1)} className="text-red-600 font-bold uppercase text-xs border-b border-red-600 pb-1">Go Back</button></div>
+      <div>
+        <p className="text-white font-black italic uppercase text-2xl mb-6 tracking-tighter">Target Not Found</p>
+        <button onClick={() => navigate(-1)} className="text-red-600 font-bold uppercase text-xs border-b border-red-600 pb-1">Go Back</button>
+      </div>
     </div>
   );
 
@@ -78,20 +88,31 @@ const StoreDetail: React.FC = () => {
             </div>
             <div className="flex-grow pb-2 text-center md:text-left">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
-                <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic">Premium {store.category}</span>
-                {isAdmin && <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="bg-emerald-600 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase italic">Edit Mode</button>}
+                <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic shadow-lg">Premium {store.category}</span>
+                {isAdmin && (
+                  <button 
+                    onClick={() => navigate(`/admin/edit-store/${store.id}`)} 
+                    className="bg-emerald-600 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase italic shadow-lg hover:bg-emerald-500 transition-colors"
+                  >
+                    Edit Mode
+                  </button>
+                )}
               </div>
               <h1 className="text-3xl md:text-6xl font-black text-white mb-4 tracking-tighter italic leading-none uppercase break-keep">{store.name}</h1>
               
-              {/* 태그 렌더링 */}
+              {/* 🔴 에러 수정 완료: tag와 i에 타입 지정 */}
               {tagList.length > 0 && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-3 gap-y-1 mb-4">
-                  {tagList.map((tag, i) => (
+                  {tagList.map((tag: string, i: number) => (
                     <span key={i} className="text-red-500 text-xs md:text-sm font-black italic">#{tag}</span>
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-center md:justify-start space-x-2 text-white font-black italic"><span className="text-yellow-500 text-2xl">★</span><span className="text-2xl tracking-tighter">{store.rating?.toFixed(1)}</span></div>
+
+              <div className="flex items-center justify-center md:justify-start space-x-2 text-white font-black italic">
+                <span className="text-yellow-500 text-2xl">★</span>
+                <span className="text-2xl tracking-tighter">{store.rating?.toFixed(1) || "4.5"}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -104,14 +125,14 @@ const StoreDetail: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-16">
             
-            {/* 1. 이미지 갤러리 */}
+            {/* Gallery */}
             <section>
               <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
                 Interior Gallery
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                {galleryImages.map((img, i) => (
+                {galleryImages.map((img: string, i: number) => (
                   <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[2rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all flex items-center justify-center">
@@ -122,32 +143,47 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
-            {/* 2. 제휴 혜택 */}
+            {/* Benefits */}
             <section className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-[2.5rem] p-8 md:p-10 border border-red-600/20 shadow-2xl">
               <div className="flex items-center space-x-4 mb-8">
-                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg"><svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg></div>
+                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
+                </div>
                 <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase whitespace-nowrap">호놀자 제휴 혜택</h3>
               </div>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(store.benefits && store.benefits.length > 0 ? store.benefits : ["호놀자 특별 할인가 제공", "예약 대기 최소화"]).map((benefit, i) => (
-                  <li key={i} className="flex items-center space-x-3 bg-white/[0.03] p-5 rounded-2xl border border-white/5 hover:bg-red-600/5 transition-colors"><div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div><span className="text-slate-300 font-bold italic text-sm">{benefit}</span></li>
+                {(store.benefits && store.benefits.length > 0 ? store.benefits : ["호놀자 특별 할인가 제공", "예약 대기 시간 최소화"]).map((benefit: string, i: number) => (
+                  <li key={i} className="flex items-center space-x-3 bg-white/[0.03] p-5 rounded-2xl border border-white/5 hover:bg-red-600/5 transition-colors">
+                    <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                    <span className="text-slate-300 font-bold italic text-sm">{benefit}</span>
+                  </li>
                 ))}
               </ul>
             </section>
 
-            {/* 3. 상세 설명 (모바일 줄바꿈 최적화) */}
+            {/* Description */}
             <section>
-              <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center"><div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>Information</h3>
+              <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
+                <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
+                Information
+              </h3>
               <div className="bg-[#0f0f0f] rounded-[2rem] p-8 border border-white/5">
-                <p className="text-slate-400 text-base md:text-lg leading-[1.8] font-medium whitespace-pre-line break-keep italic">{store.description}</p>
+                <p className="text-slate-400 text-base md:text-lg leading-[1.8] font-medium whitespace-pre-line break-keep italic">
+                  {store.description || "상세 정보가 등록되지 않았습니다."}
+                </p>
               </div>
             </section>
 
-            {/* 4. 위치 */}
+            {/* Location */}
             <section>
-              <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center"><div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>Location</h3>
+              <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
+                <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
+                Location
+              </h3>
               <div className="bg-[#0f0f0f] rounded-[2.5rem] p-8 border border-white/5 space-y-6">
-                <div className="bg-black/50 px-6 py-4 rounded-xl border border-white/5"><p className="text-white font-black italic text-base break-all">📍 {store.address}</p></div>
+                <div className="bg-black/50 px-6 py-4 rounded-xl border border-white/5">
+                  <p className="text-white font-black italic text-base break-all leading-snug">📍 {store.address}</p>
+                </div>
                 <div className="h-[300px] md:h-[450px] bg-slate-900 rounded-[2rem] overflow-hidden border-2 border-white/5">
                   <iframe title="map" width="100%" height="100%" frameBorder="0" style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }} src={mapUrl} allowFullScreen></iframe>
                 </div>
@@ -155,28 +191,28 @@ const StoreDetail: React.FC = () => {
             </section>
           </div>
 
-          {/* 사이드바 예약 */}
+          {/* Sidebar */}
           <div className="space-y-6">
              <div className="sticky top-28 bg-white rounded-[2.5rem] p-10 text-black shadow-2xl">
                 <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic text-center">Exclusive Reservation</span>
                 <h4 className="text-2xl font-black mb-6 tracking-tighter italic uppercase leading-none text-center">실시간 예약 및 문의</h4>
                 <div className="space-y-3">
-                  <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block hover:opacity-90 active:scale-95 transition-all flex items-center justify-center italic text-sm">KAKAO TALK</a>
-                  <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:opacity-90 active:scale-95 transition-all flex items-center justify-center italic text-sm">TELEGRAM</a>
+                  <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block hover:opacity-90 active:scale-95 transition-all flex items-center justify-center italic text-sm shadow-md">KAKAO TALK</a>
+                  <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:opacity-90 active:scale-95 transition-all flex items-center justify-center italic text-sm shadow-md">TELEGRAM</a>
                 </div>
                 <p className="mt-8 text-[10px] text-slate-500 font-black uppercase text-center italic tracking-tighter break-keep leading-relaxed">
-                  호놀자 보고 연락했다고 말씀해주시면 제휴 혜택이 적용됩니다.
+                  호놀자 보고 연락했다고 말씀해주시면 제휴 혜택과 최상의 서비스를 제공해드립니다.
                 </p>
              </div>
           </div>
         </div>
       </div>
 
-      {/* 이미지 확대 모달 */}
+      {/* Modal */}
       {activeImgIndex !== null && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in">
           <button onClick={() => setActiveImgIndex(null)} className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all text-white text-2xl">✕</button>
-          <img src={galleryImages[activeImgIndex]} alt="Zoom" className="max-w-5xl w-full max-h-[70vh] object-contain rounded-3xl border border-white/10" />
+          <img src={galleryImages[activeImgIndex]} alt="Zoom" className="max-w-5xl w-full max-h-[70vh] object-contain rounded-3xl border border-white/10 shadow-2xl" />
           <div className="mt-10 flex gap-4">
             <button onClick={() => setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1))} className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-black italic uppercase text-xs hover:bg-white hover:text-black transition-all">Prev</button>
             <button onClick={() => setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0))} className="px-8 py-3 bg-red-600 rounded-2xl font-black italic uppercase text-xs shadow-xl active:scale-95 transition-all">Next</button>
