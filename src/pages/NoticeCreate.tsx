@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; 
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 
-const AdminNoticeCreate: React.FC = () => {
+const NoticeCreate: React.FC = () => {
   const navigate = useNavigate();
   
-  // 1. 전역 인증 상태 구독
-  const { currentUser, loading: authLoading } = useAuth();
+  // 1. 전역 인증 상태 구독 (initialized 추가)
+  const { currentUser, loading: authLoading, initialized } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -17,29 +18,28 @@ const AdminNoticeCreate: React.FC = () => {
     is_important: false
   });
 
-  // 2. 관리자 권한 2중 보안 가드
-  if (!authLoading && currentUser?.role !== UserRole.ADMIN) {
-    navigate('/', { replace: true });
-    return null;
-  }
+  // 2. 🔴 관리자 권한 보안 가드 (튕김 방지 핵심)
+  // 초기화가 완전히 끝난 후에 관리자가 아니면 홈으로 보냅니다.
+  useEffect(() => {
+    if (initialized) {
+      if (!currentUser || currentUser.role !== UserRole.ADMIN) {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [initialized, currentUser, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.content.trim()) return;
     
-    // 전송 시작 시 로딩 활성화
     setLoading(true);
     try {
-      // 🔴 데이터 전송 (방탄 구조: author_id를 확실히 확보한 상태에서 진행)
       const { error } = await supabase.from('notices').insert([{
         ...formData,
         author_id: currentUser?.id
       }]);
 
-      if (error) {
-        // 전송 중 서버 에러(406, 403 등) 발생 시 catch로 던짐
-        throw error;
-      }
+      if (error) throw error;
 
       alert('HQ Announcement가 성공적으로 브로드캐스팅되었습니다.');
       navigate('/notice');
@@ -47,15 +47,14 @@ const AdminNoticeCreate: React.FC = () => {
       console.error("Notice Transmission Error:", err.message);
       alert(`전송 실패: ${err.message}`);
     } finally {
-      // 🔴 핵심: 전송 성공/실패 여부와 상관없이 무조건 로딩 해제
       setLoading(false);
     }
   };
 
   const inputStyle = "w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-800 font-bold italic";
 
-  // 🔴 인증 확인 중일 때 로딩 UI (다른 페이지와 통일)
-  if (authLoading) return (
+  // 🔴 인증 확인 중이거나 로딩 중일 때 로딩 UI
+  if (!initialized || (authLoading && !currentUser)) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="text-red-600 font-black animate-pulse uppercase tracking-[0.3em] text-xl italic">
         ACCESSING HQ TERMINAL...
@@ -65,7 +64,13 @@ const AdminNoticeCreate: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl">
+      {/* 🔴 SEO 최적화 (관리자 페이지 노출 차단) */}
+      <Helmet>
+        <title>호놀자 관리자 | 공지사항 작성</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
+      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <header className="mb-12 border-l-8 border-red-600 pl-8">
           <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none">
             Issue <span className="text-red-600">Bulletin</span>
@@ -131,4 +136,4 @@ const AdminNoticeCreate: React.FC = () => {
   );
 };
 
-export default AdminNoticeCreate;
+export default NoticeCreate;
