@@ -34,18 +34,32 @@ import AdminManageStores from './pages/AdminManageStores';
 import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
+// 🔒 관리자 가드 (탭 전환 시 컴포넌트 언마운트 방지)
 const AdminRoute = () => {
   const { currentUser, initialized, loading } = useAuth();
-  // 아직 로딩 중이거나 초기화 전이면 기다림 (튕김 방지 핵심)
-  if (!initialized || loading) return <div className="min-h-screen bg-black" />;
-  // 확실히 관리자일 때만 통과, 아니면 홈으로
-  return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
+  
+  // 아예 처음 접속해서 정보가 아예 없을 때만 검은 화면을 보여줍니다.
+  if (!initialized && loading) return <div className="min-h-screen bg-black" />;
+  
+  // 🔴 핵심: 이미 관리자인 게 확인되었다면, 백그라운드 로딩 중이라도 화면을 지우지 않습니다.
+  // 이래야 탭 전환 시 작성 중인 데이터가 날아가지 않습니다.
+  if (currentUser?.role === 'ADMIN') return <Outlet />;
+  
+  // 로딩이 완전히 끝났는데 관리자가 아니라면 홈으로 보냅니다.
+  if (initialized && !loading && currentUser?.role !== 'ADMIN') return <Navigate to="/" replace />;
+  
+  return <div className="min-h-screen bg-black" />;
 };
 
+// 🔒 일반 회원 가드
 const PrivateRoute = () => {
   const { currentUser, initialized, loading } = useAuth();
-  if (!initialized || loading) return <div className="min-h-screen bg-black" />;
-  return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
+  
+  if (!initialized && loading) return <div className="min-h-screen bg-black" />;
+  if (currentUser) return <Outlet />;
+  if (initialized && !loading && !currentUser) return <Navigate to="/login" replace />;
+  
+  return <div className="min-h-screen bg-black" />;
 };
 
 function App() {
@@ -83,7 +97,7 @@ function App() {
                 <Route path="/vip-lounge" element={<VipLounge />} />
               </Route>
 
-              {/* 🔴 관리자 통합 가드 구역 (NoticeEdit, AdminDashboard 모두 포함) */}
+              {/* 관리자 전용 */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/create-store" element={<AdminStoreCreate />} />
