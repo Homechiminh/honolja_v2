@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // 🔴 SEO용 추가
 import { supabase } from '../supabase';
 import { Region } from '../types';
 import type { Store } from '../types';
@@ -16,10 +17,9 @@ const DanangHome: React.FC = () => {
 
   /**
    * 🔴 [방탄 fetch] 다낭 지역 데이터 로드
-   * 어떤 네트워크 거절(406)이나 지연이 발생해도 finally 블록이 로딩을 확실히 종료합니다.
    */
   const fetchDanangStores = async () => {
-    setLoading(true); // 로딩 시작
+    setLoading(true); 
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -28,7 +28,6 @@ const DanangHome: React.FC = () => {
         .limit(8);
 
       if (error) {
-        // 🔴 서버 에러 발생 시 즉시 catch 블록으로 이동
         throw error;
       }
 
@@ -37,21 +36,18 @@ const DanangHome: React.FC = () => {
       }
     } catch (err: any) {
       console.error("다낭 데이터 동기화 실패 (406 등):", err.message);
-      // 에러 시 빈 리스트로 초기화하여 안정성 확보
       setStores([]); 
     } finally {
-      // 🔴 핵심: 성공하든 실패하든 무조건 로딩 상태 해제
       setLoading(false);
     }
   };
 
   /**
    * 🔴 [데이터 가드 적용] 
-   * 인증 확인이 끝난 최적의 타이밍에 다낭 데이터를 호출합니다.
    */
   useFetchGuard(fetchDanangStores, []);
 
-  // 2. 전체 로딩 가드 (다낭 전용 블루 테마 스피너)
+  // 2. 전체 로딩 가드
   if (authLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -60,6 +56,20 @@ const DanangHome: React.FC = () => {
 
   return (
     <div className="w-full bg-[#050505] selection:bg-blue-600/30 font-sans">
+      {/* 🔴 SEO 최적화 Helmet 섹션 (다낭 핵심 키워드 팩) */}
+      <Helmet>
+        <title>호놀자 다낭 | 다낭 유흥 · 밤문화 · 마사지 · 가라오케 · 맛집 프리미엄 가이드</title>
+        <meta name="description" content="다낭 여행의 모든 즐거움! 다낭 마사지, 가라오케, 밤문화, 이발소, 맛집, 카페 등 호놀자가 직접 검증한 핫플레이스 정보와 실시간 후기를 확인하세요." />
+        <meta name="keywords" content="다낭여행, 다낭 유흥, 다낭 밤문화, 베트남여행, 베트남 여자, 다낭 가라오케, 다낭 마사지, 다낭 불건, 다낭 이발소, 다낭 클럽, 다낭 맛집, 다낭 카페, 다낭 자유여행" />
+        
+        {/* Open Graph (SNS 공유 최적화) */}
+        <meta property="og:title" content="DANANG NEW WORLD - 호놀자 다낭 프리미엄 가이드" />
+        <meta property="og:description" content="다낭 현지의 생생한 기밀 정보와 리얼 후기, 검증된 파트너사를 호놀자에서 만나보세요." />
+        <meta property="og:image" content="https://images.unsplash.com/photo-1559592442-741e6b89cc3b?q=80&w=1200" />
+        <meta property="og:url" content="https://honolja.com/danang" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+
       {/* Hero: 다낭 전용 비주얼 */}
       <section className="relative h-[60vh] md:h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-blue-900/20 to-transparent">
         <div className="absolute inset-0 z-0 opacity-40">
