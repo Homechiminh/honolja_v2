@@ -1,12 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { HelmetProvider, Helmet } from 'react-helmet-async'; // 🔴 SEO 라이브러리 추가
+import { HelmetProvider } from 'react-helmet-async';
 import { useAuth } from './contexts/AuthContext'; 
 import { Region } from './types'; 
 import './index.css';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
-
 import Home from './pages/Home';
 import DanangHome from './pages/DanangHome';
 import NhatrangHome from './pages/NhatrangHome';
@@ -24,14 +23,10 @@ import VipLounge from './pages/VipLounge';
 import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import PostEdit from './pages/PostEdit';
-
-// 공지사항 관련 페이지
 import Notice from './pages/Notice';
 import NoticeDetail from './pages/NoticeDetail'; 
 import NoticeEdit from './pages/NoticeEdit';
 import NoticeCreate from './pages/NoticeCreate';
-
-// 관리자 페이지
 import AdminDashboard from './pages/AdminDashboard';
 import AdminStoreCreate from './pages/AdminStoreCreate';
 import AdminManageUsers from './pages/AdminManageUsers';
@@ -39,49 +34,29 @@ import AdminManageStores from './pages/AdminManageStores';
 import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
-/**
- * 🔒 [가드 1] 관리자 전용
- */
 const AdminRoute = () => {
-  const { currentUser, initialized } = useAuth();
-  if (!initialized) return null; 
+  const { currentUser, initialized, loading } = useAuth();
+  // 아직 로딩 중이거나 초기화 전이면 기다림 (튕김 방지 핵심)
+  if (!initialized || loading) return <div className="min-h-screen bg-black" />;
+  // 확실히 관리자일 때만 통과, 아니면 홈으로
   return currentUser?.role === 'ADMIN' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
-/**
- * 🔒 [가드 2] 일반 로그인 유저 전용
- */
 const PrivateRoute = () => {
-  const { currentUser, initialized } = useAuth();
-  if (!initialized) return null;
+  const { currentUser, initialized, loading } = useAuth();
+  if (!initialized || loading) return <div className="min-h-screen bg-black" />;
   return currentUser ? <Outlet /> : <Navigate to="/login" replace />;
-};
-
-/**
- * 🔒 [가드 3] 특정 등급(Level) 이상 전용
- */
-const LevelRoute = ({ minLevel }: { minLevel: number }) => {
-  const { currentUser, initialized } = useAuth();
-  if (!initialized) return null;
-  return (currentUser?.level || 0) >= minLevel ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 function App() {
   return (
-    <HelmetProvider> {/* 🔴 SEO를 위한 전체 감싸기 */}
+    <HelmetProvider>
       <Router>
-        {/* 🔴 기본 SEO 설정 (각 페이지에서 덮어쓰기 가능) */}
-        <Helmet>
-          <title>호놀자 | 호치민 여행 & 밤문화 정보</title>
-          <meta name="description" content="베트남 호치민 밤문화, 유흥, 커뮤니티 및 숙소 예약 정보 NO.1" />
-          <meta name="keywords" content="베트남여행, 호치민여행, 호치민 밤문화, 호치민 유흥, 호치민여자, 호치민 관광, 호치민 커뮤니티" />
-        </Helmet>
-
-        <div className="min-h-screen bg-[#050505] flex flex-col selection:bg-red-600/30 font-sans">
+        <div className="min-h-screen bg-[#050505] flex flex-col font-sans text-white">
           <Header />
-          
           <main className="flex-grow pt-[80px]">
             <Routes>
+              {/* 공개 페이지 */}
               <Route path="/" element={<Home />} />
               <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
               <Route path="/danang" element={<DanangHome />} />
@@ -91,33 +66,24 @@ function App() {
               <Route path="/booking" element={<Booking />} />
               <Route path="/partnership" element={<Partnership />} />
               <Route path="/policies" element={<Policies />} />
-              
               <Route path="/community" element={<Community />} />
-              
-              {/* 공지사항 라우트 */}
               <Route path="/notice" element={<Notice />} />
               <Route path="/notice/:id" element={<NoticeDetail />} />
-
               <Route path="/store/:id" element={<StoreDetail />} />
               <Route path="/post/:id" element={<PostDetail />} />
-              
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
-              {/* 🔒 인증 필요 구역 */}
+              {/* 일반 유저 전용 */}
               <Route element={<PrivateRoute />}>
                 <Route path="/mypage" element={<MyPage />} />
                 <Route path="/coupon-shop" element={<CouponShop />} />
                 <Route path="/community/create" element={<CreatePost />} />
                 <Route path="/post/edit/:id" element={<PostEdit />} />
-              </Route>
-
-              {/* 🔒 레벨 필요 구역 */}
-              <Route element={<LevelRoute minLevel={3} />}>
                 <Route path="/vip-lounge" element={<VipLounge />} />
               </Route>
 
-              {/* 🔒 관리자 전용 구역 */}
+              {/* 🔴 관리자 통합 가드 구역 (NoticeEdit, AdminDashboard 모두 포함) */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/create-store" element={<AdminStoreCreate />} />
@@ -132,7 +98,6 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
-          
           <Footer />
         </div>
       </Router>
