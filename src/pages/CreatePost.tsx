@@ -27,23 +27,18 @@ const CreatePost: React.FC = () => {
     if (initialized) {
       const savedDraft = sessionStorage.getItem('post_create_draft');
       if (savedDraft) {
-        const confirmed = window.confirm("작성 중이던 게시글이 있습니다. 불러올까요?");
-        if (confirmed) {
-          const data = JSON.parse(savedDraft);
-          setCategory(data.category || 'free');
-          setSubCategory(data.subCategory || '시크릿 꿀정보');
-          setTitle(data.title || '');
-          setContent(data.content || '');
-          setSelectedStoreId(data.selectedStoreId || '');
-          setLinkUrl(data.linkUrl || '');
-        } else {
-          sessionStorage.removeItem('post_create_draft');
-        }
+        const data = JSON.parse(savedDraft);
+        setCategory(data.category || 'free');
+        setSubCategory(data.subCategory || '시크릿 꿀정보');
+        setTitle(data.title || '');
+        setContent(data.content || '');
+        setSelectedStoreId(data.selectedStoreId || '');
+        setLinkUrl(data.linkUrl || '');
       }
     }
   }, [initialized]);
 
-  // 🔴 2. 실시간 자동 저장 (탭 전환 대비)
+  // 🔴 2. 실시간 자동 저장 (탭 전환/새로고침 대비)
   useEffect(() => {
     if (initialized) {
       const draft = { category, subCategory, title, content, selectedStoreId, linkUrl };
@@ -84,7 +79,7 @@ const CreatePost: React.FC = () => {
     if (!title.trim() || !content.trim()) return alert('제목과 내용을 입력해주세요.');
     
     if (isReviewAction) {
-      if (content.length < 50) return alert('🚨 업소 후기 최소 50자 이상 필수!');
+      if (content.length < 50) return alert('🚨 업소 후기는 최소 50자 이상 작성해야 합니다.');
       if (!selectedStoreId) return alert('🚨 대상 업소를 선택해주세요.');
     }
 
@@ -104,14 +99,15 @@ const CreatePost: React.FC = () => {
 
       if (postError) throw postError;
 
-      // ✅ 등록 성공 시 임시 데이터 삭제
+      // 성공 시 임시 저장 삭제
       sessionStorage.removeItem('post_create_draft');
 
+      // 포인트 계산
       const photoBonus = imageUrls.length > 0 ? 10 : 0;
       const totalEarned = (isReviewAction ? 100 : 20) + photoBonus;
 
-      // 프로필 업데이트 및 레벨업 체크
-      const { data: profile } = await supabase.from('profiles')
+      // 프로필 데이터 갱신 및 레벨업 체크
+      const { data: profile, error: profileErr } = await supabase.from('profiles')
         .update({
           points: (currentUser.points || 0) + totalEarned,
           review_count: (currentUser.review_count || 0) + (isReviewAction ? 1 : 0)
@@ -119,33 +115,51 @@ const CreatePost: React.FC = () => {
         .eq('id', currentUser.id)
         .select().single();
 
+      if (profileErr) throw profileErr;
+
+      // 포인트 내역 기록
       await supabase.from('point_history').insert([{ 
         user_id: currentUser.id, 
         amount: totalEarned, 
-        reason: `${category === 'vip' ? `VIP ${subCategory}` : isReviewAction ? '업소후기' : '일반글'} 작성` 
+        reason: `${isReviewAction ? '업소후기' : '일반글'} 작성 포인트 적립` 
       }]);
 
-      // 🔴 3. 등업 및 쿠폰 자동 지급 로직
+      // 🔴 3. 등업 보상 및 쿠폰 자동 지급 로직
       if (profile) {
         let newLevel = profile.level;
         if (profile.points >= 1000 && profile.review_count >= 8) newLevel = 4;
         else if (profile.points >= 300 && profile.review_count >= 3) newLevel = 3;
         else if (profile.points >= 100 && profile.review_count >= 1) newLevel = 2;
-        
+
         if (newLevel > profile.level) {
+          // DB에 신규 레벨 업데이트
           await supabase.from('profiles').update({ level: newLevel }).eq('id', currentUser.id);
           
-          // 쿠폰 지급
-          const couponName = `Lv.${newLevel} 등업 축하 쿠폰`;
-          const couponAmount = newLevel === 4 ? 30000 : newLevel === 3 ? 10000 : 5000;
-          await supabase.from('coupons').insert([{
-            user_id: currentUser.id,
-            name: couponName,
-            amount: couponAmount,
-            status: 'available'
-          }]);
-          
-          alert(`🎉 축하합니다! 등급이 Lv.${newLevel}로 상승하였으며 등업 축하 쿠폰이 지급되었습니다!`);
+          let rewardMsg = '';
+          const couponsToIssue = [];
+
+          if (newLevel === 2) {
+            rewardMsg = "방랑자 등급 달성 보상: 마사지 / 이발소 10% 할인 쿠폰 1매";
+            couponsToIssue.push({ user_id: currentUser.id, name: 'Lv.2 방랑자 등업 보상: 마사지/이발소 10% 할인 쿠폰', status: 'available' });
+          } else if (newLevel === 3) {
+            rewardMsg = "베테랑 등급 달성 보상: 가라오케 10% 할인 쿠폰 1매";
+            couponsToIssue.push({ user_id: currentUser.id, name: 'Lv.3 베테랑 등업 보상: 가라오케 10% 할인 쿠폰', status: 'available' });
+          } else if (newLevel === 4) {
+            rewardMsg = "VIP 등급 달성 보상: 마사지 90분 무료 이용권 1매 + 전 제휴업장 10% 할인 쿠폰 3매 + 최우선 예약 케어";
+            // 마사지 90분 무료권 1매
+            couponsToIssue.push({ user_id: currentUser.id, name: 'Lv.4 VIP 등업 보상: 마사지 90분 무료 이용권', status: 'available' });
+            // 전 제휴업장 10% 할인 쿠폰 3매 추가
+            for(let i=0; i<3; i++) {
+              couponsToIssue.push({ user_id: currentUser.id, name: 'Lv.4 VIP 등업 보상: 전 제휴업장 10% 할인 쿠폰', status: 'available' });
+            }
+          }
+
+          // 쿠폰 일괄 지급
+          if (couponsToIssue.length > 0) {
+            await supabase.from('coupons').insert(couponsToIssue);
+          }
+
+          alert(`🎉 축하합니다! 등급이 Lv.${newLevel}로 상승하였습니다!\n\n🎁 등업 보상:\n${rewardMsg}`);
         }
       }
 
@@ -161,11 +175,11 @@ const CreatePost: React.FC = () => {
   if (!initialized) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <Helmet><title>호놀자 | 게시글 작성</title></Helmet>
       <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[3rem] p-10 md:p-16 border border-white/5 shadow-2xl">
         <div className="flex justify-between items-center mb-10">
-          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Create <span className="text-red-600">Post</span></h2>
+          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">Create <span className="text-red-600">Post</span></h2>
           <span className="text-[10px] text-emerald-500 font-bold animate-pulse italic">● 실시간 자동 저장 중</span>
         </div>
         
@@ -203,15 +217,43 @@ const CreatePost: React.FC = () => {
               </div>
             )}
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white md:col-span-2 font-bold italic" />
-            <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="외부 링크 (선택)" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white" />
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">제목</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목을 입력하세요" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white font-bold italic focus:border-red-600 transition-all" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">외부 링크 (선택)</label>
+              <input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="URL" className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white focus:border-red-600 transition-all" />
+            </div>
           </div>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요..." className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white h-80 leading-relaxed resize-none italic" />
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">본문 내용</label>
+            <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} placeholder="내용을 입력하세요..." className="w-full bg-[#111] border border-white/10 rounded-2xl px-6 py-4 text-white h-80 leading-relaxed resize-none italic focus:border-red-600 transition-all" />
+          </div>
           
+          <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 shadow-inner">
+            <label className="text-[10px] font-black text-gray-500 uppercase block mb-4 tracking-widest italic">사진 첨부 (선택: +10P 보너스)</label>
+            <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="w-full text-xs text-gray-500 file:bg-red-600 file:text-white file:rounded-lg file:px-4 file:py-2 file:border-none cursor-pointer file:font-black file:uppercase file:mr-4 hover:file:bg-red-700 transition-all" />
+            <div className="flex flex-wrap gap-4 mt-8">
+              {imageUrls.map((url, i) => (
+                <div key={i} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-white/10 group shadow-lg">
+                  <img src={url} className="w-full h-full object-cover" alt="첨부 이미지" />
+                  <button type="button" onClick={() => setImageUrls(imageUrls.filter(u => u !== url))} className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 font-black transition-opacity text-[10px]">삭제</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-4 pt-4">
-            <button type="button" onClick={() => { sessionStorage.removeItem('post_create_draft'); navigate(-1); }} className="flex-1 py-6 bg-white/5 text-gray-500 font-black rounded-[1.5rem] hover:bg-white/10 italic transition-all tracking-widest border border-white/5">취소</button>
-            <button type="submit" disabled={loading} className="flex-[2] py-6 bg-red-600 text-white font-black rounded-[1.5rem] shadow-2xl hover:bg-red-500 transition-all uppercase italic text-xl">등록 완료</button>
+            <button type="button" onClick={() => { sessionStorage.removeItem('post_create_draft'); navigate(-1); }} className="flex-1 py-6 bg-white/5 text-gray-500 font-black rounded-[1.5rem] hover:bg-white/10 italic transition-all tracking-widest border border-white/5">
+              취소
+            </button>
+            <button type="submit" disabled={loading} className="flex-[2] py-6 bg-red-600 text-white font-black rounded-[1.5rem] shadow-2xl hover:bg-red-500 transition-all uppercase italic text-xl">
+              {loading ? '등록 중...' : '등록 완료'}
+            </button>
           </div>
         </form>
       </div>
