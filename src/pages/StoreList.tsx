@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async'; // SEO용 추가
+import { Helmet } from 'react-helmet-async'; 
 import { supabase } from '../supabase';
 import { Region } from '../types'; 
 import type { Store } from '../types';
@@ -15,7 +15,7 @@ const ITEMS_PER_PAGE = 9;
 
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
-  const { initialized } = useAuth(); // authLoading 대신 initialized 사용
+  const { initialized } = useAuth(); 
   
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   }, [category, currentRegion]);
 
   /**
-   * 🔴 카테고리 명칭 변환 함수
+   * 🔴 UI 출력용 카테고리 명칭
    */
   const getCategoryDisplay = (cat: string | undefined) => {
     if (!cat || cat === 'all') return 'PREMIUM LIST';
@@ -39,7 +39,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   };
 
   /**
-   * 🔴 SEO용 카테고리 한글 명칭
+   * 🔴 SEO 메타 태그용 카테고리 한글 명칭
    */
   const getCategoryKR = (cat: string | undefined) => {
     if (!cat || cat === 'all') return '전체 업소';
@@ -62,7 +62,6 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
-      // 필터링 로직 유지
       if (category && category !== 'all') {
         query = query.eq('category', category);
       } else if (category === 'all') {
@@ -88,7 +87,6 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     }
   };
 
-  // 🔴 useFetchGuard를 제거하고 useEffect로 직접 호출 (비로그인 접근 허용 핵심)
   useEffect(() => {
     if (initialized) {
       fetchStores();
@@ -97,7 +95,6 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  // 초기화 중일 때만 로딩 표시
   if (!initialized) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -106,13 +103,16 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      {/* 🔴 SEO 최적화 메타 태그 */}
+      {/* 🔴 SEO 최적화 메타 태그 (이발소, 바, 클럽 키워드 추가) */}
       <Helmet>
-        <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 여행 정보</title>
-        <meta name="description" content={`${currentRegion} 지역 ${getCategoryKR(category)}의 실시간 정보와 검증된 업장 정보를 확인하세요. 베트남 호치민 밤문화 & 관광 No.1 가이드.`} />
-        <meta name="keywords" content={`베트남여행, 호치민여행, ${currentRegion}여행, 호치민 밤문화, 호치민 유흥, 호치민 ${getCategoryKR(category)}, 호치민 관광, 호치민 커뮤니티`} />
-        <meta property="og:title" content={`호놀자 | ${currentRegion} ${getCategoryKR(category)}`} />
-        <meta property="og:description" content="남성들을 위한 베트남 호치민 프리미엄 가이드" />
+        <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 유흥 · 밤문화 · 이발소 · 클럽 가이드</title>
+        <meta name="description" content={`${currentRegion} ${getCategoryKR(category)}의 실시간 정보와 검증된 업장 정보를 확인하세요. 호치민 가라오케, 마사지, 이발소, 바, 클럽 등 베트남 밤문화 No.1 가이드.`} />
+        <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 이발소, 호치민 바, 호치민 클럽, ${currentRegion} ${getCategoryKR(category)}`} />
+        
+        {/* Open Graph (SNS 공유용) */}
+        <meta property="og:title" content={`호놀자 | ${currentRegion} ${getCategoryKR(category)} 프리미엄 가이드`} />
+        <meta property="og:description" content={`검증된 호치민 ${getCategoryKR(category)} 정보를 확인하고 실패 없는 여행을 계획하세요.`} />
+        <meta property="og:url" content={`https://honolja.com/stores/${category || 'all'}`} />
       </Helmet>
 
       <div className="max-w-7xl mx-auto">
