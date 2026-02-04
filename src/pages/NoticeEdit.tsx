@@ -17,19 +17,19 @@ const NoticeEdit: React.FC = () => {
     is_important: false
   });
 
-  // 초기 데이터 로드 + 임시 저장 데이터 확인
+  // 1. 초기 데이터 로드
   useEffect(() => {
     const fetchNotice = async () => {
       if (!id || !initialized) return;
       try {
-        const { data, error } = await supabase.from('notices').select('*').eq('id', id).single();
-        if (error) throw error;
+        const { data, error } = await supabase
+          .from('notices')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-        // 🔴 탭 전환 시 데이터 보존을 위해 세션 스토리지 체크
-        const savedDraft = sessionStorage.getItem(`notice_draft_${id}`);
-        if (savedDraft) {
-          setFormData(JSON.parse(savedDraft));
-        } else if (data) {
+        if (error) throw error;
+        if (data) {
           setFormData({ 
             title: data.title, 
             content: data.content, 
@@ -46,112 +46,80 @@ const NoticeEdit: React.FC = () => {
     fetchNotice();
   }, [id, initialized, navigate]);
 
-  // 🔴 작성 중 내용 실시간 임시 저장 (탭 전환 대비)
-  useEffect(() => {
-    if (!loading && id) {
-      sessionStorage.setItem(`notice_draft_${id}`, JSON.stringify(formData));
-    }
-  }, [formData, loading, id]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.content.trim()) {
-      alert('제목과 내용을 모두 입력해주세요.');
+      alert('제목과 내용을 입력해주세요.');
       return;
     }
 
     setUpdating(true);
     try {
+      // 🔴 데이터 업데이트 실행
       const { error } = await supabase
         .from('notices')
         .update({
           title: formData.title,
           content: formData.content,
           is_important: formData.is_important,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString() // 수정 시간 갱신
         })
         .eq('id', id);
 
       if (error) throw error;
 
-      // 성공 시 임시 저장 데이터 삭제
-      sessionStorage.removeItem(`notice_draft_${id}`);
-      
       alert('성공적으로 수정되었습니다.');
+      
+      // 🔴 핵심: 목록(/notice)이 아니라 수정한 상세 페이지로 이동하여 즉시 확인
       navigate(`/notice/${id}`, { replace: true });
       
     } catch (err: any) {
       console.error('Update Error:', err.message);
-      alert('오류가 발생했습니다: ' + err.message);
+      alert('수정 중 오류가 발생했습니다.');
     } finally {
       setUpdating(false);
     }
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-white uppercase italic tracking-widest">
-      데이터 로딩 중...
+    <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse text-red-600 uppercase italic tracking-widest">
+      Loading HQ Archives...
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans">
       <Helmet><title>공지사항 수정 | 관리자</title></Helmet>
-      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[2.5rem] p-10 md:p-14 border border-white/5 shadow-2xl">
-        <h2 className="text-4xl font-black mb-10 uppercase tracking-tighter italic text-white">
-          공지사항 <span className="text-red-600">수정</span>
+      <div className="max-w-4xl mx-auto bg-[#0f0f0f] rounded-[2rem] p-10 md:p-14 border border-white/5 shadow-2xl">
+        <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter italic text-white">
+          Edit <span className="text-red-600">Notice</span>
         </h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in duration-500">
-          <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 font-black uppercase italic tracking-widest ml-4">제목</label>
-            <input 
-              className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white focus:border-red-600 outline-none transition-all font-bold text-xl italic"
-              value={formData.title} 
-              onChange={e => setFormData({...formData, title: e.target.value})} 
-              placeholder="공지 제목을 입력하세요"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 font-black uppercase italic tracking-widest ml-4">본문 내용</label>
-            <textarea 
-              className="w-full bg-black border border-white/10 rounded-[2rem] px-8 py-8 h-96 text-white focus:border-red-600 outline-none transition-all font-medium leading-relaxed resize-none italic"
-              value={formData.content} 
-              onChange={e => setFormData({...formData, content: e.target.value})} 
-              placeholder="공지 내용을 입력하세요"
-            />
-          </div>
-
-          <div className="flex items-center gap-4 bg-white/5 p-6 rounded-2xl border border-white/5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <input 
+            className="w-full bg-black border border-white/10 rounded-xl px-6 py-4 outline-none focus:border-red-600 text-white font-bold italic"
+            value={formData.title} 
+            onChange={e => setFormData({...formData, title: e.target.value})} 
+            placeholder="제목"
+          />
+          <textarea 
+            className="w-full bg-black border border-white/10 rounded-xl px-6 py-4 h-96 outline-none focus:border-red-600 text-white leading-relaxed resize-none italic"
+            value={formData.content} 
+            onChange={e => setFormData({...formData, content: e.target.value})} 
+            placeholder="내용"
+          />
+          <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl">
             <input 
               type="checkbox" 
               id="important"
-              className="w-5 h-5 accent-red-600 cursor-pointer"
+              className="w-5 h-5 accent-red-600"
               checked={formData.is_important} 
               onChange={e => setFormData({...formData, is_important: e.target.checked})} 
             />
-            <label htmlFor="important" className="text-white font-black italic cursor-pointer uppercase text-xs tracking-tighter">
-              중요 공지사항으로 설정
-            </label>
+            <label htmlFor="important" className="text-sm font-bold text-gray-400 italic">중요 공지사항으로 설정</label>
           </div>
-
-          <div className="flex gap-4 pt-6">
-            <button 
-              type="button"
-              onClick={() => {
-                sessionStorage.removeItem(`notice_draft_${id}`);
-                navigate(-1);
-              }}
-              className="flex-1 py-5 bg-white/5 text-gray-400 font-black rounded-2xl hover:bg-white/10 transition-all uppercase italic text-xs"
-            >
-              취소
-            </button>
-            <button 
-              type="submit" 
-              disabled={updating}
-              className="flex-[2] py-5 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-900/20 uppercase italic text-lg"
-            >
+          <div className="flex gap-4 pt-4">
+            <button type="button" onClick={() => navigate(-1)} className="flex-1 py-4 bg-white/5 text-gray-500 font-black rounded-xl italic">취소</button>
+            <button type="submit" disabled={updating} className="flex-[2] py-4 bg-red-600 text-white font-black rounded-xl hover:bg-red-700 transition-all shadow-xl">
               {updating ? '수정 중...' : '수정 완료'}
             </button>
           </div>
