@@ -8,7 +8,7 @@ import StoreCard from '../components/StoreCard';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth(); 
+  const { currentUser, initialized } = useAuth();
   const { stores, loading: storesLoading } = useStores('all');
   
   const [latestPosts, setLatestPosts] = useState<any[]>([]);
@@ -18,11 +18,11 @@ const Home: React.FC = () => {
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
   const hotServiceStores = useMemo(() => {
-    return stores?.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5) || [];
+    return stores.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5);
   }, [stores]);
 
   const premiumHotStays = useMemo(() => {
-    return stores?.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2) || [];
+    return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
 
   useEffect(() => {
@@ -39,7 +39,6 @@ const Home: React.FC = () => {
         supabase.from('posts').select('*, author:profiles(nickname)').eq('category', 'vip').order('created_at', { ascending: false }).limit(6),
         supabase.from('notices').select('*').order('is_important', { ascending: false }).order('created_at', { ascending: false }).limit(6)
       ]);
-      
       if (postRes.data) setLatestPosts(postRes.data);
       if (vipRes.data) setLatestVipPosts(vipRes.data);
       if (noticeRes.data) setLatestNotices(noticeRes.data);
@@ -49,11 +48,7 @@ const Home: React.FC = () => {
   };
 
   useEffect(() => {
-    // 🔴 팁: initialized가 되면 즉시 데이터를 가져오되, 
-    // 이미 데이터가 있다면 다시 부르지 않게 최적화 가능하지만 현재는 정석대로 진행합니다.
-    if (initialized) {
-      fetchHomeData();
-    }
+    if (initialized) fetchHomeData();
   }, [initialized]);
 
   const handleVIPClick = (e: React.MouseEvent) => {
@@ -74,15 +69,7 @@ const Home: React.FC = () => {
     }
   };
 
-  // 🔴 초기화 중일 때 로딩 화면
-  if (!initialized) return (
-    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
-      <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <div className="text-red-600 font-black animate-pulse italic uppercase tracking-widest text-sm">
-        Initializing Ho Nolja...
-      </div>
-    </div>
-  );
+  if (!initialized) return null;
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
@@ -102,7 +89,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Hero 섹션 */}
+      {/* [Hero 섹션] 느낌표 간격 ml-2 및 Vivid Red 적용 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           호치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">놀자<span className="ml-2 md:ml-3">!</span></span>
@@ -123,7 +110,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 실시간 인기 업소 */}
+      {/* HOT 실시간 인기 업소 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -133,13 +120,11 @@ const Home: React.FC = () => {
           <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
-           hotServiceStores.length > 0 ? hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />) :
-           <p className="text-gray-500 italic col-span-full py-20 text-center">불러올 업소 정보가 없습니다.</p>}
+          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 섹션 */}
+      {/* SNS & 커뮤니티 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
@@ -161,12 +146,12 @@ const Home: React.FC = () => {
               <Link to="/community" className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="bg-[#111] rounded-2xl border border-white/5 divide-y divide-white/5 overflow-hidden shadow-2xl">
-              {latestPosts.length > 0 ? latestPosts.map(post => (
+              {latestPosts.map(post => (
                 <Link key={post.id} to={`/post/${post.id}`} className="flex justify-between items-center p-4 hover:bg-white/5 transition-all group">
                   <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-red-500 truncate text-slate-200">{post.title}</p></div>
                   <span className="text-red-600 text-[10px] font-black">+{post.likes || 0}</span>
                 </Link>
-              )) : <p className="p-4 text-xs text-gray-500 italic">게시글이 없습니다.</p>}
+              ))}
             </div>
           </div>
           <div>
@@ -175,12 +160,12 @@ const Home: React.FC = () => {
               <button onClick={handleVIPClick} className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</button>
             </div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
-              {latestVipPosts.length > 0 ? latestVipPosts.map(post => (
+              {latestVipPosts.map(post => (
                 <div key={post.id} onClick={(e) => handleVipPostClick(e, post.id)} className="flex justify-between items-center p-4 hover:bg-yellow-500/5 transition-all cursor-pointer group">
                   <div className="min-w-0 pr-4"><p className="text-sm font-bold group-hover:text-yellow-500 truncate text-slate-200">{post.title}</p></div>
                   <span className="text-[9px] font-black text-yellow-600 bg-yellow-600/10 px-1.5 py-0.5 rounded italic uppercase">VIP</span>
                 </div>
-              )) : <p className="p-4 text-xs text-gray-500 italic">VIP 게시글이 없습니다.</p>}
+              ))}
             </div>
           </div>
           <div>
@@ -189,15 +174,15 @@ const Home: React.FC = () => {
               <Link to="/notice" className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="space-y-3">
-              {latestNotices.length > 0 ? latestNotices.map(notice => (
+              {latestNotices.map(notice => (
                 <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl"><p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>{notice.is_important && '[필독] '}{notice.title}</p></Link>
-              )) : <p className="p-4 text-xs text-gray-500 italic">공지사항이 없습니다.</p>}
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* PREMIUM STAYS */}
+      {/* [섹션 4] PREMIUM STAYS - 이미지 잘림 해결 (배경 블러 + Contain 전략) */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -211,10 +196,12 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
             {storesLoading ? [1, 2].map(i => <div key={i} className="h-[200px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
-                <div key={store.id} className="block group w-full h-[200px] md:h-[260px] overflow-hidden rounded-[2.5rem] border border-white/10 relative shadow-2xl bg-black">
-                  <img src={store.image_url} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30" alt="bg" />
-                  <div className="w-full h-full flex items-center justify-center p-2 relative z-10 transform transition-transform duration-700 group-hover:scale-105">
-                    <StoreCard store={store} />
+                <div key={store.id} className="block group w-full h-[200px] md:h-[260px] overflow-hidden rounded-[2.5rem] border border-white/5 relative shadow-2xl">
+                  {/* 잘림 방지용 컨테이너: h-full 설정 및 StoreCard 내부 이미지 강제 Contain 유도 */}
+                  <div className="w-full h-full flex items-center justify-center bg-black/50">
+                    <div className="w-full h-full transform transition-transform duration-700 group-hover:scale-105">
+                      <StoreCard store={store} />
+                    </div>
                   </div>
                 </div>
               ))
