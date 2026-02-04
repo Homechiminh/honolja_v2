@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // 🔴 Link 제거 (에러 해결)
 import { supabase } from '../supabase';
 import { CategoryType, UserRole } from '../types'; 
 import type { Store } from '../types';
@@ -66,7 +66,7 @@ const AdminManageStores: React.FC = () => {
     }
   };
 
-  // 세션 확인 및 권한 가드
+  // 세션 확인 및 권한 가드 (튕김 방지)
   if (!initialized || (loading && stores.length === 0)) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -84,7 +84,7 @@ const AdminManageStores: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-orange-600/30">
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
         
-        {/* 🔴 상단 네비게이션 섹션 */}
+        {/* 🔴 상단 네비게이션 섹션 (한글 버튼들) */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
           <div className="flex items-center gap-6">
             <button 
