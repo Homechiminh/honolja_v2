@@ -23,13 +23,14 @@ const AdminStoreEdit: React.FC = () => {
     image_url: '',
     promo_images: [] as string[],
     rating: 4.5,
-    tags: '', // 문자열로 관리
+    tags: '', // 문자열로 관리 (쉼표 구분)
     benefits: '',
     kakao_url: '',
     telegram_url: '',
     is_hot: false
   });
 
+  // 튕김 방지 가드 및 권한 체크
   useEffect(() => {
     if (initialized) {
       if (!currentUser || currentUser.role !== UserRole.ADMIN) {
@@ -38,6 +39,7 @@ const AdminStoreEdit: React.FC = () => {
     }
   }, [initialized, currentUser, navigate]);
 
+  // 업소 데이터 호출
   const fetchStore = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -56,7 +58,7 @@ const AdminStoreEdit: React.FC = () => {
           image_url: data.image_url || '',
           promo_images: data.promo_images || [],
           rating: data.rating ?? 4.5,
-          // 🔴 배열로 저장된 태그를 쉼표 문자열로 변환하여 노출
+          // 배열 데이터를 쉼표 문자열로 변환하여 에디터에 표시
           tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
           benefits: Array.isArray(data.benefits) ? data.benefits.join(', ') : (data.benefits || ''),
           kakao_url: data.kakao_url || '',
@@ -74,6 +76,7 @@ const AdminStoreEdit: React.FC = () => {
 
   useFetchGuard(fetchStore, [id]);
 
+  // 이미지 다중 업로드
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -102,6 +105,7 @@ const AdminStoreEdit: React.FC = () => {
     }
   };
 
+  // 정보 수정 제출 (tags 배열 변환 포함)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdating(true);
@@ -115,7 +119,7 @@ const AdminStoreEdit: React.FC = () => {
         image_url: formData.image_url,
         promo_images: formData.promo_images,
         rating: Number(formData.rating),
-        // 🔴 문자열을 다시 배열로 변환하여 저장
+        // 다시 배열로 변환하여 저장
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
         kakao_url: formData.kakao_url,
@@ -137,7 +141,7 @@ const AdminStoreEdit: React.FC = () => {
 
   if (!initialized || loading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse font-black uppercase tracking-widest text-xl">
-      업소 데이터 분석 중...
+      정보 로딩 중...
     </div>
   );
 
@@ -145,7 +149,7 @@ const AdminStoreEdit: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-emerald-600/30 text-white">
       <div className="max-w-5xl mx-auto">
         
-        {/* 🔴 상단 네비게이션: 관리 페이지로 돌아가기 버튼 추가 */}
+        {/* 상단 네비게이션: 관리 페이지로 돌아가기 */}
         <button 
           onClick={() => navigate('/admin/manage-stores')}
           className="mb-8 flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all font-black uppercase italic text-sm group"
@@ -153,7 +157,7 @@ const AdminStoreEdit: React.FC = () => {
           <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Management
+          목록으로 돌아가기
         </button>
 
         <div className="bg-[#111] rounded-[3.5rem] p-10 md:p-16 border border-white/5 shadow-2xl animate-in fade-in duration-700">
@@ -169,7 +173,7 @@ const AdminStoreEdit: React.FC = () => {
                 <p className="text-xl font-black text-emerald-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
                 <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
                   className={`w-20 h-10 rounded-full relative transition-all duration-500 ${formData.is_hot ? 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-800'}`}>
-                  <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_hot ? 'left-11' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_hot ? 'left-11 shadow-lg' : 'left-1'}`} />
                 </button>
               </div>
               <div className="bg-yellow-600/10 p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between shadow-inner">
@@ -192,7 +196,7 @@ const AdminStoreEdit: React.FC = () => {
                 </select>
               </div>
 
-              {/* 🔴 해시태그 수정란 추가 */}
+              {/* 해시태그 수정란 */}
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">#️⃣ 해시태그 (쉼표로 구분)</label>
                 <input 
@@ -204,7 +208,7 @@ const AdminStoreEdit: React.FC = () => {
               </div>
 
               <div className="md:col-span-2 space-y-4">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🖼️ 갤러리 이미지 관리 (대표 사진 선택)</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🖼️ 갤러리 이미지 관리</label>
                 <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner">
                   <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} 
                     className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-xs text-gray-500 file:mr-6 file:py-3 file:px-8 file:rounded-xl file:bg-emerald-600 file:text-white file:font-black file:uppercase file:border-none file:hover:bg-emerald-500 cursor-pointer shadow-xl" />
@@ -238,7 +242,7 @@ const AdminStoreEdit: React.FC = () => {
             <div className="flex gap-6 pt-10">
               <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-7 bg-white/5 text-gray-500 font-black text-xl rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all active:scale-95">취소</button>
               <button type="submit" disabled={updating} className="flex-[2] py-7 bg-emerald-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-emerald-900/40 uppercase italic hover:bg-emerald-500 active:scale-95 transition-all">
-                {updating ? '데이터 전송 중...' : '수정 완료'}
+                {updating ? '처리 중...' : '정보 수정 완료'}
               </button>
             </div>
           </form>
