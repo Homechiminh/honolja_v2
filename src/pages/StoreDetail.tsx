@@ -36,7 +36,7 @@ const StoreDetail: React.FC = () => {
     if (initialized) fetchStoreDetail();
   }, [id, initialized]);
 
-  // 🔴 에러 수정 완료: t와 tag에 명시적 타입 지정 및 tags 타입 가드
+  // 태그 리스트 변환 로직
   const tagList = useMemo<string[]>(() => {
     if (!store?.tags) return [];
     if (Array.isArray(store.tags)) return store.tags as string[];
@@ -46,17 +46,35 @@ const StoreDetail: React.FC = () => {
     return [];
   }, [store?.tags]);
 
+  // 구글 지도 URL 생성
   const mapUrl = useMemo(() => {
     if (!store?.address) return "";
     return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }, [store?.address]);
 
+  // 갤러리 이미지 추출
   const galleryImages = useMemo<string[]>(() => {
     if (!store) return [];
     return store.promo_images && store.promo_images.length > 0 
       ? store.promo_images 
       : [store.image_url].filter(Boolean) as string[];
   }, [store]);
+
+  // 🔴 SEO용 카테고리 한글 변환 (맛집, 카페 포함)
+  const getCategoryKR = (cat: string) => {
+    const mapping: {[key: string]: string} = {
+      massage: '마사지 스파',
+      barber: '이발소',
+      karaoke: '가라오케',
+      barclub: '바 클럽',
+      villa: '풀빌라 숙소',
+      restaurant: '호치민 맛집',
+      cafe: '호치민 카페',
+      tour: '투어 서비스',
+      vehicle: '차량 렌트'
+    };
+    return mapping[cat] || cat;
+  };
 
   if (!initialized || loading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center text-red-600 italic animate-pulse uppercase font-black tracking-widest">
@@ -75,7 +93,18 @@ const StoreDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] font-sans selection:bg-red-600/30 text-white overflow-x-hidden">
-      <Helmet><title>호놀자 | {store.name} - 호치민 {store.category}</title></Helmet>
+      {/* 🔴 SEO 최적화 Helmet 섹션 */}
+      <Helmet>
+        <title>호놀자 | {store.name} - 호치민 {getCategoryKR(store.category)} 추천 및 후기</title>
+        <meta name="description" content={`${store.name} - 호치민 ${getCategoryKR(store.category)}의 위치, 가격, 예약 혜택 정보입니다. 호치민 맛집, 카페, 밤문화의 모든 정보를 호놀자에서 확인하세요.`} />
+        <meta name="keywords" content={`${store.name}, 호치민맛집, 호치민카페, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 이발소, 호치민 바, 호치민 클럽`} />
+        
+        <meta property="og:title" content={`${store.name} | 호치민 ${getCategoryKR(store.category)} - 호놀자`} />
+        <meta property="og:description" content={`검증된 호치민 프리미엄 업소 ${store.name}의 상세 정보와 특별 혜택을 확인하세요.`} />
+        <meta property="og:image" content={store.image_url} />
+        <meta property="og:url" content={`https://honolja.com/store/${store.id}`} />
+        <meta property="og:type" content="article" />
+      </Helmet>
 
       {/* Hero Header */}
       <div className="relative h-[40vh] md:h-[55vh] w-full bg-black">
@@ -100,7 +129,6 @@ const StoreDetail: React.FC = () => {
               </div>
               <h1 className="text-3xl md:text-6xl font-black text-white mb-4 tracking-tighter italic leading-none uppercase break-keep">{store.name}</h1>
               
-              {/* 🔴 에러 수정 완료: tag와 i에 타입 지정 */}
               {tagList.length > 0 && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-3 gap-y-1 mb-4">
                   {tagList.map((tag: string, i: number) => (
