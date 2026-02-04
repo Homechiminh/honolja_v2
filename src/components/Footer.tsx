@@ -59,15 +59,16 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-3">
             <h4 className="text-white font-black text-[13px] mb-8 tracking-[0.2em] uppercase italic">Support</h4>
             <ul className="space-y-4 text-gray-500 text-[14px] font-bold">
-              <li className="hover:text-white transition-colors cursor-pointer">공지사항</li>
+              {/* 🔴 공지사항 링크 연결 */}
+              <li className="hover:text-white transition-colors">
+                <Link to="/notice">공지사항</Link>
+              </li>
               <li className="hover:text-white transition-colors">
                 <Link to="/booking">투어 및 가이드</Link>
               </li>
-              {/* 🔴 광고 및 제휴문의 연결 */}
               <li className="text-red-600 hover:text-red-500 transition-colors">
                 <Link to="/partnership">광고 및 제휴문의</Link>
               </li>
-              {/* 🔴 이용약관 및 정책 연결 */}
               <li className="hover:text-white transition-colors">
                 <Link to="/policies">이용약관 및 정책</Link>
               </li>
