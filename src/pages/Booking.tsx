@@ -1,25 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // 🔴 useEffect 추가
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import type { Store } from '../types';
 import { useAuth } from '../contexts/AuthContext'; 
-import { useFetchGuard } from '../hooks/useFetchGuard'; 
 
 const Booking: React.FC = () => {
   const navigate = useNavigate();
   
-  // 1. 전역 인증 정보 구독
-  const { loading: authLoading } = useAuth();
+  // 1. 전역 인증 정보에서 initialized를 가져옵니다. (로그인 여부와 상관없이 초기화 확인)
+  const { initialized } = useAuth();
 
   const [services, setServices] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
   /**
    * 🔴 [방탄 fetch] 서비스 데이터 호출 로직
-   * 406 에러나 세션 지연이 발생해도 finally 블록이 로딩 스피너를 확실히 해제합니다.
    */
   const fetchServices = async () => {
-    setLoading(true); // 로딩 시작
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -27,32 +25,32 @@ const Booking: React.FC = () => {
         .in('category', ['tour', 'vehicle', 'visa_guide'])
         .order('created_at', { ascending: false });
       
-      if (error) {
-        // 🔴 서버 거절(406) 등의 에러 발생 시 catch로 즉시 이동
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setServices(data as Store[]);
       }
     } catch (err: any) {
-      console.error("Travel Service Sync Failed (406 등):", err.message);
-      // 에러 발생 시 기존 리스트를 비워 잘못된 정보 노출 방지
+      console.error("Travel Service Sync Failed:", err.message);
       setServices([]); 
     } finally {
-      // 🔴 핵심: 성공하든 실패하든 무조건 로딩 상태 해제
       setLoading(false);
     }
   };
 
   /**
-   * 🔴 [데이터 가드 적용] 
-   * 인증 확인이 완료된 최적의 타이밍에 데이터를 안전하게 동기화합니다.
+   * 🔴 [핵심 수정] 
+   * useFetchGuard는 유저 세션을 체크하므로 비로그인 시 멈출 수 있습니다.
+   * 공용 페이지이므로 일반 useEffect를 사용하여 초기화 완료 시 바로 호출합니다.
    */
-  useFetchGuard(fetchServices, []);
+  useEffect(() => {
+    if (initialized) {
+      fetchServices();
+    }
+  }, [initialized]);
 
-  // 2. 전체 로딩 가드 (인증 확인 중일 때의 블랙아웃 방지)
-  if (authLoading || (loading && services.length === 0)) {
+  // 2. 전체 로딩 가드 (비로그인 유저도 initialized가 true가 되면 이 구간을 통과합니다)
+  if (!initialized || (loading && services.length === 0)) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-white font-black italic animate-pulse tracking-widest uppercase">
