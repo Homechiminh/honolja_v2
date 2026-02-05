@@ -12,20 +12,20 @@ const AdminStoreCreate: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     category: CategoryType.MASSAGE,
-    region: Region.HCMC,
+    region: Region.HCMC, // 기본값 설정됨
     address: '',
     description: '',
     image_url: '',
     promo_images: [] as string[],
     rating: 4.5,
-    tags: '', // 입력 시에는 문자열로 관리
-    benefits: '',
+    tags: '', 
+    benefits: '', // 🔴 제휴 혜택 필드 추가
+    price: '',    // 🔴 가격 필드 추가
     kakao_url: '',
     telegram_url: '',
     is_hot: false
   });
 
-  // 🔴 튕김 방지 가드 및 권한 체크
   useEffect(() => {
     if (initialized) {
       if (!currentUser || currentUser.role !== UserRole.ADMIN) {
@@ -34,9 +34,6 @@ const AdminStoreCreate: React.FC = () => {
     }
   }, [initialized, currentUser, navigate]);
 
-  /**
-   * 🔴 이미지 다중 업로드 로직
-   */
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -67,9 +64,6 @@ const AdminStoreCreate: React.FC = () => {
     }
   };
 
-  /**
-   * 🔴 새 업소 등록 제출 로직 (tags 변환 포함)
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return alert('관리자 세션이 만료되었습니다.');
@@ -80,8 +74,8 @@ const AdminStoreCreate: React.FC = () => {
       const payload = {
         ...formData,
         rating: Number(formData.rating),
-        // 콤마로 구분된 문자열을 배열로 정제하여 저장
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
+        // 🔴 제휴 혜택을 배열로 변환하여 저장
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
         author_id: currentUser.id
       };
@@ -117,8 +111,6 @@ const AdminStoreCreate: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
       <div className="max-w-5xl mx-auto">
-        
-        {/* 상단 네비게이션: 관리 페이지로 돌아가기 */}
         <button 
           onClick={() => navigate('/admin/manage-stores')}
           className="mb-8 flex items-center gap-2 text-gray-500 hover:text-white transition-all font-black uppercase italic text-sm group"
@@ -137,7 +129,6 @@ const AdminStoreCreate: React.FC = () => {
           </header>
           
           <form onSubmit={handleSubmit} className="space-y-10">
-            {/* 상단 핫플레이스/별점 설정 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between shadow-inner">
                 <p className="text-xl font-black text-red-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
@@ -155,11 +146,19 @@ const AdminStoreCreate: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* 기본 정보 */}
               <div className="space-y-2">
                 <label className={labelStyle}>🏢 업소/숙소 명</label>
                 <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className={inputStyle} placeholder="상호를 입력하세요" />
               </div>
+
+              {/* 🔴 지역 선택 추가 */}
+              <div className="space-y-2">
+                <label className={labelStyle}>📍 지역 선택</label>
+                <select value={formData.region} onChange={(e) => setFormData({...formData, region: e.target.value as any})} className={`${inputStyle} italic`}>
+                  {Object.values(Region).map(reg => <option key={reg} value={reg}>{reg.toUpperCase()}</option>)}
+                </select>
+              </div>
+
               <div className="space-y-2">
                 <label className={labelStyle}>📂 카테고리</label>
                 <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className={`${inputStyle} italic`}>
@@ -167,23 +166,28 @@ const AdminStoreCreate: React.FC = () => {
                 </select>
               </div>
 
-              {/* 🔴 해시태그 설정 부분 추가 */}
+              {/* 🔴 빌라 가격 입력란 (VILLA 일때만 노출) */}
+              {formData.category === CategoryType.VILLA && (
+                <div className="space-y-2">
+                  <label className={labelStyle}>💰 숙박 가격 (예: 200만동 / 400 USD)</label>
+                  <input value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className={inputStyle} placeholder="가격을 입력하세요" />
+                </div>
+              )}
+
               <div className="md:col-span-2 space-y-2">
                 <label className={labelStyle}>#️⃣ 해시태그 (쉼표로 구분)</label>
-                <input 
-                  value={formData.tags} 
-                  onChange={(e) => setFormData({...formData, tags: e.target.value})} 
-                  className={inputStyle} 
-                  placeholder="예: 마사지잘하는곳, 가성비, 고퀄리티" 
-                />
-                <p className="text-[10px] text-gray-600 ml-4 font-bold italic">* 콤마(,)를 찍어 여러 개를 입력할 수 있습니다.</p>
+                <input value={formData.tags} onChange={(e) => setFormData({...formData, tags: e.target.value})} className={inputStyle} placeholder="예: 마사지잘하는곳, 가성비" />
               </div>
 
-              {/* 이미지 업로드 */}
+              {/* 🔴 제휴 혜택 입력란 추가 */}
+              <div className="md:col-span-2 space-y-2">
+                <label className={labelStyle}>🎁 제휴 혜택 (쉼표로 구분)</label>
+                <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className={inputStyle} placeholder="예: 첫 방문 10% 할인, 무료 음료" />
+              </div>
+
               <div className="md:col-span-2 space-y-4">
                 <label className={labelStyle}>🖼️ 갤러리 사진 등록 (첫 장이 대표사진)</label>
                 <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className={`${inputStyle} text-sm file:mr-6 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer`} />
-                
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-6">
                   {formData.promo_images.map((url, idx) => (
                     <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
@@ -200,7 +204,6 @@ const AdminStoreCreate: React.FC = () => {
                 </div>
               </div>
 
-              {/* 나머지 입력 필드들 */}
               <div className="md:col-span-2 space-y-2">
                 <label className={labelStyle}>📍 상세 주소</label>
                 <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className={inputStyle} placeholder="주소를 입력하세요" />
@@ -218,8 +221,7 @@ const AdminStoreCreate: React.FC = () => {
 
             <div className="space-y-2">
               <label className={labelStyle}>📝 업소 설명</label>
-              {/* 모바일 가독성을 위해 line-height(leading)와 여백 조정 */}
-              <textarea rows={6} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className={`${inputStyle} h-48 resize-none py-6 leading-relaxed`} placeholder="업소의 상세 설명을 입력하세요. 모바일 화면을 위해 줄바꿈을 적절히 사용해 주세요." />
+              <textarea rows={6} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className={`${inputStyle} h-48 resize-none py-6 leading-relaxed`} placeholder="상세 설명을 입력하세요." />
             </div>
 
             <button type="submit" disabled={loading || !formData.image_url} className="w-full py-8 bg-red-600 text-white font-black text-2xl rounded-[2.5rem] hover:bg-red-700 transition-all uppercase italic shadow-2xl shadow-red-900/40 active:scale-[0.98] disabled:opacity-20">
