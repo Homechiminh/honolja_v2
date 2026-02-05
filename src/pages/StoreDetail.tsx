@@ -60,7 +60,7 @@ const StoreDetail: React.FC = () => {
       : [store.image_url].filter(Boolean) as string[];
   }, [store]);
 
-  // 🔴 SEO용 카테고리 한글 변환 (맛집, 카페 포함)
+  // SEO용 카테고리 한글 변환
   const getCategoryKR = (cat: string) => {
     const mapping: {[key: string]: string} = {
       massage: '마사지 스파',
@@ -93,17 +93,11 @@ const StoreDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] font-sans selection:bg-red-600/30 text-white overflow-x-hidden">
-      {/* 🔴 SEO 최적화 Helmet 섹션 */}
       <Helmet>
         <title>호놀자 | {store.name} - 호치민 {getCategoryKR(store.category)} 추천 및 후기</title>
-        <meta name="description" content={`${store.name} - 호치민 ${getCategoryKR(store.category)}의 위치, 가격, 예약 혜택 정보입니다. 호치민 맛집, 카페, 밤문화의 모든 정보를 호놀자에서 확인하세요.`} />
-        <meta name="keywords" content={`${store.name}, 호치민맛집, 호치민카페, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 이발소, 호치민 바, 호치민 클럽`} />
-        
+        <meta name="description" content={`${store.name} - 호치민 ${getCategoryKR(store.category)}의 위치, 가격, 예약 혜택 정보입니다.`} />
         <meta property="og:title" content={`${store.name} | 호치민 ${getCategoryKR(store.category)} - 호놀자`} />
-        <meta property="og:description" content={`검증된 호치민 프리미엄 업소 ${store.name}의 상세 정보와 특별 혜택을 확인하세요.`} />
         <meta property="og:image" content={store.image_url} />
-        <meta property="og:url" content={`https://honolja.com/store/${store.id}`} />
-        <meta property="og:type" content="article" />
       </Helmet>
 
       {/* Hero Header */}
@@ -119,16 +113,18 @@ const StoreDetail: React.FC = () => {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
                 <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest italic shadow-lg">Premium {store.category}</span>
                 {isAdmin && (
-                  <button 
-                    onClick={() => navigate(`/admin/edit-store/${store.id}`)} 
-                    className="bg-emerald-600 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase italic shadow-lg hover:bg-emerald-500 transition-colors"
-                  >
-                    Edit Mode
-                  </button>
+                  <button onClick={() => navigate(`/admin/edit-store/${store.id}`)} className="bg-emerald-600 text-white px-4 py-1 rounded-full text-[9px] font-black uppercase italic shadow-lg hover:bg-emerald-500 transition-colors">Edit Mode</button>
                 )}
               </div>
-              <h1 className="text-3xl md:text-6xl font-black text-white mb-4 tracking-tighter italic leading-none uppercase break-keep">{store.name}</h1>
+              <h1 className="text-3xl md:text-6xl font-black text-white mb-2 tracking-tighter italic leading-none uppercase break-keep">{store.name}</h1>
               
+              {/* 🔴 [수정] 빌라 카테고리일 때 가격 표시 (Hero 영역) */}
+              {store.category === 'villa' && store.price && (
+                <div className="mb-4 text-red-500 font-black text-xl md:text-2xl italic tracking-tighter uppercase">
+                   {store.price} <span className="text-xs md:text-sm opacity-80">/ Per Night</span>
+                </div>
+              )}
+
               {tagList.length > 0 && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-3 gap-y-1 mb-4">
                   {tagList.map((tag: string, i: number) => (
@@ -223,7 +219,16 @@ const StoreDetail: React.FC = () => {
           <div className="space-y-6">
              <div className="sticky top-28 bg-white rounded-[2.5rem] p-10 text-black shadow-2xl">
                 <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic text-center">Exclusive Reservation</span>
-                <h4 className="text-2xl font-black mb-6 tracking-tighter italic uppercase leading-none text-center">실시간 예약 및 문의</h4>
+                <h4 className="text-2xl font-black mb-4 tracking-tighter italic uppercase leading-none text-center">실시간 예약 및 문의</h4>
+                
+                {/* 🔴 [수정] 빌라 카테고리일 때 가격 표시 (사이드바 예약창 내) */}
+                {store.category === 'villa' && store.price && (
+                  <div className="mb-6 py-3 border-y border-gray-100 text-center">
+                    <p className="text-[10px] text-gray-400 font-black uppercase italic mb-1">Stay Price</p>
+                    <p className="text-2xl font-black text-red-600 italic tracking-tighter">{store.price}</p>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <a href={store.kakao_url || SNS_LINKS.kakao} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#FAE100] text-[#3C1E1E] rounded-2xl font-black text-center block hover:opacity-90 active:scale-95 transition-all flex items-center justify-center italic text-sm shadow-md">KAKAO TALK</a>
                   <a href={store.telegram_url || SNS_LINKS.telegram} target="_blank" rel="noreferrer" className="w-full py-5 bg-[#0088CC] text-white rounded-2xl font-black text-center block hover:opacity-90 active:scale-95 transition-all flex items-center justify-center italic text-sm shadow-md">TELEGRAM</a>
