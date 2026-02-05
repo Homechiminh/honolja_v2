@@ -61,7 +61,8 @@ export interface Store {
   image_url: string;
   image_index: number;
   tags: string[];
-  benefits?: string[];
+  benefits?: string[]; // 기존 유지
+  price?: string;      // 🔴 조언대로 가격 필드 추가
   address: string;
   is_hot: boolean;
   author_id: string;
@@ -75,15 +76,15 @@ export interface Store {
 export interface Post {
   id: string;
   author_id: string;
-  store_id?: string | null;     // 후기 작성 시 연결된 업소 ID
+  store_id?: string | null;      // 후기 작성 시 연결된 업소 ID
   title: string;
   content: string;
-  category: string;             // 'free', 'vip', 'review' 등
-  sub_category?: string;        // '실시간 현황' 등
-  view_count: number;           // 조회수 (DB 컬럼명 일치)
-  likes: number;                // 좋아요 수 (DB 컬럼명 일치)
-  image_urls?: string[];        // 첨부 이미지 배열 (text[])
-  link_url?: string | null;     // 외부 링크
+  category: string;              // 'free', 'vip', 'review' 등
+  sub_category?: string;         // '실시간 현황' 등
+  view_count: number;            // 조회수 (DB 컬럼명 일치)
+  likes: number;                 // 좋아요 수 (DB 컬럼명 일치)
+  image_urls?: string[];         // 첨부 이미지 배열 (text[])
+  link_url?: string | null;      // 외부 링크
   created_at: string;
   updated_at: string;
 }
@@ -103,8 +104,8 @@ export interface Notice {
   author_id: string;
   title: string;
   content: string;
-  is_important: boolean;        // 중요 공지 여부
-  views: number;                // 공지사항 조회수
+  is_important: boolean;         // 중요 공지 여부
+  views: number;                 // 공지사항 조회수
   created_at: string;
   updated_at: string;
 }
@@ -115,8 +116,8 @@ export interface Coupon {
   user_id: string;
   title: string;
   content: string;
-  is_used: boolean;             // 사용 여부 (필수 체크!)
-  expired_at: string;           // 만료 일시
+  is_used: boolean;              // 사용 여부 (필수 체크!)
+  expired_at: string;            // 만료 일시
   created_at: string;
 }
 
@@ -124,7 +125,7 @@ export interface Coupon {
 export interface PointHistory {
   id: string;
   user_id: string;
-  amount: number;               // 증감 수치 (예: -200)
-  reason: string;               // 사유 (예: 쿠폰 교환)
+  amount: number;                // 증감 수치 (예: -200)
+  reason: string;                // 사유 (예: 쿠폰 교환)
   created_at: string;
 }
