@@ -26,8 +26,6 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
 
   /**
    * 🔴 [스프라이트 엔진] 9구와 12구 이미지를 인덱스에 따라 자동 스위칭
-   * index 0~8: 9구 이미지 (3x3)
-   * index 9~20: 12구 이미지 (4x3)
    */
   const spriteConfig = useMemo(() => {
     const index = store.image_index || 0;
@@ -53,7 +51,7 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
       className="group relative bg-[#0a0a0a] rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/5 hover:border-red-600 transition-all duration-500 shadow-2xl block"
     >
       <div className="relative aspect-[3/4.2] overflow-hidden bg-black">
-        {/* 이미지 영역: 모델 타입은 스프라이트, 일반 타입은 단일 이미지 */}
+        {/* 이미지 영역 */}
         {isModelType ? (
           <div 
             className="absolute inset-0 w-full h-full transition-transform duration-1000 group-hover:scale-110"
@@ -83,21 +81,30 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
           )}
         </div>
 
-        {/* 별점 표시 (Tony님 수정안 반영) */}
+        {/* 별점 표시 */}
         <div className="absolute top-4 right-4 z-20 bg-black/50 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
           <span className="text-[10px] text-white font-black italic">
             ⭐ {(store.rating ?? 4.5).toFixed(1)}
           </span>
         </div>
 
-        {/* 하단 텍스트 정보 정보 */}
+        {/* 하단 텍스트 정보 */}
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7 z-30">
           <h3 className="text-lg md:text-2xl font-black text-white mb-1 tracking-tighter group-hover:text-red-500 transition-colors uppercase italic leading-none truncate">
             {store.name}
           </h3>
-          <p className="text-[10px] md:text-[11px] text-slate-400 line-clamp-1 mb-4 font-medium opacity-80 italic tracking-tight">
+          <p className="text-[10px] md:text-[11px] text-slate-400 line-clamp-1 mb-3 font-medium opacity-80 italic tracking-tight">
             {store.description || '호놀자가 보증하는 프리미엄 서비스입니다.'}
           </p>
+
+          {/* 🔴 빌라(VILLA) 카테고리일 때 가격 표시 추가 */}
+          {store.category === 'villa' && store.price && (
+            <div className="mb-4">
+              <span className="text-red-500 font-black text-sm md:text-lg italic tracking-tighter">
+                {store.price} <span className="text-[10px] md:text-xs opacity-70">/ 박</span>
+              </span>
+            </div>
+          )}
           
           <div className="flex justify-between items-center border-t border-white/10 pt-4 mt-2">
             <div className="flex flex-col">
