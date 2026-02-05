@@ -23,8 +23,9 @@ const AdminStoreEdit: React.FC = () => {
     image_url: '',
     promo_images: [] as string[],
     rating: 4.5,
-    tags: '', // 문자열로 관리 (쉼표 구분)
-    benefits: '',
+    tags: '', 
+    benefits: '', // 제휴 혜택
+    price: '',    // 🔴 가격 필드 추가
     kakao_url: '',
     telegram_url: '',
     is_hot: false
@@ -60,6 +61,7 @@ const AdminStoreEdit: React.FC = () => {
           rating: data.rating ?? 4.5,
           tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
           benefits: Array.isArray(data.benefits) ? data.benefits.join(', ') : (data.benefits || ''),
+          price: data.price || '', // 🔴 DB에서 가격 불러오기
           kakao_url: data.kakao_url || '',
           telegram_url: data.telegram_url || '',
           is_hot: data.is_hot ?? false
@@ -120,6 +122,7 @@ const AdminStoreEdit: React.FC = () => {
         rating: Number(formData.rating),
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
+        price: formData.price, // 🔴 가격 데이터 추가
         kakao_url: formData.kakao_url,
         telegram_url: formData.telegram_url,
         is_hot: formData.is_hot
@@ -147,7 +150,6 @@ const AdminStoreEdit: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-emerald-600/30 text-white">
       <div className="max-w-5xl mx-auto">
         
-        {/* 🔴 상단 네비게이션 섹션: 버튼 한글화 및 신규 추가 버튼 배치 */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
           <div className="flex items-center gap-6">
             <button 
@@ -204,12 +206,29 @@ const AdminStoreEdit: React.FC = () => {
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🏢 업소 명칭</label>
                 <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" />
               </div>
+
+              {/* 🔴 지역 선택 추가 (Create와 동일 스타일) */}
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📍 지역 선택</label>
+                <select value={formData.region} onChange={(e) => setFormData({...formData, region: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none font-bold shadow-inner italic">
+                  {Object.values(Region).map(reg => <option key={reg} value={reg}>{reg.toUpperCase()}</option>)}
+                </select>
+              </div>
+
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📂 카테고리</label>
                 <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none font-bold shadow-inner italic">
                   {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
                 </select>
               </div>
+
+              {/* 🔴 빌라 가격 입력 (카테고리가 VILLA일 때만) */}
+              {formData.category === CategoryType.VILLA && (
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">💰 숙박 가격 (예: 200만동 / 박)</label>
+                  <input value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" placeholder="가격을 입력하세요" />
+                </div>
+              )}
 
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">#️⃣ 해시태그 (쉼표로 구분)</label>
@@ -218,6 +237,17 @@ const AdminStoreEdit: React.FC = () => {
                   onChange={(e) => setFormData({...formData, tags: e.target.value})} 
                   className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" 
                   placeholder="태그1, 태그2, 태그3"
+                />
+              </div>
+
+              {/* 🔴 제휴 혜택 추가 (Create와 동일 스타일) */}
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🎁 제휴 혜택 (쉼표로 구분)</label>
+                <input 
+                  value={formData.benefits} 
+                  onChange={(e) => setFormData({...formData, benefits: e.target.value})} 
+                  className="w-full bg-black border border-white/10 rounded-2xl px-8 py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" 
+                  placeholder="혜택1, 혜택2"
                 />
               </div>
 
