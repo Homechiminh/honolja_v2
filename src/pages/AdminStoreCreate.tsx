@@ -12,15 +12,15 @@ const AdminStoreCreate: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     category: CategoryType.MASSAGE,
-    region: Region.HCMC, // 기본값 설정됨
+    region: Region.HCMC, 
     address: '',
     description: '',
     image_url: '',
     promo_images: [] as string[],
     rating: 4.5,
     tags: '', 
-    benefits: '', // 🔴 제휴 혜택 필드 추가
-    price: '',    // 🔴 가격 필드 추가
+    benefits: '', 
+    price: '',    
     kakao_url: '',
     telegram_url: '',
     is_hot: false
@@ -75,7 +75,6 @@ const AdminStoreCreate: React.FC = () => {
         ...formData,
         rating: Number(formData.rating),
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
-        // 🔴 제휴 혜택을 배열로 변환하여 저장
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
         author_id: currentUser.id
       };
@@ -151,7 +150,6 @@ const AdminStoreCreate: React.FC = () => {
                 <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className={inputStyle} placeholder="상호를 입력하세요" />
               </div>
 
-              {/* 🔴 지역 선택 추가 */}
               <div className="space-y-2">
                 <label className={labelStyle}>📍 지역 선택</label>
                 <select value={formData.region} onChange={(e) => setFormData({...formData, region: e.target.value as any})} className={`${inputStyle} italic`}>
@@ -166,8 +164,8 @@ const AdminStoreCreate: React.FC = () => {
                 </select>
               </div>
 
-              {/* 🔴 빌라 가격 입력란 (VILLA 일때만 노출) */}
-              {formData.category === CategoryType.VILLA && (
+              {/* 🔴 타입 에러 수정됨: (formData.category as string) */}
+              {(formData.category as string) === CategoryType.VILLA && (
                 <div className="space-y-2">
                   <label className={labelStyle}>💰 숙박 가격 (예: 200만동 / 400 USD)</label>
                   <input value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className={inputStyle} placeholder="가격을 입력하세요" />
@@ -179,7 +177,6 @@ const AdminStoreCreate: React.FC = () => {
                 <input value={formData.tags} onChange={(e) => setFormData({...formData, tags: e.target.value})} className={inputStyle} placeholder="예: 마사지잘하는곳, 가성비" />
               </div>
 
-              {/* 🔴 제휴 혜택 입력란 추가 */}
               <div className="md:col-span-2 space-y-2">
                 <label className={labelStyle}>🎁 제휴 혜택 (쉼표로 구분)</label>
                 <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className={inputStyle} placeholder="예: 첫 방문 10% 할인, 무료 음료" />
