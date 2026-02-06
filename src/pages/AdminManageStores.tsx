@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; // 🔴 Link 제거 (에러 해결)
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { CategoryType, UserRole } from '../types'; 
 import type { Store } from '../types';
@@ -14,9 +14,6 @@ const AdminManageStores: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
-  /**
-   * 🔴 업소 데이터베이스 동기화
-   */
   const fetchStores = useCallback(async () => {
     setLoading(true);
     try {
@@ -38,9 +35,6 @@ const AdminManageStores: React.FC = () => {
 
   useFetchGuard(fetchStores, [filterCategory]);
 
-  /**
-   * 🔴 업소 삭제 핸들러
-   */
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`[${name}] 업소를 정말로 삭제하시겠습니까? 관련 데이터가 모두 소멸됩니다.`)) return;
     try {
@@ -53,9 +47,6 @@ const AdminManageStores: React.FC = () => {
     }
   };
 
-  /**
-   * 🔴 인기 업소(HOT) 토글 핸들러
-   */
   const toggleHot = async (id: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase.from('stores').update({ is_hot: !currentStatus }).eq('id', id);
@@ -66,7 +57,6 @@ const AdminManageStores: React.FC = () => {
     }
   };
 
-  // 세션 확인 및 권한 가드 (튕김 방지)
   if (!initialized || (loading && stores.length === 0)) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -77,14 +67,12 @@ const AdminManageStores: React.FC = () => {
     );
   }
 
-  // 관리자 권한 확인
   if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white selection:bg-orange-600/30">
       <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
         
-        {/* 🔴 상단 네비게이션 섹션 (한글 버튼들) */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
           <div className="flex items-center gap-6">
             <button 
@@ -119,11 +107,10 @@ const AdminManageStores: React.FC = () => {
             </p>
           </div>
 
-          {/* 카테고리 필터 */}
           <select 
             value={filterCategory} 
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-[#111] border border-white/10 rounded-xl px-6 py-3 text-xs font-black uppercase italic outline-none focus:border-orange-600 transition-all cursor-pointer"
+            className="w-full md:w-auto bg-[#111] border border-white/10 rounded-xl px-6 py-3 text-xs font-black uppercase italic outline-none focus:border-orange-600 transition-all cursor-pointer"
           >
             <option value="all">전체 카테고리</option>
             {Object.values(CategoryType).map(cat => (
@@ -132,8 +119,10 @@ const AdminManageStores: React.FC = () => {
           </select>
         </header>
 
+        {/* 🔴 모바일/PC 통합 레이아웃 수정 */}
         <div className="bg-[#111] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl">
-          <div className="overflow-x-auto">
+          {/* PC용 테이블 (md 이상에서만 노출) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-white/5 border-b border-white/5 text-[10px] font-black uppercase text-gray-500 italic tracking-widest">
@@ -172,16 +161,17 @@ const AdminManageStores: React.FC = () => {
                       </button>
                     </td>
                     <td className="p-6 text-right">
-                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* 🔴 버튼 시인성 개선: opacity-100으로 상시 노출 및 배경 강조 */}
+                      <div className="flex justify-end gap-3 transition-opacity">
                         <button 
                           onClick={() => navigate(`/admin/edit-store/${store.id}`)}
-                          className="px-5 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase italic hover:bg-white hover:text-black transition-all"
+                          className="px-5 py-2 bg-emerald-600 text-white border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase italic hover:bg-emerald-500 transition-all shadow-lg"
                         >
                           수정
                         </button>
                         <button 
                           onClick={() => handleDelete(store.id, store.name)}
-                          className="px-5 py-2 bg-red-600/10 border border-red-600/20 text-red-500 rounded-xl text-[10px] font-black uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-lg"
+                          className="px-5 py-2 bg-red-600/20 border border-red-600/20 text-red-500 rounded-xl text-[10px] font-black uppercase italic hover:bg-red-600 hover:text-white transition-all shadow-lg"
                         >
                           삭제
                         </button>
@@ -191,6 +181,45 @@ const AdminManageStores: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* 🔴 모바일 전용 카드 레이아웃 (md 미만 노출) */}
+          <div className="md:hidden divide-y divide-white/5">
+            {stores.map((store) => (
+              <div key={store.id} className="p-6 space-y-6">
+                <div className="flex items-center gap-4">
+                  <img src={store.image_url} alt={store.name} className="w-20 h-20 rounded-2xl object-cover border border-white/10 shadow-lg" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <span className="text-orange-500 font-black text-[10px] uppercase italic">#{store.category}</span>
+                      <button 
+                        onClick={() => toggleHot(store.id, store.is_hot)}
+                        className={`w-12 h-6 rounded-full relative transition-all duration-500 ${store.is_hot ? 'bg-orange-600 shadow-[0_0_10px_rgba(234,88,12,0.4)]' : 'bg-gray-800'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${store.is_hot ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+                    <p className="font-black text-white text-xl italic uppercase tracking-tighter mt-1">{store.name}</p>
+                    <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest">{store.region}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => navigate(`/admin/edit-store/${store.id}`)}
+                    className="w-full py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase italic shadow-xl active:scale-95"
+                  >
+                    업소 수정
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(store.id, store.name)}
+                    className="w-full py-4 bg-red-600/20 text-red-500 border border-red-600/30 rounded-2xl text-xs font-black uppercase italic active:scale-95"
+                  >
+                    업소 삭제
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
           
           {stores.length === 0 && !loading && (
