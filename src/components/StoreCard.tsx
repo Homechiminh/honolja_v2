@@ -10,10 +10,8 @@ const SPRITE_9_URL = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1768906
 const SPRITE_12_URL = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1768960502/lucid-origin_9_asian_girls_with_well_dressed_such_as_Sequin_Dress_off_shoulder_dress_Slip_Dre-0_2_kuf0m2.jpg";
 
 const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
-  // 1. 모델 타입 여부 판별 (스프라이트 사용 카테고리)
   const isModelType = ['massage', 'barber', 'karaoke', 'barclub'].includes(store.category);
 
-  // 2. 카테고리 라벨 메모이제이션 (디자인 유지)
   const categoryLabel = useMemo(() => {
     switch (store.category) {
       case 'villa': return 'Premium Stays';
@@ -24,9 +22,6 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
     }
   }, [store.category]);
 
-  /**
-   * 🔴 [스프라이트 엔진] 9구와 12구 이미지를 인덱스에 따라 자동 스위칭
-   */
   const spriteConfig = useMemo(() => {
     const index = store.image_index || 0;
     if (index < 9) {
@@ -35,7 +30,6 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
     return { url: SPRITE_12_URL, cols: 4, rows: 3, size: '400% 300%', localIndex: index - 9 };
   }, [store.image_index]);
 
-  // 3. 배경 좌표 계산 (CSS % 방식)
   const backgroundPosition = useMemo(() => {
     const { cols, rows, localIndex } = spriteConfig;
     const col = localIndex % cols;
@@ -71,8 +65,8 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
           />
         )}
 
-        {/* 오버레이 그라데이션 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90"></div>
+        {/* 오버레이 그라데이션 - 텍스트 가독성을 위해 하단 블랙 농도 강화 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-95"></div>
         
         {/* HOT 배지 */}
         <div className="absolute top-4 left-4 z-20">
@@ -90,28 +84,32 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
 
         {/* 하단 텍스트 정보 */}
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7 z-30">
-          <h3 className="text-lg md:text-2xl font-black text-white mb-1 tracking-tighter group-hover:text-red-500 transition-colors uppercase italic leading-none truncate">
+          <h3 className="text-xl md:text-2xl font-black text-white mb-2 tracking-tighter group-hover:text-red-500 transition-colors uppercase italic leading-none truncate">
             {store.name}
           </h3>
-          <p className="text-[10px] md:text-[11px] text-slate-400 line-clamp-1 mb-3 font-medium opacity-80 italic tracking-tight">
+          
+          {/* ✅ 설명(핵심정보) 스타일 개선: 폰트 크기 키우고 흰색/볼드 처리하여 시인성 확보 */}
+          <p className="text-[11px] md:text-[13px] text-white line-clamp-1 mb-4 font-bold italic tracking-tight opacity-100">
             {store.description || '호놀자가 보증하는 프리미엄 서비스입니다.'}
           </p>
 
-          {/* 🔴 빌라(VILLA) 카테고리일 때 가격 표시 추가 */}
+          {/* 빌라(VILLA) 가격 표시 */}
           {store.category === 'villa' && store.price && (
             <div className="mb-4">
-              <span className="text-red-500 font-black text-sm md:text-lg italic tracking-tighter">
-                {store.price} <span className="text-[10px] md:text-xs opacity-70">/ 박</span>
+              <span className="text-red-500 font-black text-base md:text-xl italic tracking-tighter">
+                {store.price} <span className="text-[10px] md:text-xs opacity-70 text-white">/ 박</span>
               </span>
             </div>
           )}
           
-          <div className="flex justify-between items-center border-t border-white/10 pt-4 mt-2">
+          <div className="flex justify-between items-center border-t border-white/20 pt-4 mt-2">
             <div className="flex flex-col">
-              <span className="text-red-600 font-black text-[8px] uppercase italic tracking-[0.2em]">Verified Service</span>
-              <span className="text-white font-black italic text-[11px] uppercase tracking-tighter">{categoryLabel}</span>
+              {/* 🔴 "Verified Service" 삭제됨 */}
+              <span className="text-white font-black italic text-[12px] md:text-[13px] uppercase tracking-tighter">
+                {categoryLabel}
+              </span>
             </div>
-            <div className="bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-red-900/40 group-hover:bg-white group-hover:text-red-600 transition-all uppercase italic active:scale-95">
+            <div className="bg-red-600 text-white text-[10px] md:text-[11px] font-black px-4 py-2 rounded-xl shadow-lg shadow-red-900/40 group-hover:bg-white group-hover:text-red-600 transition-all uppercase italic active:scale-95">
               예약문의
             </div>
           </div>
