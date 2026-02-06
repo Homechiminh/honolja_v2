@@ -57,30 +57,33 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
 
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-95"></div>
         
-        {/* HOT 배지 */}
+        {/* 상단 배지 및 별점 */}
         <div className="absolute top-4 left-4 z-20">
           {store.is_hot && (
             <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse uppercase italic tracking-tighter">Hot</div>
           )}
         </div>
 
-        {/* 별점 표시 */}
         <div className="absolute top-4 right-4 z-20 bg-black/50 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
           <span className="text-[10px] text-white font-black italic">
             ⭐ {(store.rating ?? 4.5).toFixed(1)}
           </span>
         </div>
 
-        {/* 하단 텍스트 정보 */}
+        {/* 하단 정보 레이어 */}
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7 z-30">
-          <h3 className="text-xl md:text-2xl font-black text-white mb-2 tracking-tighter group-hover:text-red-500 transition-colors uppercase italic leading-none truncate">
+          
+          {/* ✅ 제목: 기본 빨간색 + 호버 시 흰색 글로우 효과 */}
+          <h3 className="text-xl md:text-2xl font-black text-red-500 mb-2 tracking-tighter uppercase italic leading-none truncate transition-all duration-300 group-hover:text-white group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">
             {store.name}
           </h3>
           
+          {/* 설명글: 흰색 볼드 */}
           <p className="text-[11px] md:text-[13px] text-white line-clamp-1 mb-4 font-bold italic tracking-tight opacity-100">
             {store.description || '호놀자가 보증하는 프리미엄 서비스입니다.'}
           </p>
 
+          {/* 빌라 전용 가격 표시 */}
           {store.category === 'villa' && store.price && (
             <div className="mb-4">
               <span className="text-red-500 font-black text-base md:text-xl italic tracking-tighter">
@@ -89,10 +92,10 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
             </div>
           )}
           
+          {/* 하단 라인: 제휴 마크 & 예약문의 버튼 */}
           <div className="flex justify-between items-center border-t border-white/20 pt-4 mt-2 gap-2">
-            {/* ✅ "호놀자 제휴" 박스/캡슐형 배지 디자인 */}
             <div className="flex-shrink-0">
-              <div className="border border-red-600/50 bg-red-600/10 px-2.5 py-1 rounded-full backdrop-blur-sm">
+              <div className="border border-red-600/50 bg-red-600/10 px-2.5 py-1 rounded-full backdrop-blur-sm shadow-[0_0_10px_rgba(220,38,38,0.1)]">
                 <span className="text-red-500 font-black italic text-[9px] md:text-[11px] uppercase tracking-tighter whitespace-nowrap">
                   호놀자 제휴
                 </span>
