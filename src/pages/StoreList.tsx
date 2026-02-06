@@ -11,17 +11,26 @@ interface StoreListProps {
   forcedRegion?: Region; 
 }
 
-const ITEMS_PER_PAGE = 9; 
-
 const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const { category } = useParams<{ category: string }>();
   const { initialized } = useAuth(); 
   
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  // ✅ PC에서는 16개, 모바일(1024px 미만)에서는 10개로 동적 설정
+  const getItemsPerPage = () => {
+    return window.innerWidth >= 1024 ? 16 : 10;
+  };
+  const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
+
+  useEffect(() => {
+    const handleResize = () => setItemsPerPage(getItemsPerPage());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const currentRegion = forcedRegion || Region.HCMC;
 
@@ -29,18 +38,12 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     setCurrentPage(1);
   }, [category, currentRegion]);
 
-  /**
-   * 🔴 UI 출력용 카테고리 명칭
-   */
   const getCategoryDisplay = (cat: string | undefined) => {
     if (!cat || cat === 'all') return 'PREMIUM LIST';
     if (cat === 'villa') return '숙소 / 풀빌라';
     return cat.replace('_', ' ').toUpperCase();
   };
 
-  /**
-   * 🔴 SEO 메타 태그용 카테고리 한글 명칭
-   */
   const getCategoryKR = (cat: string | undefined) => {
     if (!cat || cat === 'all') return '전체 업소';
     if (cat === 'massage') return '마사지 스파';
@@ -54,18 +57,20 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   const fetchStores = async () => {
     setLoading(true);
     try {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
       let query = supabase
         .from('stores')
         .select('*', { count: 'exact' })
         .eq('region', currentRegion); 
 
+      // ✅ 수정된 필터 로직: '전체보기'일 때 업장 카테고리만 포함 (villa, car, guide 제외)
       if (category && category !== 'all') {
         query = query.eq('category', category);
-      } else if (category === 'all') {
-        query = query.not('category', 'in', '("villa", "car", "guide")');
+      } else if (category === 'all' || !category) {
+        // 실제 업장 카테고리만 명시적으로 필터링
+        query = query.in('category', ['massage', 'barber', 'karaoke', 'barclub']);
       }
 
       const { data, error, count } = await query
@@ -91,9 +96,9 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
     if (initialized) {
       fetchStores();
     }
-  }, [initialized, category, currentRegion, currentPage]);
+  }, [initialized, category, currentRegion, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   if (!initialized) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -102,20 +107,17 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-red-600/30">
-      {/* 🔴 SEO 최적화 메타 태그 (이발소, 바, 클럽 키워드 추가) */}
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-6 font-sans selection:bg-red-600/30">
       <Helmet>
         <title>호놀자 | {currentRegion} {getCategoryKR(category)} - 호치민 유흥 · 밤문화 · 이발소 · 클럽 가이드</title>
         <meta name="description" content={`${currentRegion} ${getCategoryKR(category)}의 실시간 정보와 검증된 업장 정보를 확인하세요. 호치민 가라오케, 마사지, 이발소, 바, 클럽 등 베트남 밤문화 No.1 가이드.`} />
         <meta name="keywords" content={`호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 이발소, 호치민 바, 호치민 클럽, ${currentRegion} ${getCategoryKR(category)}`} />
-        
-        {/* Open Graph (SNS 공유용) */}
         <meta property="og:title" content={`호놀자 | ${currentRegion} ${getCategoryKR(category)} 프리미엄 가이드`} />
         <meta property="og:description" content={`검증된 호치민 ${getCategoryKR(category)} 정보를 확인하고 실패 없는 여행을 계획하세요.`} />
         <meta property="og:url" content={`https://honolja.com/stores/${category || 'all'}`} />
       </Helmet>
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1600px] mx-auto">
         <header className="mb-12 border-l-4 border-red-600 pl-6">
           <h2 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none">
             {currentRegion} 
@@ -140,7 +142,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 animate-in fade-in duration-700">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6 animate-in fade-in duration-700">
               {stores.map((store) => (
                 <StoreCard key={store.id} store={store} />
               ))}
@@ -196,7 +198,7 @@ const StoreList: React.FC<StoreListProps> = ({ forcedRegion }) => {
             
             <div className="mt-12 text-center">
                <p className="text-[10px] text-gray-700 font-black uppercase italic tracking-widest opacity-50">
-                 Total {totalCount} premium stores found in {currentRegion} sector
+                  Total {totalCount} premium stores found in {currentRegion} sector
                </p>
             </div>
           </>
