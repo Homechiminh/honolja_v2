@@ -12,16 +12,6 @@ const SPRITE_12_URL = "https://res.cloudinary.com/dtkfzuyew/image/upload/v176896
 const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
   const isModelType = ['massage', 'barber', 'karaoke', 'barclub'].includes(store.category);
 
-  const categoryLabel = useMemo(() => {
-    switch (store.category) {
-      case 'villa': return 'Premium Stays';
-      case 'vehicle': return 'Premium Vehicle';
-      case 'tour': return 'Premium Tour';
-      case 'visa_guide': return 'Travel Service';
-      default: return 'Premium Selection';
-    }
-  }, [store.category]);
-
   const spriteConfig = useMemo(() => {
     const index = store.image_index || 0;
     if (index < 9) {
@@ -65,7 +55,6 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
           />
         )}
 
-        {/* 오버레이 그라데이션 - 텍스트 가독성을 위해 하단 블랙 농도 강화 */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-95"></div>
         
         {/* HOT 배지 */}
@@ -88,12 +77,10 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
             {store.name}
           </h3>
           
-          {/* ✅ 설명(핵심정보) 스타일 개선: 폰트 크기 키우고 흰색/볼드 처리하여 시인성 확보 */}
           <p className="text-[11px] md:text-[13px] text-white line-clamp-1 mb-4 font-bold italic tracking-tight opacity-100">
             {store.description || '호놀자가 보증하는 프리미엄 서비스입니다.'}
           </p>
 
-          {/* 빌라(VILLA) 가격 표시 */}
           {store.category === 'villa' && store.price && (
             <div className="mb-4">
               <span className="text-red-500 font-black text-base md:text-xl italic tracking-tighter">
@@ -102,14 +89,17 @@ const StoreCard: React.FC<StoreCardProps> = ({ store }) => {
             </div>
           )}
           
-          <div className="flex justify-between items-center border-t border-white/20 pt-4 mt-2">
-            <div className="flex flex-col">
-              {/* 🔴 "Verified Service" 삭제됨 */}
-              <span className="text-white font-black italic text-[12px] md:text-[13px] uppercase tracking-tighter">
-                {categoryLabel}
-              </span>
+          <div className="flex justify-between items-center border-t border-white/20 pt-4 mt-2 gap-2">
+            {/* ✅ "호놀자 제휴" 박스/캡슐형 배지 디자인 */}
+            <div className="flex-shrink-0">
+              <div className="border border-red-600/50 bg-red-600/10 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                <span className="text-red-500 font-black italic text-[9px] md:text-[11px] uppercase tracking-tighter whitespace-nowrap">
+                  호놀자 제휴
+                </span>
+              </div>
             </div>
-            <div className="bg-red-600 text-white text-[10px] md:text-[11px] font-black px-4 py-2 rounded-xl shadow-lg shadow-red-900/40 group-hover:bg-white group-hover:text-red-600 transition-all uppercase italic active:scale-95">
+
+            <div className="bg-red-600 text-white text-[10px] md:text-[11px] font-black px-3 md:px-4 py-2 rounded-xl shadow-lg shadow-red-900/40 group-hover:bg-white group-hover:text-red-600 transition-all uppercase italic active:scale-95 whitespace-nowrap flex-shrink-0">
               예약문의
             </div>
           </div>
