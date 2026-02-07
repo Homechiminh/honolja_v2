@@ -17,7 +17,7 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🔴 [자동 출석 시스템] 1일 1회 5P 지급 로직
+  // 🔴 [자동 출석 시스템] 1일 1회 5P 지급
   useEffect(() => {
     const checkAttendance = async () => {
       if (!initialized || !currentUser) return;
@@ -62,14 +62,19 @@ const Home: React.FC = () => {
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
 
+  // 🔥 [인기 업소 로직] HOT 업소 중 최대 14개를 무작위로 추출
   const hotServiceStores = useMemo(() => {
-    return stores.filter((s: any) => s.is_hot && s.category !== 'villa').slice(0, 5);
+    return stores
+      .filter((s: any) => s.is_hot && s.category !== 'villa')
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 14);
   }, [stores]);
 
   const premiumHotStays = useMemo(() => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
 
+  // 상단 배너 타이머
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -77,6 +82,7 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // 커뮤니티 데이터 페칭
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -118,15 +124,11 @@ const Home: React.FC = () => {
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
-      {/* 🔴 SEO 최적화 메타 태그 (HCMC 통합 키워드 팩) */}
       <Helmet>
         <title>호놀자 | 베트남 호치민 유흥 · 밤문화 · 마사지 · 가라오케 · 맛집 프리미엄 가이드</title>
-        <meta name="description" content="베트남 호치민 여행의 모든 것! 마사지, 가라오케, 이발소, 클럽, 맛집, 카페 등 검증된 업소 정보와 실시간 후기를 제공하는 호치민 No.1 밤문화 커뮤니티 호놀자입니다." />
-        <meta name="keywords" content="호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 베트남 여자, 호치민 가라오케, 호치민 마사지, 호치민 불건, 호치민 이발소, 호치민 바, 호치민 클럽, 호치민 맛집, 호치민 카페, 호치민 자유여행" />
-        
-        {/* Open Graph (SNS 공유 최적화) */}
+        <meta name="description" content="베트남 호치민 여행의 모든 것! 마사지, 가라오케, 이발소, 클럽, 맛집 정보와 실시간 후기를 제공하는 호치민 No.1 커뮤니티 호놀자입니다." />
+        <meta name="keywords" content="호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 호치민 가라오케, 호치민 마사지, 호치민 이발소, 호치민 맛집" />
         <meta property="og:title" content="호놀자 - 호치민 밤문화 & 여행 프리미엄 가이드" />
-        <meta property="og:description" content="실시간 정보와 검증된 업소, 그 이상의 즐거움. 호치민 여행은 호놀자와 함께하세요." />
         <meta property="og:url" content="https://honolja.com" />
         <meta property="og:type" content="website" />
       </Helmet>
@@ -142,14 +144,14 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Hero 섹션 - 🔴 "호" 글자 색상 수정 반영 */}
+      {/* Hero 섹션 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">호</span>치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] tracking-tighter">놀자<span className="ml-5 md:ml-3">!</span></span>
         </h2>
         <div className="space-y-4 mb-16 z-10 px-4 flex flex-col items-center">
           <p className="text-[17px] sm:text-2xl md:text-4xl font-black tracking-tight uppercase whitespace-nowrap leading-tight">남성들을 위한 호치민의 모든 것</p>
-          <p className="text-blue-500 font-black text-lg md:text-2xl italic leading-snug">실시간 정보 + 검증된 업장 + <br className="md:hidden" /> 그 이상의 즐거움(α)</p>
+          <p className="text-blue-500 font-black text-lg md:text-2xl italic leading-snug">실시간 정보 + 검증된 업장 + 그 이상의 즐거움(α)</p>
           <p className="text-emerald-400 font-bold text-sm md:text-lg opacity-90 mt-2 italic">풀빌라 · 아파트 예약까지 한번에!</p>
         </div>
 
@@ -163,7 +165,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 실시간 인기 업소 */}
+      {/* 실시간 인기 업소 (14개 그리드 적용) */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -173,11 +175,14 @@ const Home: React.FC = () => {
           <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-          {storesLoading ? [1,2,3,4,5].map(i => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
+          {storesLoading ? 
+            [...Array(14)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
+            hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)
+          }
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 */}
+      {/* SNS & 커뮤니티 통합 섹션 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
@@ -193,6 +198,7 @@ const Home: React.FC = () => {
         </div>
 
         <div className="lg:col-span-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* 자유게시판 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4>
@@ -207,6 +213,7 @@ const Home: React.FC = () => {
               ))}
             </div>
           </div>
+          {/* VIP 라운지 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4>
@@ -221,6 +228,7 @@ const Home: React.FC = () => {
               ))}
             </div>
           </div>
+          {/* 공지사항 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4>
@@ -228,20 +236,24 @@ const Home: React.FC = () => {
             </div>
             <div className="space-y-3">
               {latestNotices.map(notice => (
-                <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl"><p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>{notice.is_important && '[필독] '}{notice.title}</p></Link>
+                <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl">
+                  <p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>
+                    {notice.is_important && '[필독] '}{notice.title}
+                  </p>
+                </Link>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* [섹션 4] PREMIUM STAYS */}
+      {/* PREMIUM STAYS */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
             <div>
               <h3 className="text-3xl md:text-5xl font-black italic mb-3 tracking-tighter uppercase leading-none">Premium Stays</h3>
-              <p className="text-gray-500 font-bold text-sm md:text-lg">호놀자가 검증한 최고급 풀빌라 정보를 만나보세요</p>
+              <p className="text-gray-500 font-bold text-sm md:text-lg">호놀자가 검증한 최고급 풀빌라 정보</p>
             </div>
             <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all italic">예약문의</Link>
           </div>
@@ -258,15 +270,12 @@ const Home: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                   <div className="absolute top-6 left-6 flex gap-2">
                     <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase italic shadow-lg">Hot Pick</span>
-                    <span className="bg-black/50 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-lg border border-white/10">⭐ {(store.rating ?? 4.5).toFixed(1)}</span>
                   </div>
                   <div className="absolute bottom-8 left-8 right-8">
                     <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">
                       {store.name}
                     </h4>
-                    <div className="flex items-center gap-4 text-gray-300">
-                       <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">Ho Chi Minh Villa</span>
-                    </div>
+                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">Ho Chi Minh Villa</span>
                   </div>
                 </Link>
               ))
@@ -275,7 +284,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 하단 배너 */}
+      {/* 하단 제휴 배너 */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
@@ -283,11 +292,10 @@ const Home: React.FC = () => {
               <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Partnership</span>
               <h4 className="text-white text-xl md:text-4xl font-black italic tracking-tighter leading-tight">호놀자와 함께하실 <br/> 광고주분들의 연락을 기다립니다.</h4>
             </div>
-            <a href="https://t.me/honolja84" target="_blank" rel="noreferrer" className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] hover:bg-white/5 transition-all text-white">
-              <span className="absolute -right-4 -bottom-8 text-white/10 text-9xl font-black italic select-none">H</span>
-              <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic relative z-10">Telegram Ad Contact</span>
-              <h4 className="text-white text-lg md:text-4xl font-black italic tracking-tighter mb-6 whitespace-nowrap font-sans relative z-10">호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
-              <div className="px-8 py-3 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-xs font-black uppercase tracking-widest italic hover:bg-blue-600 hover:text-white transition-all relative z-10">Contact Now</div>
+            <a href="https://t.me/honolja84" target="_blank" rel="noreferrer" className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] text-white">
+              <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Telegram Ad Contact</span>
+              <h4 className="text-white text-lg md:text-4xl font-black italic tracking-tighter mb-6">호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
+              <div className="px-8 py-3 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-xs font-black uppercase tracking-widest italic hover:bg-blue-600 hover:text-white transition-all">Contact Now</div>
             </a>
           </div>
         </div>
