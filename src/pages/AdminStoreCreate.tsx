@@ -71,7 +71,7 @@ const AdminStoreCreate: React.FC = () => {
     
     setLoading(true);
     try {
-      // ✅ [핵심 수정] 기존 개수를 파악하여 1~21번까지 순차적으로 순환 배정
+      // ✅ [순번 배정 핵심] 현재 DB의 개수를 가져와서 다음 번호를 부여 (0~20 순환)
       const { count } = await supabase
         .from('stores')
         .select('*', { count: 'exact', head: true });
@@ -80,7 +80,7 @@ const AdminStoreCreate: React.FC = () => {
 
       const payload = {
         ...formData,
-        image_index: sequentialIndex, // 랜덤 대신 순차적 번호 저장
+        image_index: sequentialIndex, 
         rating: Number(formData.rating),
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
@@ -91,7 +91,7 @@ const AdminStoreCreate: React.FC = () => {
       
       if (insertError) throw insertError;
 
-      alert(`새 업소 등록 완료! (지정 이미지 번호: ${sequentialIndex + 1})`);
+      alert(`등록 완료! (부여된 누님 번호: ${sequentialIndex + 1})`);
       navigate('/admin/manage-stores');
     } catch (err: any) {
       alert(`등록 실패: ${err.message}`);
@@ -100,16 +100,7 @@ const AdminStoreCreate: React.FC = () => {
     }
   };
 
-  if (!initialized) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-red-600 font-black animate-pulse tracking-widest uppercase italic text-xl">
-          관리자 권한 확인 중...
-        </div>
-      </div>
-    );
-  }
-
+  if (!initialized) return null;
   if (!currentUser || currentUser.role !== UserRole.ADMIN) return null;
 
   const inputStyle = "w-full bg-[#1c1c1c] border-2 border-[#333] rounded-2xl px-6 py-5 text-lg font-bold text-white focus:border-red-600 focus:bg-black outline-none transition-all shadow-md placeholder:text-gray-700";
@@ -128,7 +119,7 @@ const AdminStoreCreate: React.FC = () => {
           Back to Management
         </button>
 
-        <div className="bg-[#111] rounded-[3.5rem] p-8 md:p-16 border border-white/5 shadow-2xl animate-in fade-in duration-700">
+        <div className="bg-[#111] rounded-[3.5rem] p-8 md:p-16 border border-white/5 shadow-2xl">
           <header className="text-center mb-16">
             <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter inline-block border-b-8 border-red-600 pb-4 leading-none">
               신규 <span className="text-red-600">업소 등록</span>
@@ -137,14 +128,14 @@ const AdminStoreCreate: React.FC = () => {
           
           <form onSubmit={handleSubmit} className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between shadow-inner">
+              <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between">
                 <p className="text-xl font-black text-red-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
                 <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})}
                   className={`w-20 h-10 rounded-full relative transition-all duration-500 ${formData.is_hot ? 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)]' : 'bg-gray-800'}`}>
                   <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${formData.is_hot ? 'left-11 shadow-lg' : 'left-1'}`} />
                 </button>
               </div>
-              <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between shadow-inner">
+              <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between">
                 <p className="text-xl font-black text-yellow-500 italic uppercase tracking-tight">⭐ 별점 설정</p>
                 <input type="number" step="0.1" value={formData.rating}
                   onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})}
@@ -174,7 +165,7 @@ const AdminStoreCreate: React.FC = () => {
 
               {(formData.category as string) === CategoryType.VILLA && (
                 <div className="space-y-2">
-                  <label className={labelStyle}>💰 숙박 가격 (예: 200만동 / 400 USD)</label>
+                  <label className={labelStyle}>💰 숙박 가격</label>
                   <input value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className={inputStyle} placeholder="가격을 입력하세요" />
                 </div>
               )}
@@ -191,16 +182,16 @@ const AdminStoreCreate: React.FC = () => {
 
               <div className="md:col-span-2 space-y-4">
                 <label className={labelStyle}>🖼️ 갤러리 사진 등록 (첫 장이 대표사진)</label>
-                <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className={`${inputStyle} text-sm file:mr-6 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer`} />
+                <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className={`${inputStyle} text-sm file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer`} />
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-6">
-                  {formData.promo_images.map((url, idx) => (
+                  {formData.promo_images.map((url) => (
                     <div key={url} onClick={() => setFormData({...formData, image_url: url})}
                       className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all duration-300 ${formData.image_url === url ? 'border-red-600 scale-105 shadow-xl' : 'border-transparent opacity-40 hover:opacity-100'}`}
                     >
                       <img src={url} className="w-full h-full object-cover" alt="preview" />
                       {formData.image_url === url && (
                         <div className="absolute inset-0 bg-red-600/10 flex items-center justify-center">
-                          <span className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase italic shadow-lg">대표</span>
+                          <span className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase italic">대표</span>
                         </div>
                       )}
                     </div>
