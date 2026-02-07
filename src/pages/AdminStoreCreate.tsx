@@ -20,7 +20,7 @@ const AdminStoreCreate: React.FC = () => {
     rating: 4.5,
     tags: '', 
     benefits: '', 
-    price: '',    
+    price: '',     
     kakao_url: '',
     telegram_url: '',
     is_hot: false
@@ -71,12 +71,16 @@ const AdminStoreCreate: React.FC = () => {
     
     setLoading(true);
     try {
-      // ✅ 업소 등록 시 0~20 사이의 랜덤 인덱스를 자동 부여
-      const randomImageIndex = Math.floor(Math.random() * 21);
+      // ✅ [핵심 수정] 기존 개수를 파악하여 1~21번까지 순차적으로 순환 배정
+      const { count } = await supabase
+        .from('stores')
+        .select('*', { count: 'exact', head: true });
+
+      const sequentialIndex = (count || 0) % 21;
 
       const payload = {
         ...formData,
-        image_index: randomImageIndex, // 서버에 랜덤 번호 저장
+        image_index: sequentialIndex, // 랜덤 대신 순차적 번호 저장
         rating: Number(formData.rating),
         tags: formData.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t !== ''),
         benefits: formData.benefits.split(',').map((b: string) => b.trim()).filter((b: string) => b !== ''),
@@ -87,7 +91,7 @@ const AdminStoreCreate: React.FC = () => {
       
       if (insertError) throw insertError;
 
-      alert('새 업소 등록 완료!');
+      alert(`새 업소 등록 완료! (지정 이미지 번호: ${sequentialIndex + 1})`);
       navigate('/admin/manage-stores');
     } catch (err: any) {
       alert(`등록 실패: ${err.message}`);
@@ -96,7 +100,6 @@ const AdminStoreCreate: React.FC = () => {
     }
   };
 
-  // ... 이하 UI 렌더링 부분은 이전과 동일 (생략 가능하나 전문 요청하셨으므로 유지) ...
   if (!initialized) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -133,7 +136,6 @@ const AdminStoreCreate: React.FC = () => {
           </header>
           
           <form onSubmit={handleSubmit} className="space-y-10">
-            {/* HOT & 별점 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#1c1c1c] p-8 rounded-[2.5rem] border-2 border-[#333] flex items-center justify-between shadow-inner">
                 <p className="text-xl font-black text-red-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
@@ -150,7 +152,6 @@ const AdminStoreCreate: React.FC = () => {
               </div>
             </div>
 
-            {/* 기본 정보 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className={labelStyle}>🏢 업소/숙소 명</label>
@@ -188,13 +189,12 @@ const AdminStoreCreate: React.FC = () => {
                 <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className={inputStyle} placeholder="예: 첫 방문 10% 할인, 무료 음료" />
               </div>
 
-              {/* 이미지 업로드 */}
               <div className="md:col-span-2 space-y-4">
                 <label className={labelStyle}>🖼️ 갤러리 사진 등록 (첫 장이 대표사진)</label>
                 <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className={`${inputStyle} text-sm file:mr-6 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-red-600 file:text-white hover:file:bg-red-700 cursor-pointer`} />
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-6">
                   {formData.promo_images.map((url, idx) => (
-                    <div key={idx} onClick={() => setFormData({...formData, image_url: url})}
+                    <div key={url} onClick={() => setFormData({...formData, image_url: url})}
                       className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all duration-300 ${formData.image_url === url ? 'border-red-600 scale-105 shadow-xl' : 'border-transparent opacity-40 hover:opacity-100'}`}
                     >
                       <img src={url} className="w-full h-full object-cover" alt="preview" />
