@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#050505] border-t border-white/5 pt-20 pb-12 px-6">
+    <footer className="bg-[#050505] border-t border-white/5 pt-20 pb-12 px-6 font-sans">
       <div className="max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20">
           
@@ -13,15 +13,20 @@ const Footer: React.FC = () => {
               <span className="text-2xl font-black text-white tracking-tighter">호놀자</span>
               <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2"></span>
             </div>
-            <p className="text-gray-400 text-[15px] leading-relaxed mb-8 max-w-sm font-medium">
-              베트남 여행의 모든 즐거움을 한 곳에, 호놀자입니다.<br />
+            <p className="text-gray-400 text-[15px] leading-relaxed mb-8 max-w-md font-medium">
+              베트남 여행의 모든 즐거움을 한 곳에, 호놀자입니다.<br className="hidden md:block" />
               정직한 리뷰와 프리미엄 정보를 통해 여러분의 여행을 더욱 특별하게 만들어드리겠습니다.
             </p>
             
             <div className="flex flex-wrap gap-3">
-              <button className="flex items-center gap-2 bg-[#FEE500] text-black px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#F7D600] transition-colors">
+              <a 
+                href="https://open.kakao.com/o/gx4EsPRg" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-[#FEE500] text-black px-5 py-3 rounded-xl font-black text-[13px] hover:bg-[#F7D600] transition-colors"
+              >
                 <span className="text-lg">💬</span> 호놀자 카톡
-              </button>
+              </a>
               <a 
                 href="https://t.me/honolja84" 
                 target="_blank" 
@@ -59,7 +64,6 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-3">
             <h4 className="text-white font-black text-[13px] mb-8 tracking-[0.2em] uppercase italic">Support</h4>
             <ul className="space-y-4 text-gray-500 text-[14px] font-bold">
-              {/* 🔴 공지사항 링크 연결 */}
               <li className="hover:text-white transition-colors">
                 <Link to="/notice">공지사항</Link>
               </li>
@@ -77,8 +81,12 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="pt-10 border-t border-white/5 text-center">
-          <p className="text-[12px] text-gray-600 font-bold mb-2">© 2024 {new Date().getFullYear() > 2024 ? `2024-${new Date().getFullYear()}` : '2024'} 호놀자 VIETNAM. All rights reserved.</p>
-          <p className="text-[11px] text-gray-700 font-bold italic uppercase tracking-wider">High-End Lifestyle Concierge for Vietnam Travelers.</p>
+          <p className="text-[12px] text-gray-600 font-bold mb-2 uppercase tracking-tight">
+            © {new Date().getFullYear()} HONOLJA VIETNAM. All rights reserved.
+          </p>
+          <p className="text-[11px] text-gray-700 font-bold italic uppercase tracking-wider">
+            High-End Lifestyle Concierge for Vietnam Travelers.
+          </p>
         </div>
       </div>
     </footer>
