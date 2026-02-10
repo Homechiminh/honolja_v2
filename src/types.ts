@@ -61,8 +61,8 @@ export interface Store {
   image_url: string;
   image_index: number;
   tags: string[];
-  benefits?: string[]; // 기존 유지
-  price?: string;      // 🔴 조언대로 가격 필드 추가
+  benefits?: string[];
+  price?: string;
   address: string;
   is_hot: boolean;
   author_id: string;
@@ -70,21 +70,24 @@ export interface Store {
   kakao_url?: string;
   telegram_url?: string;
   created_at?: string;
+  // 📍 지도 표시를 위한 좌표 데이터 추가
+  lat?: number; 
+  lng?: number;
 }
 
-// 7. 게시글 인터페이스 (posts 테이블 기반 - 조회수/좋아요 포함)
+// 7. 게시글 인터페이스 (posts 테이블 기반)
 export interface Post {
   id: string;
   author_id: string;
-  store_id?: string | null;      // 후기 작성 시 연결된 업소 ID
+  store_id?: string | null;
   title: string;
   content: string;
-  category: string;              // 'free', 'vip', 'review' 등
-  sub_category?: string;         // '실시간 현황' 등
-  view_count: number;            // 조회수 (DB 컬럼명 일치)
-  likes: number;                 // 좋아요 수 (DB 컬럼명 일치)
-  image_urls?: string[];         // 첨부 이미지 배열 (text[])
-  link_url?: string | null;      // 외부 링크
+  category: string;
+  sub_category?: string;
+  view_count: number;
+  likes: number;
+  image_urls?: string[];
+  link_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -104,8 +107,8 @@ export interface Notice {
   author_id: string;
   title: string;
   content: string;
-  is_important: boolean;         // 중요 공지 여부
-  views: number;                 // 공지사항 조회수
+  is_important: boolean;
+  views: number;
   created_at: string;
   updated_at: string;
 }
@@ -116,8 +119,8 @@ export interface Coupon {
   user_id: string;
   title: string;
   content: string;
-  is_used: boolean;              // 사용 여부 (필수 체크!)
-  expired_at: string;            // 만료 일시
+  is_used: boolean;
+  expired_at: string;
   created_at: string;
 }
 
@@ -125,7 +128,7 @@ export interface Coupon {
 export interface PointHistory {
   id: string;
   user_id: string;
-  amount: number;                // 증감 수치 (예: -200)
-  reason: string;                // 사유 (예: 쿠폰 교환)
+  amount: number;
+  reason: string;
   created_at: string;
 }
