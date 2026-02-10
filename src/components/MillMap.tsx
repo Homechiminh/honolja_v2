@@ -32,7 +32,6 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
 
-  // 🔴 수정 포인트: [map, setMap] 대신 [, setMap]으로 변경하여 미사용 변수 에러 방지
   const [, setMap] = useState<google.maps.Map | null>(null);
   const [selectedStore, setSelectedStore] = useState<any>(null);
 
