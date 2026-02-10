@@ -12,7 +12,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
 
   const [selectedStore, setSelectedStore] = useState<any>(null);
 
-  if (!isLoaded) return <div className="w-full h-full bg-white" />;
+  if (!isLoaded) return <div className="w-full h-full bg-white flex items-center justify-center text-black font-bold">지도 로딩 중...</div>;
 
   return (
     <GoogleMap
@@ -20,7 +20,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
       center={center}
       zoom={14}
       options={{
-        styles: [], // 기본 밝은 테마 사용
+        styles: [], // 기본 테마 강제
         mapTypeId: 'roadmap',
         disableDefaultUI: false,
         backgroundColor: '#ffffff'
@@ -29,21 +29,23 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
       {stores.map((store) => {
         const lat = Number(store.lat);
         const lng = Number(store.lng);
-        
-        // Supabase category 컬럼 값 (karaoke, barber, massage, barclub)
+        if (isNaN(lat) || isNaN(lng)) return null;
+
+        // DB의 category 값 처리
         const cat = String(store.category || "").toLowerCase().trim();
         
-        // 기본 핀 이미지
-        let iconUrl = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
+        // 🧪 구글 공식 컬러 핀으로 테스트 (Cloudinary 이미지 대신)
+        // 로직이 맞다면 카테고리별로 핀의 색깔이 바뀌어야 합니다.
+        let iconUrl = 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'; // 기본: 빨강
 
         if (cat === 'karaoke') {
-          iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png';
+          iconUrl = 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'; // 가라오케: 파랑
         } else if (cat === 'barber') {
-          iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png';
+          iconUrl = 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png'; // 이발소: 노랑
         } else if (cat === 'massage') {
-          iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png';
+          iconUrl = 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'; // 마사지: 초록
         } else if (cat === 'barclub') {
-          iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png';
+          iconUrl = 'http://maps.google.com/mapfiles/ms/icons/purple-dot.png'; // 바/클럽: 보라
         }
 
         return (
@@ -51,11 +53,11 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             key={store.id}
             position={{ lat, lng }}
             onClick={() => setSelectedStore(store)}
-            icon={{
+            // window.google 객체가 확실히 로드된 후 아이콘 적용
+            icon={window.google ? {
               url: iconUrl,
               scaledSize: new window.google.maps.Size(40, 40),
-              anchor: new window.google.maps.Point(20, 20),
-            }}
+            } : undefined}
           />
         );
       })}
@@ -65,8 +67,8 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
           position={{ lat: Number(selectedStore.lat), lng: Number(selectedStore.lng) }}
           onCloseClick={() => setSelectedStore(null)}
         >
-          <div className="p-2 text-black">
-            <h4 className="font-bold text-sm">{selectedStore.name}</h4>
+          <div className="p-2 text-black bg-white">
+            <h4 className="font-bold text-sm text-black">{selectedStore.name}</h4>
             <p className="text-[10px] text-gray-500">{selectedStore.address}</p>
           </div>
         </InfoWindow>
