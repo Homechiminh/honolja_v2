@@ -191,7 +191,8 @@ const Home: React.FC = () => {
                       massage: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png",
                       barber: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png",
                       karaoke: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png",
-                      barclub: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png"
+                      barclub: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png",
+                      villa: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770754541/villa_nf3ksq.png"
                     };
                     iconUrl = iconMap[store.category] || null;
                   }
