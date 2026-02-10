@@ -22,7 +22,7 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🗺️ 지도 및 필터 관련 상태
+  // 🗺️ 지도 및 하단 리스트 필터 관련 상태
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState('all'); 
 
@@ -62,7 +62,7 @@ const Home: React.FC = () => {
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
 
-  // 📍 [필터링 통합 로직] - 카테고리 선택 시 지도와 리스트 모두 반영
+  // 📍 [필터링 로직] - 지도 마커 및 인기 업소 리스트 연동
   const filteredStores = useMemo(() => {
     return stores.filter((s: any) => activeCategory === 'all' || s.category === activeCategory);
   }, [stores, activeCategory]);
@@ -122,7 +122,7 @@ const Home: React.FC = () => {
         <title>호놀자 | 베트남 호치민 프리미엄 가이드</title>
       </Helmet>
 
-      {/* Hero 섹션 */}
+      {/* Hero 섹션 - 아이콘 클릭 시 /stores/카테고리명 이동 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">호</span>치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] tracking-tighter">놀자<span className="ml-5 md:ml-3">!</span></span>
@@ -138,24 +138,17 @@ const Home: React.FC = () => {
           {categories.map((cat) => (
             <button 
               key={cat.id} 
-              onClick={() => {
-                setActiveCategory(cat.id);
-                document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className={`flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 rounded-2xl md:rounded-[32px] border transition-all group shadow-lg ${
-                activeCategory === cat.id ? 'bg-red-600/20 border-red-600' : 'bg-white/5 border-white/5 hover:bg-white/10'
-              }`}
+              onClick={() => navigate(`/stores/${cat.id}`)}
+              className="flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 rounded-2xl md:rounded-[32px] border border-white/5 bg-white/5 hover:bg-white/10 hover:border-red-600/50 transition-all group shadow-lg"
             >
               <span className="text-2xl md:text-5xl group-hover:scale-110 transition-transform">{cat.icon}</span>
-              <span className={`text-[8px] md:text-sm font-black uppercase tracking-tighter whitespace-nowrap ${
-                activeCategory === cat.id ? 'text-white' : 'text-gray-400 group-hover:text-white'
-              }`}>{cat.name}</span>
+              <span className="text-[8px] md:text-sm font-black uppercase tracking-tighter whitespace-nowrap text-gray-400 group-hover:text-white">{cat.name}</span>
             </button>
           ))}
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 (MarkerF + Map ID + 커스텀 아이콘 + 높이 축소) */}
+      {/* 🗺️ 내 주변 방앗간 (지도 전용 필터 유지) */}
       <section id="map-section" className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
@@ -167,9 +160,9 @@ const Home: React.FC = () => {
             </div>
             
             <div className="flex flex-wrap gap-2 bg-black/40 p-2 rounded-2xl border border-white/5 font-sans">
-              <button onClick={() => setActiveCategory('all')} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-emerald-500 text-black' : 'text-gray-500'}`}>전체</button>
+              <button onClick={() => setActiveCategory('all')} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-emerald-500 text-black' : 'text-gray-500 hover:text-white'}`}>전체</button>
               {categories.map(c => (
-                <button key={c.id} onClick={() => setActiveCategory(c.id)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === c.id ? 'bg-red-600 text-white' : 'text-gray-500'}`}>{c.name.split('/')[0]}</button>
+                <button key={c.id} onClick={() => setActiveCategory(c.id)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === c.id ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-white'}`}>{c.name.split('/')[0]}</button>
               ))}
             </div>
           </div>
@@ -192,7 +185,6 @@ const Home: React.FC = () => {
                 }}
               >
                 {mapStores.map((store: any) => {
-                  // 섹터별 아이콘 매핑
                   let iconUrl = store.map_icon_url;
                   if (!iconUrl) {
                     const iconMap: any = {
@@ -237,7 +229,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🔥 실시간 인기 업소 (카테고리 필터 연동됨) */}
+      {/* 🔥 실시간 인기 업소 (지도 필터와 연동됨) */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
