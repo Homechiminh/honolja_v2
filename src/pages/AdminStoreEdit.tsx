@@ -8,17 +8,19 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 const AdminStoreEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
   const { currentUser, initialized } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
     category: CategoryType.MASSAGE,
     region: Region.HCMC,
     address: '',
+    lat: '',
+    lng: '',
     description: '',
     image_url: '',
     promo_images: [] as string[],
@@ -39,20 +41,40 @@ const AdminStoreEdit: React.FC = () => {
     }
   }, [initialized, currentUser, navigate]);
 
+  const handleFetchCoords = async () => {
+    if (!formData.address) return alert('주소를 먼저 입력해주세요.');
+    setGeoLoading(true);
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(formData.address)}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+      );
+      const data = await response.json();
+      if (data.status === 'OK') {
+        const { lat, lng } = data.results[0].geometry.location;
+        setFormData(prev => ({ ...prev, lat: lat.toString(), lng: lng.toString() }));
+        alert('좌표 갱신 완료!');
+      }
+    } catch (err) {
+      alert('오류 발생');
+    } finally {
+      setGeoLoading(false);
+    }
+  };
+
   const fetchStore = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
-      
       if (error) throw error;
-
       if (data) {
         setFormData({
           name: data.name || '',
           category: data.category || CategoryType.MASSAGE,
           region: data.region || Region.HCMC,
           address: data.address || '',
+          lat: data.lat?.toString() || '',
+          lng: data.lng?.toString() || '',
           description: data.description || '',
           image_url: data.image_url || '',
           promo_images: data.promo_images || [],
@@ -66,7 +88,6 @@ const AdminStoreEdit: React.FC = () => {
         });
       }
     } catch (err: any) {
-      alert('업소 정보를 불러올 수 없습니다.');
       navigate('/admin/manage-stores');
     } finally {
       setLoading(false);
@@ -78,26 +99,19 @@ const AdminStoreEdit: React.FC = () => {
   const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
     setUpdating(true);
     const newUrls: string[] = [];
     try {
       for (const file of Array.from(files)) {
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const filePath = `store-images/${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('stores').upload(filePath, file);
-        if (uploadError) throw uploadError;
-        
+        await supabase.storage.from('stores').upload(filePath, file);
         const { data } = supabase.storage.from('stores').getPublicUrl(filePath);
         newUrls.push(data.publicUrl);
       }
-      setFormData(prev => ({
-        ...prev,
-        promo_images: [...prev.promo_images, ...newUrls],
-        image_url: prev.image_url || newUrls[0]
-      }));
+      setFormData(prev => ({ ...prev, promo_images: [...prev.promo_images, ...newUrls], image_url: prev.image_url || newUrls[0] }));
     } catch (err: any) {
-      alert(`이미지 업로드 실패: ${err.message}`);
+      alert('업로드 실패');
     } finally {
       setUpdating(false);
     }
@@ -112,6 +126,8 @@ const AdminStoreEdit: React.FC = () => {
         category: formData.category,
         region: formData.region,
         address: formData.address,
+        lat: formData.lat ? Number(formData.lat) : null,
+        lng: formData.lng ? Number(formData.lng) : null,
         description: formData.description,
         image_url: formData.image_url,
         promo_images: formData.promo_images,
@@ -123,134 +139,102 @@ const AdminStoreEdit: React.FC = () => {
         telegram_url: formData.telegram_url,
         is_hot: formData.is_hot
       };
-      
-      const { error: updateError } = await supabase.from('stores').update(updateData).eq('id', id);
-      if (updateError) throw updateError;
-      
-      alert('정보가 성공적으로 수정되었습니다!');
+      const { error } = await supabase.from('stores').update(updateData).eq('id', id);
+      if (error) throw error;
+      alert('수정 완료!');
       navigate('/admin/manage-stores');
     } catch (err: any) {
-      alert('수정 중 에러가 발생했습니다.');
+      alert('수정 실패');
     } finally {
       setUpdating(false);
     }
   };
 
-  if (!initialized || loading) return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center text-white italic animate-pulse font-black uppercase tracking-widest text-xl">
-      정보 로딩 중...
-    </div>
-  );
+  if (!initialized || loading) return <div className="min-h-screen bg-black" />;
+
+  const inputStyle = "w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner";
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans selection:bg-emerald-600/30 text-white">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-6 font-sans text-white">
       <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-          <div className="flex items-center gap-6">
-            <button onClick={() => navigate('/admin')} className="text-gray-500 hover:text-white transition-all font-black uppercase italic text-xs tracking-widest border-b border-transparent hover:border-white pb-1">관리자 대시보드</button>
-            <button onClick={() => navigate('/admin/manage-stores')} className="flex items-center gap-2 text-gray-500 hover:text-emerald-500 transition-all font-black uppercase italic text-xs tracking-widest group">
-              <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
-              </svg>
-              목록으로 돌아가기
-            </button>
-          </div>
-          <button onClick={() => navigate('/admin/create-store')} className="w-full md:w-auto px-8 py-3.5 bg-white text-black font-black text-[11px] rounded-2xl uppercase italic hover:bg-emerald-600 hover:text-white transition-all shadow-[0_10px_30_rgba(255,255,255,0.1)] active:scale-95 flex items-center justify-center gap-2">
-            <span className="text-lg">+</span> 신규 업소 추가
-          </button>
-        </div>
-
-        <div className="bg-[#111] rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-16 border border-white/5 shadow-2xl animate-in fade-in duration-700">
-          <header className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter inline-block border-b-8 border-emerald-500 pb-4 leading-none">업소 <span className="text-emerald-500">정보 수정</span></h2>
+        <div className="bg-[#111] rounded-[3.5rem] p-8 md:p-16 border border-white/5 shadow-2xl">
+          <header className="text-center mb-16">
+            <h2 className="text-5xl font-black italic uppercase inline-block border-b-8 border-emerald-500 pb-4">업소 <span className="text-emerald-500">정보 수정</span></h2>
           </header>
 
-          <form onSubmit={handleSubmit} className="space-y-10 md:space-y-12">
-            {/* 상단 스위치 섹션 */}
+          <form onSubmit={handleSubmit} className="space-y-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-emerald-600/10 p-6 md:p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between shadow-inner">
-                <p className="text-lg md:text-xl font-black text-emerald-500 italic uppercase tracking-tight">🔥 인기 업소(HOT)</p>
-                <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})} className={`w-16 h-8 md:w-20 md:h-10 rounded-full relative transition-all duration-500 ${formData.is_hot ? 'bg-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-800'}`}>
-                  <div className={`absolute top-1 w-6 h-6 md:w-8 md:h-8 bg-white rounded-full transition-all duration-300 ${formData.is_hot ? 'left-9 md:left-11 shadow-lg' : 'left-1'}`} />
+              <div className="bg-emerald-600/10 p-8 rounded-[2rem] border border-emerald-600/20 flex items-center justify-between">
+                <p className="text-xl font-black text-emerald-500 italic uppercase">🔥 인기 업소(HOT)</p>
+                <button type="button" onClick={() => setFormData({...formData, is_hot: !formData.is_hot})} className={`w-20 h-10 rounded-full relative transition-all duration-500 ${formData.is_hot ? 'bg-emerald-600' : 'bg-gray-800'}`}>
+                  <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${formData.is_hot ? 'left-11' : 'left-1'}`} />
                 </button>
               </div>
-              <div className="bg-yellow-600/10 p-6 md:p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between shadow-inner">
-                <p className="text-lg md:text-xl font-black text-yellow-500 italic uppercase tracking-tight">⭐ 별점 설정</p>
-                <input type="number" step="0.1" value={formData.rating} onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} className="w-20 md:w-24 bg-black text-yellow-500 text-center font-black text-xl md:text-2xl outline-none border-b-2 border-yellow-600 italic" />
+              <div className="bg-yellow-600/10 p-8 rounded-[2rem] border border-yellow-600/20 flex items-center justify-between">
+                <p className="text-xl font-black text-yellow-500 italic uppercase">⭐ 별점 설정</p>
+                <input type="number" step="0.1" value={formData.rating} onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})} className="w-24 bg-black text-yellow-500 text-center font-black text-2xl outline-none border-b-2 border-yellow-600 italic" />
               </div>
             </div>
 
-            {/* 기본 정보 그리드 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🏢 업소 명칭</label>
-                <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" />
+                <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className={inputStyle} />
               </div>
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📍 지역 선택</label>
-                <select value={formData.region} onChange={(e) => setFormData({...formData, region: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none font-bold shadow-inner italic">
+                <select value={formData.region} onChange={(e) => setFormData({...formData, region: e.target.value as any})} className={inputStyle}>
                   {Object.values(Region).map(reg => <option key={reg} value={reg}>{reg.toUpperCase()}</option>)}
                 </select>
               </div>
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📂 카테고리</label>
-                <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none font-bold shadow-inner italic">
+                <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value as any})} className={inputStyle}>
                   {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
                 </select>
               </div>
-
-              {(formData.category as string) === CategoryType.VILLA && (
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">💰 숙박 가격 (예: 200만동 / 박)</label>
-                  <input value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" placeholder="가격을 입력하세요" />
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📍 상세 주소 및 위치 수정</label>
+                <div className="flex gap-4">
+                  <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className={inputStyle} />
+                  <button type="button" onClick={handleFetchCoords} disabled={geoLoading} className="px-6 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-500 transition-all uppercase italic text-sm">좌표갱신</button>
                 </div>
-              )}
-
-              <div className="md:col-span-2 space-y-4">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">#️⃣ 해시태그 (쉼표로 구분)</label>
-                <input value={formData.tags} onChange={(e) => setFormData({...formData, tags: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" placeholder="태그1, 태그2, 태그3" />
-              </div>
-
-              <div className="md:col-span-2 space-y-4">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🎁 제휴 혜택 (쉼표로 구분)</label>
-                <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none focus:border-emerald-500 font-bold transition-all shadow-inner" placeholder="혜택1, 혜택2" />
-              </div>
-
-              {/* 🔴 카카오톡 / 텔레그램 링크 수정 섹션 (캡처화면 반영 - 갤러리 위로 이동) */}
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-[#FAE100] uppercase tracking-widest ml-2 italic">💬 카카오톡 링크</label>
-                <input value={formData.kakao_url} onChange={(e) => setFormData({...formData, kakao_url: e.target.value})} className="w-full bg-[#1a1a1a] border border-[#FAE100]/20 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none focus:border-[#FAE100] font-bold transition-all shadow-inner" placeholder="https://open.kakao.com/..." />
-              </div>
-              <div className="space-y-4">
-                <label className="text-[10px] font-black text-[#0088CC] uppercase tracking-widest ml-2 italic">✈️ 텔레그램 링크</label>
-                <input value={formData.telegram_url} onChange={(e) => setFormData({...formData, telegram_url: e.target.value})} className="w-full bg-[#1a1a1a] border border-[#0088CC]/20 rounded-2xl px-6 py-4 md:px-8 md:py-5 text-white outline-none focus:border-[#0088CC] font-bold transition-all shadow-inner" placeholder="https://t.me/..." />
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <input value={formData.lat} onChange={(e) => setFormData({...formData, lat: e.target.value})} className={`${inputStyle} text-sm py-4`} placeholder="위도" />
+                  <input value={formData.lng} onChange={(e) => setFormData({...formData, lng: e.target.value})} className={`${inputStyle} text-sm py-4`} placeholder="경도" />
+                </div>
               </div>
 
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">🖼️ 갤러리 이미지 관리</label>
-                <div className="p-6 md:p-8 bg-black/40 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 space-y-8 shadow-inner">
-                  <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className="w-full bg-black border border-white/10 rounded-2xl px-6 py-4 text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:bg-emerald-600 file:text-white file:font-black file:uppercase file:border-none file:hover:bg-emerald-500 cursor-pointer shadow-xl" />
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-6">
-                    {formData.promo_images.map((url, idx) => (
-                      <div key={idx} onClick={() => setFormData({...formData, image_url: url})} className={`relative aspect-square rounded-[1.2rem] md:rounded-[1.5rem] overflow-hidden cursor-pointer border-4 transition-all shadow-xl ${formData.image_url === url ? 'border-red-600 scale-105' : 'border-transparent opacity-40 hover:opacity-100'}`}>
-                        <img src={url} className="w-full h-full object-cover" alt="gallery" />
-                        <button type="button" onClick={(e) => { e.stopPropagation(); setFormData({...formData, promo_images: formData.promo_images.filter(img => img !== url)}); }} className="absolute top-2 right-2 bg-black/80 text-white w-6 h-6 md:w-7 md:h-7 rounded-full text-[10px] flex items-center justify-center hover:bg-red-600 transition-colors">✕</button>
-                        {formData.image_url === url && <div className="absolute inset-0 bg-red-600/10 flex items-center justify-center"><span className="bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase italic tracking-tighter shadow-lg">대표</span></div>}
-                      </div>
-                    ))}
-                  </div>
+                <input type="file" multiple accept="image/*" onChange={handleMultipleImageUpload} className={inputStyle} />
+                <div className="grid grid-cols-5 gap-4 mt-4">
+                  {formData.promo_images.map((url, idx) => (
+                    <div key={idx} className={`relative aspect-square rounded-2xl overflow-hidden border-4 ${formData.image_url === url ? 'border-red-600' : 'border-transparent'}`}>
+                      <img src={url} className="w-full h-full object-cover" alt="gallery" />
+                    </div>
+                  ))}
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-[#FAE100] uppercase tracking-widest ml-2 italic">💬 카카오톡 링크</label>
+                <input value={formData.kakao_url} onChange={(e) => setFormData({...formData, kakao_url: e.target.value})} className={inputStyle} />
+              </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-[#0088CC] uppercase tracking-widest ml-2 italic">✈️ 텔레그램 링크</label>
+                <input value={formData.telegram_url} onChange={(e) => setFormData({...formData, telegram_url: e.target.value})} className={inputStyle} />
               </div>
             </div>
 
             <div className="space-y-4">
                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📝 업소 상세 설명</label>
-               <textarea rows={6} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full bg-black border border-white/10 rounded-[2rem] md:rounded-[2.5rem] px-6 py-6 md:px-8 md:py-7 text-white outline-none focus:border-emerald-500 font-medium leading-relaxed resize-none italic shadow-inner" placeholder="상세 내용을 입력하세요..." />
+               <textarea rows={6} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className={`${inputStyle} h-48 resize-none py-6 leading-relaxed`} />
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6 pt-6 md:pt-10">
-              <button type="button" onClick={() => navigate('/admin/manage-stores')} className="order-2 md:order-1 flex-1 py-5 md:py-7 bg-white/5 text-gray-500 font-black text-lg md:text-xl rounded-[2rem] md:rounded-[2.5rem] uppercase italic border border-white/5 hover:bg-white/10 transition-all active:scale-95">취소</button>
-              <button type="submit" disabled={updating} className="order-1 md:order-2 flex-[2] py-5 md:py-7 bg-emerald-600 text-white font-black text-lg md:text-xl rounded-[2rem] md:rounded-[2.5rem] shadow-2xl shadow-emerald-900/40 uppercase italic hover:bg-emerald-500 active:scale-95 transition-all">{updating ? '처리 중...' : '정보 수정 완료'}</button>
+            <div className="flex gap-6">
+              <button type="button" onClick={() => navigate('/admin/manage-stores')} className="flex-1 py-7 bg-white/5 text-gray-500 font-black text-xl rounded-[2.5rem] uppercase italic">취소</button>
+              <button type="submit" disabled={updating} className="flex-[2] py-7 bg-emerald-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl uppercase italic">수정 완료</button>
             </div>
           </form>
         </div>
