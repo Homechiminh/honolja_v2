@@ -113,7 +113,6 @@ export interface Notice {
   updated_at: string;
 }
 
-// 10. 쿠폰 인터페이스 (coupons 테이블 기반)
 export interface Coupon {
   id: string;
   user_id: string;
