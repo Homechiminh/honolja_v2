@@ -6,7 +6,7 @@ import './index.css';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
-import ScrollToTop from './components/ScrollToTop'; // 🔴 추가된 임포트
+import ScrollToTop from './components/ScrollToTop'; 
 import Home from './pages/Home';
 import DanangHome from './pages/DanangHome';
 import NhatrangHome from './pages/NhatrangHome';
@@ -35,17 +35,17 @@ import AdminManageStores from './pages/AdminManageStores';
 import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
+// 🔴 추가: 구글 지도를 보여줄 페이지 (이름은 프로젝트 상황에 맞춰 변경 가능)
+import StoreMapPage from './pages/StoreMapPage'; 
+
 // 🔒 관리자 가드 (탭 전환 시 컴포넌트 언마운트 방지)
 const AdminRoute = () => {
   const { currentUser, initialized, loading } = useAuth();
   
-  // 아예 처음 접속해서 정보가 아예 없을 때만 검은 화면을 보여줍니다.
   if (!initialized && loading) return <div className="min-h-screen bg-black" />;
   
-  // 🔴 핵심: 이미 관리자인 게 확인되었다면, 백그라운드 로딩 중이라도 화면을 지우지 않습니다.
   if (currentUser?.role === 'ADMIN') return <Outlet />;
   
-  // 로딩이 완전히 끝났는데 관리자가 아니라면 홈으로 보냅니다.
   if (initialized && !loading && currentUser?.role !== 'ADMIN') return <Navigate to="/" replace />;
   
   return <div className="min-h-screen bg-black" />;
@@ -66,7 +66,6 @@ function App() {
   return (
     <HelmetProvider>
       <Router>
-        {/* 🔴 상위 페이지 간 이동 시 상단 스크롤 실행 */}
         <ScrollToTop /> 
         <div className="min-h-screen bg-[#050505] flex flex-col font-sans text-white">
           <Header />
@@ -75,6 +74,10 @@ function App() {
               {/* 공개 페이지 */}
               <Route path="/" element={<Home />} />
               <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
+              
+              {/* 🔴 추가된 구글 지도 경로 */}
+              <Route path="/mill-map" element={<StoreMapPage />} />
+
               <Route path="/danang" element={<DanangHome />} />
               <Route path="/danang/:category" element={<StoreList forcedRegion={Region.DANANG} />} />
               <Route path="/nhatrang" element={<NhatrangHome />} />
