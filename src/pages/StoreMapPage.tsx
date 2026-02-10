@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import MillMap from '../components/MillMap';
-import { supabase } from '../lib/supabase'; // 사용하시는 DB 연결 방식에 맞춰 수정 (supabase 또는 firebase)
+import { supabase } from '../supabase'; // 사용하시는 DB 연결 방식에 맞춰 수정 (supabase 또는 firebase)
 
 const StoreMapPage: React.FC = () => {
   const [stores, setStores] = useState<any[]>([]);
