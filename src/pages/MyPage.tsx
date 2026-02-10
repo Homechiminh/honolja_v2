@@ -67,18 +67,38 @@ const MyPage: React.FC = () => {
       await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
       await refreshUser();
       alert('프로필 이미지가 변경되었습니다.');
-    } catch (err: any) { alert(`업로드 실패: ${err.message}`); } finally { setLoading(false); }
+    } catch (err: any) { 
+      alert(`업로드 실패: ${err.message}`); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
+  // 닉네임 업데이트 함수 (에러 방지를 위해 로직 명확화)
   const handleUpdateNickname = async () => {
-    if (!currentUser || !newNickname.trim()) return;
+    if (!currentUser || !newNickname.trim()) {
+      alert('닉네임을 입력해주세요.');
+      return;
+    }
+    
     setLoading(true);
     try {
-      await supabase.from('profiles').update({ nickname: newNickname }).eq('id', currentUser.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ nickname: newNickname.trim() })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+
       setIsEditing(false);
       await refreshUser();
       alert('닉네임이 변경되었습니다.');
-    } catch (err: any) { alert(`변경 실패: ${err.message}`); } finally { setLoading(false); }
+    } catch (err: any) { 
+      console.error('Update Error:', err);
+      alert(`변경 실패: ${err.message || '알 수 없는 오류'}`); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const openCouponModal = (coupon: any) => {
@@ -110,7 +130,11 @@ const MyPage: React.FC = () => {
       alert('QR 저장이 완료되었습니다. 해당 쿠폰은 사용 완료 처리됩니다.');
       setSelectedCoupon(null);
       await fetchMyData(); 
-    } catch (err) { alert('처리 중 오류가 발생했습니다.'); } finally { setLoading(false); }
+    } catch (err) { 
+      alert('처리 중 오류가 발생했습니다.'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   if (!initialized || (authLoading && !currentUser)) {
@@ -151,9 +175,13 @@ const MyPage: React.FC = () => {
               <div className="flex items-center justify-center lg:justify-start gap-4 mb-4">
                 {isEditing ? (
                   <div className="flex items-center gap-3">
-                    <input value={newNickname} onChange={(e) => setNewNickname(e.target.value)} className="bg-black border-2 border-red-600/50 rounded-2xl px-4 py-2 text-xl md:text-2xl font-black w-40 md:w-48 outline-none shadow-inner" />
-                    <button onClick={handleUpdateNickname} disabled={loading} className="bg-emerald-600 p-2 rounded-xl text-sm">✔️</button>
-                    <button onClick={() => setIsEditing(false)} className="bg-white/5 p-2 rounded-xl text-sm">❌</button>
+                    <input 
+                      value={newNickname} 
+                      onChange={(e) => setNewNickname(e.target.value)} 
+                      className="bg-black border-2 border-red-600/50 rounded-2xl px-4 py-2 text-xl md:text-2xl font-black w-40 md:w-48 outline-none shadow-inner" 
+                    />
+                    <button onClick={handleUpdateNickname} disabled={loading} className="bg-emerald-600 p-2 rounded-xl text-sm hover:scale-110 transition-transform">✔️</button>
+                    <button onClick={() => setIsEditing(false)} className="bg-white/5 p-2 rounded-xl text-sm hover:scale-110 transition-transform">❌</button>
                   </div>
                 ) : (
                   <>
@@ -221,7 +249,6 @@ const MyPage: React.FC = () => {
                       <Link key={post.id} to={`/post/${post.id}`} className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 md:p-8 bg-white/[0.03] rounded-[2rem] md:rounded-[2.5rem] border border-white/5 hover:border-red-600/40 transition-all group gap-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-6 w-full">
                           <span className="text-red-600 font-black text-[9px] px-3 py-1 bg-red-600/10 rounded-full italic w-fit">#{post.category}</span>
-                          {/* 🔴 모바일 세로 꺾임 방지: truncate 해제 및 유연한 너비 설정 */}
                           <span className="text-lg md:text-xl font-bold group-hover:text-red-500 transition-colors italic tracking-tight break-keep">{post.title}</span>
                         </div>
                         <span className="text-[9px] text-gray-600 font-black uppercase italic shrink-0">{new Date(post.created_at).toLocaleDateString()}</span>
@@ -263,7 +290,6 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 🔴 하단 버튼 레이아웃 수정: 모바일에서 버튼이 겹치지 않도록 flex-col/flex-row 조정 */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-8 px-6 md:px-10">
           <Link to="/" className="text-gray-500 hover:text-white text-[10px] md:text-[11px] font-black uppercase italic tracking-[0.3em] transition-all">← 메인으로 이동</Link>
           <div className="flex gap-4 w-full sm:w-auto">
