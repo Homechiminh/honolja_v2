@@ -5,7 +5,6 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
-// 지도 연동을 위한 라이브러리 추가
 import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
 const Home: React.FC = () => {
