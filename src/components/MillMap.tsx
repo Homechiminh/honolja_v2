@@ -6,13 +6,11 @@ const mapContainerStyle = {
   height: '100%',
 };
 
+// 호치민 1군 중심 좌표
 const center = {
   lat: 10.7769,
   lng: 106.7009,
 };
-
-// 🛠️ 시인성을 방해하는 다크스타일 변수를 제거하거나 비웁니다.
-const lightMapStyle = []; 
 
 interface MillMapProps {
   stores: any[];
@@ -35,14 +33,16 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
     setMap(null);
   }, []);
 
-  // 🔗 Cloudinary 링크 기반 카테고리별 아이콘 설정
+  /**
+   * 카테고리에 따른 Cloudinary 아이콘 매핑
+   */
   const getIcon = (category: string) => {
     const cat = category?.toLowerCase().trim();
     
-    // 기본 마커
+    // 매칭되는 카테고리가 없을 때 사용할 기본 핀 이미지
     let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
     
-    // 🔴 전달해주신 Cloudinary 직접 링크로 모두 교체했습니다.
+    // 사용자가 제공한 Cloudinary 링크 적용
     if (cat === 'karaoke') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png';
     if (cat === 'barber') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png';
     if (cat === 'massage') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png';
@@ -50,7 +50,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
 
     return {
       url,
-      // 기본 지도에서 가장 보기 좋은 사이즈 40x40
+      // 아이콘 크기 (40x40 픽셀이 표준 지도에서 가장 잘 보입니다)
       scaledSize: new window.google.maps.Size(40, 40),
       origin: new window.google.maps.Point(0, 0),
       anchor: new window.google.maps.Point(20, 20), 
@@ -65,17 +65,19 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
       center={center}
       zoom={14}
       options={{
-        // 🛠️ styles: lightMapStyle 로 변경하여 기본 지도를 보여줍니다.
-        styles: lightMapStyle,
+        // 다크모드 스타일 코드를 제거하여 기본 지도가 나오게 함 (타입 에러 해결)
         disableDefaultUI: false,
         zoomControl: true,
       }}
       onLoad={onLoad}
       onUnmount={onUnmount}
     >
+      {/* 데이터 유효성 검사 후 마커 표시 */}
       {stores.map((store) => {
         const lat = Number(store.lat || store.Lat);
         const lng = Number(store.lng || store.Ing);
+
+        if (isNaN(lat) || isNaN(lng)) return null;
 
         return (
           <Marker
@@ -84,12 +86,13 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
             icon={getIcon(store.category)}
             onClick={() => setSelectedStore(store)}
             title={store.name}
-            // 마커가 떨어지는 애니메이션 추가 (시인성 업)
+            // 마커 생성 시 톡 떨어지는 애니메이션 효과
             animation={window.google.maps.Animation.DROP}
           />
         );
       })}
 
+      {/* 마커 클릭 시 정보창 표시 */}
       {selectedStore && (
         <InfoWindow
           position={{ 
