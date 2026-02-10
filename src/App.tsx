@@ -75,7 +75,6 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/stores/:category" element={<StoreList forcedRegion={Region.HCMC} />} />
               
-              {/* 🔴 추가된 구글 지도 경로 */}
               <Route path="/mill-map" element={<StoreMapPage />} />
 
               <Route path="/danang" element={<DanangHome />} />
