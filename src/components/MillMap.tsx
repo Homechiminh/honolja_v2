@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -14,7 +14,7 @@ const ICON_ASSETS: Record<string, string> = {
 };
 
 const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
-  // Advanced Marker를 사용하기 위해 'marker' 라이브러리를 명시적으로 로드합니다.
+  // Advanced Marker를 사용하기 위해 'marker' 라이브러리를 로드합니다.
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -28,7 +28,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     const renderMarkers = async () => {
       // 지도와 라이브러리가 로드되고 데이터가 있을 때 실행
       if (isLoaded && mapRef.current && stores.length > 0) {
-        // 기존 마커 초기화
+        // 기존 마커 초기화 (메모리 누수 방지)
         markersRef.current.forEach(marker => (marker.map = null));
         markersRef.current = [];
 
@@ -41,7 +41,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
           
           if (isNaN(lat) || isNaN(lng)) return;
 
-          // 카테고리 매칭 로직 (Supabase Table 기준)
+          // 카테고리 매칭 로직 (소문자/공백 처리)
           const cat = String(store.category || "").toLowerCase().trim();
           
           // 마커용 커스텀 HTML 요소(img) 생성
@@ -50,7 +50,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
           iconImg.style.width = '40px';
           iconImg.style.height = '40px';
 
-          // Advanced Marker 생성 (CSS 간섭 방지를 위해 content 속성 사용)
+          // Advanced Marker 생성
           const marker = new AdvancedMarkerElement({
             map: mapRef.current,
             position: { lat, lng },
@@ -58,9 +58,9 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             content: iconImg, 
           });
 
-          // 클릭 이벤트 추가 (필요 시 InfoWindow 로직 결합 가능)
+          // 클릭 시 정보 확인용 이벤트
           marker.addListener('click', () => {
-            console.log(`${store.name} 클릭됨`);
+            alert(`${store.name}\n${store.address}`);
           });
 
           markersRef.current.push(marker);
@@ -80,8 +80,8 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
       zoom={14}
       onLoad={(map) => { mapRef.current = map; }}
       options={{
-        // 🚨 새로 생성한 지도 ID를 반드시 적용해야 합니다.
-        mapId: import.meta.env.VITE_GOOGLE_MAP_ID || "YOUR_MAP_ID_HERE",
+        // 🚨 Vercel 환경변수에 등록한 지도 ID를 적용합니다.
+        mapId: import.meta.env.VITE_GOOGLE_MAP_ID,
         disableDefaultUI: false,
         backgroundColor: '#ffffff',
         gestureHandling: 'greedy'
