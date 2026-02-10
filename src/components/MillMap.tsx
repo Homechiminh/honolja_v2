@@ -43,17 +43,25 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
     setMap(null);
   }, []);
 
+  // Flaticon 링크 기반 카테고리별 아이콘 설정
   const getIcon = (category: string) => {
+    const cat = category?.toLowerCase().trim();
+    
+    // 기본 마커 (핀 모양)
     let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
     
-    if (category === 'karaoke') url = 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png';
-    if (category === 'massage') url = 'https://cdn-icons-png.flaticon.com/512/833/833472.png';
-    if (category === 'barber') url = 'https://cdn-icons-png.flaticon.com/512/8146/8146003.png';
-    if (category === 'barclub') url = 'https://cdn-icons-png.flaticon.com/512/3813/3813681.png';
+    // 사용자가 제공한 Flaticon 링크 기반 아이콘 매핑
+    if (cat === 'karaoke') url = 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png'; // Karaoke (Freepik)
+    if (cat === 'massage') url = 'https://cdn-icons-png.flaticon.com/512/833/833472.png';   // Massage (Darius Dan)
+    if (cat === 'barber') url = 'https://cdn-icons-png.flaticon.com/512/8146/8146003.png';  // Barber shop (Freepik)
+    if (cat === 'barclub') url = 'https://cdn-icons-png.flaticon.com/512/3813/3813681.png'; // Alcohol/Club (Freepik)
 
     return {
       url,
+      // 512x512 원본을 35x35로 강제 축소하여 선명하게 표시
       scaledSize: new window.google.maps.Size(35, 35),
+      origin: new window.google.maps.Point(0, 0),
+      anchor: new window.google.maps.Point(17, 17), // 아이콘의 정중앙이 좌표에 오도록 설정
     };
   };
 
@@ -72,21 +80,35 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
       onLoad={onLoad}
       onUnmount={onUnmount}
     >
-      {stores.filter(s => s.lat && s.lng).map((store) => (
-        <Marker
-          key={store.id}
-          position={{ lat: Number(store.lat), lng: Number(store.lng) }}
-          icon={getIcon(store.category)}
-          onClick={() => setSelectedStore(store)}
-        />
-      ))}
+      {stores.filter(s => (s.lat || s.Lat) && (s.lng || s.Ing)).map((store) => {
+        // DB 컬럼명 혼용 대응 (lat/Lat, lng/Ing)
+        const lat = Number(store.lat || store.Lat);
+        const lng = Number(store.lng || store.Ing);
+
+        return (
+          <Marker
+            key={store.id}
+            position={{ lat, lng }}
+            icon={getIcon(store.category)}
+            onClick={() => setSelectedStore(store)}
+            // 마커에 마우스 올렸을 때 이름 표시
+            title={store.name}
+          />
+        );
+      })}
 
       {selectedStore && (
         <InfoWindow
-          position={{ lat: Number(selectedStore.lat), lng: Number(selectedStore.lng) }}
+          position={{ 
+            lat: Number(selectedStore.lat || selectedStore.Lat), 
+            lng: Number(selectedStore.lng || selectedStore.Ing) 
+          }}
           onCloseClick={() => setSelectedStore(null)}
         >
           <div className="p-2 text-black min-w-[150px]">
+            <p className="text-[9px] font-black text-red-600 uppercase italic mb-0.5">
+              {selectedStore.category}
+            </p>
             <h4 className="font-black text-sm mb-1">{selectedStore.name}</h4>
             <p className="text-[10px] text-gray-600 mb-2">{selectedStore.address}</p>
             <a 
