@@ -5,10 +5,10 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
-// Advanced Marker 기능을 위한 라이브러리 및 컴포넌트 로드
-import { GoogleMap, useJsApiLoader, AdvancedMarker, InfoWindowF } from '@react-google-maps/api';
+// @react-google-maps/api에서 지원하지 않는 AdvancedMarker 대신 MarkerF를 사용하여 에러 해결
+import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
-// 리렌더링 방지를 위해 라이브러리 상수를 컴포넌트 외부로 선언
+// 라이브러리 로드 고정 (재로드 방지)
 const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker'];
 
 const Home: React.FC = () => {
@@ -22,11 +22,11 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🗺️ 지도 관련 상태
+  // 🗺️ 지도 및 필터 관련 상태
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState('all'); 
 
-  // 🛠️ Google Maps API 로더 (Map ID와 함께 사용)
+  // 🛠️ Google Maps API 로더
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -55,7 +55,6 @@ const Home: React.FC = () => {
             const rewardPoints = 5;
             await supabase.from('profiles').update({ points: (currentUser.points || 0) + rewardPoints }).eq('id', currentUser.id);
             await refreshUser();
-            alert(`✨ 반가워요! 오늘의 출석 보상 ${rewardPoints}P가 지급되었습니다.`);
           }
         }
       } catch (err) { console.error(err); }
@@ -63,19 +62,18 @@ const Home: React.FC = () => {
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
 
-  // 📍 [지도용 필터링 로직]
-  const mapStores = useMemo(() => {
-    return stores.filter((s: any) => {
-      const hasCoords = s.lat && s.lng;
-      const matchesCategory = activeCategory === 'all' || s.category === activeCategory;
-      return hasCoords && matchesCategory;
-    });
+  // 📍 [필터링 통합 로직] - 카테고리 선택 시 지도와 리스트 모두 반영
+  const filteredStores = useMemo(() => {
+    return stores.filter((s: any) => activeCategory === 'all' || s.category === activeCategory);
   }, [stores, activeCategory]);
 
-  // 🔥 [인기 업소 로직]
+  const mapStores = useMemo(() => {
+    return filteredStores.filter((s: any) => s.lat && s.lng);
+  }, [filteredStores]);
+
   const hotServiceStores = useMemo(() => {
-    return stores.filter((s: any) => s.is_hot && s.category !== 'villa').sort(() => Math.random() - 0.5).slice(0, 14);
-  }, [stores]);
+    return filteredStores.filter((s: any) => s.is_hot && s.category !== 'villa').sort(() => Math.random() - 0.5).slice(0, 14);
+  }, [filteredStores]);
 
   const premiumHotStays = useMemo(() => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
@@ -157,7 +155,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 (섹터별 커스텀 아이콘 + Map ID) */}
+      {/* 🗺️ 내 주변 방앗간 (MarkerF + Map ID + 커스텀 아이콘 + 높이 축소) */}
       <section id="map-section" className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
@@ -168,7 +166,7 @@ const Home: React.FC = () => {
               </h3>
             </div>
             
-            <div className="flex flex-wrap gap-2 bg-black/40 p-2 rounded-2xl border border-white/5">
+            <div className="flex flex-wrap gap-2 bg-black/40 p-2 rounded-2xl border border-white/5 font-sans">
               <button onClick={() => setActiveCategory('all')} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-emerald-500 text-black' : 'text-gray-500'}`}>전체</button>
               {categories.map(c => (
                 <button key={c.id} onClick={() => setActiveCategory(c.id)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === c.id ? 'bg-red-600 text-white' : 'text-gray-500'}`}>{c.name.split('/')[0]}</button>
@@ -194,42 +192,29 @@ const Home: React.FC = () => {
                 }}
               >
                 {mapStores.map((store: any) => {
-                  // 🎨 섹터별(카테고리별) 아이콘 URL 매핑 로직
-                  let iconUrl = store.map_icon_url; // 1순위: DB 개별 아이콘
-                  
-                  if (!iconUrl) { // 2순위: 카테고리별 지정 아이콘
-                    switch(store.category) {
-                      case 'massage':
-                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png";
-                        break;
-                      case 'barber':
-                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png";
-                        break;
-                      case 'karaoke':
-                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png";
-                        break;
-                      case 'barclub':
-                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png";
-                        break;
-                      default:
-                        iconUrl = null;
-                    }
+                  // 섹터별 아이콘 매핑
+                  let iconUrl = store.map_icon_url;
+                  if (!iconUrl) {
+                    const iconMap: any = {
+                      massage: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png",
+                      barber: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png",
+                      karaoke: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png",
+                      barclub: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png"
+                    };
+                    iconUrl = iconMap[store.category] || null;
                   }
 
                   return (
-                    <AdvancedMarker
+                    <MarkerF
                       key={store.id}
                       position={{ lat: Number(store.lat), lng: Number(store.lng) }}
                       onClick={() => setSelectedStore(store)}
-                    >
-                      <div className="hover:scale-125 transition-transform cursor-pointer drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-                        {iconUrl ? (
-                          <img src={iconUrl} alt="marker" style={{ width: '45px', height: '45px' }} />
-                        ) : (
-                          <div className="bg-red-600 p-2 rounded-full border-2 border-white shadow-lg text-[10px]">📍</div>
-                        )}
-                      </div>
-                    </AdvancedMarker>
+                      icon={iconUrl ? {
+                        url: iconUrl,
+                        scaledSize: new window.google.maps.Size(42, 42),
+                        anchor: new window.google.maps.Point(21, 21)
+                      } : undefined}
+                    />
                   );
                 })}
 
@@ -252,16 +237,21 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 실시간 인기 업소 */}
+      {/* 🔥 실시간 인기 업소 (카테고리 필터 연동됨) */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
-            <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span> HOT 실시간 인기 업소
+            <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span> 
+            {activeCategory === 'all' ? 'HOT 실시간 인기 업소' : `${activeCategory.toUpperCase()} 추천 리스트`}
           </h3>
           <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 font-sans">
-          {storesLoading ? [...Array(10)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
+          {storesLoading ? (
+            [...Array(10)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />)
+          ) : (
+            hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)
+          )}
         </div>
       </section>
 
