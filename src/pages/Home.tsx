@@ -5,8 +5,11 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
-// 지도 연동을 위한 라이브러리 추가
-import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
+// Advanced Marker 기능을 위한 라이브러리 로드
+import { GoogleMap, useJsApiLoader, AdvancedMarker, InfoWindowF } from '@react-google-maps/api';
+
+// 리렌더링 시 라이브러리 재로드 방지를 위해 컴포넌트 외부 선언
+const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker'];
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -19,16 +22,18 @@ const Home: React.FC = () => {
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
 
-  // 🗺️ 지도 관련 상태 및 로더
+  // 🗺️ 지도 관련 상태
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState('all'); 
 
+  // 🛠️ Google Maps API 로더
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: LIBRARIES
   });
 
-  // 🔴 [자동 출석 시스템]
+  // 🔴 [자동 출석 체크]
   useEffect(() => {
     const checkAttendance = async () => {
       if (!initialized || !currentUser) return;
@@ -82,7 +87,6 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 커뮤니티 데이터 페칭
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -153,7 +157,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 (높이 70% 축소 및 위성뷰 제거) */}
+      {/* 🗺️ 내 주변 방앗간 (Map ID 적용 + 높이 축소) */}
       <section id="map-section" className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
@@ -172,7 +176,7 @@ const Home: React.FC = () => {
             </div>
           </div>
           
-          {/* 지도의 높이를 기존 500/650에서 약 70%인 350/450으로 조절 */}
+          {/* 지도 높이를 70% 수준인 350px~450px로 유지 */}
           <div className="w-full h-[350px] md:h-[450px] rounded-[2rem] overflow-hidden border-4 border-white/5 relative shadow-inner">
             {isLoaded ? (
               <GoogleMap
@@ -180,21 +184,30 @@ const Home: React.FC = () => {
                 center={{ lat: 10.7769, lng: 106.7009 }} 
                 zoom={14}
                 options={{
-                  mapTypeControl: false, // 🗺️ 위성/지도 전환 버튼 제거
+                  mapId: '5485af0bf2bb4ebe63c8f331', // 🔑 요청하신 고유 MAP ID
+                  mapTypeControl: false, 
                   streetViewControl: false,
                   fullscreenControl: false,
                   styles: [
-                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+                    { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] },
+                    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#17263c" }] }
                   ],
                 }}
               >
                 {mapStores.map((store: any) => (
-                  <MarkerF
+                  <AdvancedMarker
                     key={store.id}
                     position={{ lat: Number(store.lat), lng: Number(store.lng) }}
                     onClick={() => setSelectedStore(store)}
-                  />
+                  >
+                    <div className="hover:scale-110 transition-transform cursor-pointer">
+                      {store.map_icon_url ? (
+                        <img src={store.map_icon_url} alt="icon" style={{ width: '42px', height: '42px' }} />
+                      ) : (
+                        <div className="bg-red-600 p-2 rounded-full border-2 border-white shadow-lg text-lg">📍</div>
+                      )}
+                    </div>
+                  </AdvancedMarker>
                 ))}
 
                 {selectedStore && (
@@ -211,12 +224,12 @@ const Home: React.FC = () => {
                   </InfoWindowF>
                 )}
               </GoogleMap>
-            ) : <div className="w-full h-full bg-white/5 animate-pulse flex items-center justify-center text-gray-500 font-black">MAP LOADING...</div>}
+            ) : <div className="w-full h-full bg-white/5 animate-pulse flex items-center justify-center text-gray-500 font-black italic">MAP LOADING...</div>}
           </div>
         </div>
       </section>
 
-      {/* 인기 업소 섹션 */}
+      {/* 실시간 인기 업소 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
