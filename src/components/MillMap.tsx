@@ -34,7 +34,18 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
 
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedStore, setSelectedStore] = useState<any>(null);
+
+  // 1. onLoad: 지도가 로드되었을 때 인스턴스 저장
+  const onLoad = useCallback((map: google.maps.Map) => {
+    setMap(map);
+  }, []);
+
+  // 2. onUnmount: 지도가 사라질 때 인스턴스 정리 (TS6133 에러 해결을 위해 useCallback 사용)
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
 
   // 카테고리별 커스텀 아이콘 설정
   const getIcon = (category: string) => {
@@ -63,6 +74,8 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
         disableDefaultUI: false,
         zoomControl: true,
       }}
+      onLoad={onLoad}
+      onUnmount={onUnmount}
     >
       {stores.filter(s => s.lat && s.lng).map((store) => (
         <Marker
