@@ -79,7 +79,7 @@ const Home: React.FC = () => {
       .slice(0, 14);
   }, [stores]);
 
-  // 📍 [지도용 좌표 데이터 추출]
+  // 📍 [지도용 좌표 데이터 추출] - any 처리로 TS 에러 방지
   const mapStores = useMemo(() => {
     return stores.filter((s: any) => s.lat && s.lng);
   }, [stores]);
@@ -196,7 +196,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 찾기 (지도 섹션 명칭: 호치민 방앗간) */}
+      {/* 🗺️ 내 주변 방앗간 찾기 (지도 섹션) */}
       <section className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
           <div className="flex items-center gap-4 mb-8">
@@ -210,7 +210,7 @@ const Home: React.FC = () => {
             {isLoaded ? (
               <GoogleMap
                 mapContainerStyle={{ width: '100%', height: '100%' }}
-                center={{ lat: 10.7769, lng: 106.7009 }} // 호치민 시내 중심점
+                center={{ lat: 10.7769, lng: 106.7009 }} 
                 zoom={14}
                 options={{
                   styles: [
@@ -219,17 +219,18 @@ const Home: React.FC = () => {
                   ],
                 }}
               >
-                {mapStores.map((store) => (
+                {/* 📍 마커 렌더링 수정 완료 */}
+                {mapStores.map((store: any) => (
                   <MarkerF
                     key={store.id}
-                    position={{ lat: store.lat, lng: store.lng }}
+                    position={{ lat: Number(store.lat), lng: Number(store.lng) }}
                     onClick={() => setSelectedStore(store)}
                   />
                 ))}
 
                 {selectedStore && (
                   <InfoWindowF
-                    position={{ lat: selectedStore.lat, lng: selectedStore.lng }}
+                    position={{ lat: Number(selectedStore.lat), lng: Number(selectedStore.lng) }}
                     onCloseClick={() => setSelectedStore(null)}
                   >
                     <div className="p-2 min-w-[200px] text-black">
