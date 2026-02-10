@@ -65,8 +65,9 @@ const MyPage: React.FC = () => {
       await supabase.storage.from('avatars').upload(filePath, file);
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
       await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
-      await refreshUser();
+      
       alert('프로필 이미지가 변경되었습니다.');
+      window.location.reload(); // 새로고침으로 상태 동기화
     } catch (err: any) { 
       alert(`업로드 실패: ${err.message}`); 
     } finally { 
@@ -74,28 +75,26 @@ const MyPage: React.FC = () => {
     }
   };
 
-  // 닉네임 업데이트 함수 (에러 방지를 위해 로직 명확화)
   const handleUpdateNickname = async () => {
-    if (!currentUser || !newNickname.trim()) {
-      alert('닉네임을 입력해주세요.');
-      return;
-    }
-    
+    if (!currentUser || !newNickname.trim()) return;
     setLoading(true);
     try {
-      const { error } = await supabase
+      // 1. Supabase 프로필 업데이트
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ nickname: newNickname.trim() })
         .eq('id', currentUser.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      setIsEditing(false);
-      await refreshUser();
+      // 2. 성공 알림 및 새로고침 (l is not a function 에러 방지)
       alert('닉네임이 변경되었습니다.');
+      window.location.reload(); 
+      
     } catch (err: any) { 
       console.error('Update Error:', err);
-      alert(`변경 실패: ${err.message || '알 수 없는 오류'}`); 
+      alert(`변경 실패 혹은 동기화 오류: ${err.message || '다시 시도해주세요.'}`); 
+      window.location.reload();
     } finally { 
       setLoading(false); 
     }
@@ -178,7 +177,7 @@ const MyPage: React.FC = () => {
                     <input 
                       value={newNickname} 
                       onChange={(e) => setNewNickname(e.target.value)} 
-                      className="bg-black border-2 border-red-600/50 rounded-2xl px-4 py-2 text-xl md:text-2xl font-black w-40 md:w-48 outline-none shadow-inner" 
+                      className="bg-black border-2 border-red-600/50 rounded-2xl px-4 py-2 text-xl md:text-2xl font-black w-40 md:w-48 outline-none shadow-inner text-white" 
                     />
                     <button onClick={handleUpdateNickname} disabled={loading} className="bg-emerald-600 p-2 rounded-xl text-sm hover:scale-110 transition-transform">✔️</button>
                     <button onClick={() => setIsEditing(false)} className="bg-white/5 p-2 rounded-xl text-sm hover:scale-110 transition-transform">❌</button>
