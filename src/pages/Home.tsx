@@ -23,7 +23,7 @@ const Home: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY // .env 파일에 키가 있어야 합니다.
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
 
   // 🔴 [자동 출석 시스템] 1일 1회 5P 지급
@@ -213,6 +213,8 @@ const Home: React.FC = () => {
                 center={{ lat: 10.7769, lng: 106.7009 }} 
                 zoom={14}
                 options={{
+                  // 🚨 지도가 어둡게 나오는 문제 해결을 위한 mapId 추가
+                  mapId: "69a6320a10996f9", 
                   styles: [
                     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
                     { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
