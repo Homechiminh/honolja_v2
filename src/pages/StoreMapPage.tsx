@@ -3,26 +3,33 @@ import MillMap from '../components/MillMap';
 import { supabase } from '../supabase';
 
 const StoreMapPage: React.FC = () => {
-  const [stores, setStores] = useState<any[]>([]);
+  const [allStores, setAllStores] = useState<any[]>([]); // 원본 보관용
+  const [stores, setStores] = useState<any[]>([]);       // 지도 표시용 (필터링됨)
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+
+  // 필터 카테고리 정의
+  const categories = [
+    { id: 'all', name: '전체', icon: '📍' },
+    { id: 'massage', name: '마사지', icon: '💆' },
+    { id: 'barber', name: '이발소', icon: '💈' },
+    { id: 'karaoke', name: '가라오케', icon: '🎤' },
+    { id: 'barclub', name: '바/클럽', icon: '🍸' },
+  ];
 
   useEffect(() => {
     const fetchStores = async () => {
       try {
         setLoading(true);
-        
-        // 1. 위도/경도가 있는 것만 가져오되, 컬럼명 오타 대응을 위해 유연하게 쿼리
-        const { data, error } = await supabase
-          .from('stores')
-          .select('*');
+        // 1. 전체 데이터를 가져옵니다.
+        const { data, error } = await supabase.from('stores').select('*');
 
         if (error) throw error;
 
         if (data) {
-          // 2. DB의 float8 값을 프론트엔드에서 쓸 수 있게 안전하게 변환
+          // 2. 좌표 데이터 전처리 (오타 및 형식 대응)
           const validData = data
             .map((item: any) => {
-              // lng가 소문자 l인지 대문자 I인지 모르므로 둘 다 체크
               const latVal = item.lat || item.Lat;
               const lngVal = item.lng || item.Ing || item.Lng;
 
@@ -32,11 +39,11 @@ const StoreMapPage: React.FC = () => {
                 lng: lngVal ? Number(lngVal) : null
               };
             })
-            // 3. 변환 후 위도, 경도가 확실히 숫자로 존재하는 데이터만 최종 필터링
+            // 3. 좌표가 확실히 존재하는 것만 1차 필터링
             .filter(item => item.lat !== null && item.lng !== null && !isNaN(item.lat));
 
-          console.log("지도에 표시될 유효 데이터:", validData);
-          setStores(validData);
+          setAllStores(validData);
+          setStores(validData); // 초기 상태는 전체 표시
         }
       } catch (err) {
         console.error('가게 정보를 불러오는데 실패했습니다:', err);
@@ -48,28 +55,63 @@ const StoreMapPage: React.FC = () => {
     fetchStores();
   }, []);
 
+  // 4. 카테고리 변경 시 실시간 필터링 로직 (누락되었던 부분)
+  useEffect(() => {
+    if (activeCategory === 'all') {
+      setStores(allStores);
+    } else {
+      const filtered = allStores.filter(
+        (s) => s.category?.toLowerCase().trim() === activeCategory
+      );
+      setStores(filtered);
+    }
+  }, [activeCategory, allStores]);
+
   return (
-    <div className="w-full h-[calc(100vh-80px)] bg-[#050505] relative">
+    <div className="w-full h-[calc(100vh-80px)] bg-[#050505] relative overflow-hidden">
+      
+      {/* 5. 상단 필터 버튼 UI (누락되었던 부분) */}
+      <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-[95%] max-w-2xl">
+        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar justify-start md:justify-center">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[11px] font-black uppercase italic whitespace-nowrap transition-all border ${
+                activeCategory === cat.id
+                  ? 'bg-red-600 border-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]'
+                  : 'bg-black/60 border-white/10 text-gray-400 backdrop-blur-md hover:border-white/30'
+              }`}
+            >
+              <span>{cat.icon}</span>
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
         <div className="absolute inset-0 flex items-center justify-center text-white">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-red-600"></div>
         </div>
       ) : (
         <>
-          {/* 필터링된 stores를 MillMap에 전달 */}
           <MillMap stores={stores} />
           
           {stores.length === 0 && (
-            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 bg-red-600/90 text-white px-6 py-2 rounded-full font-black shadow-xl">
-              📍 표시 가능한 데이터가 없습니다 (데이터 확인 필요)
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-black/80 text-white px-8 py-4 rounded-2xl border border-white/10 backdrop-blur-xl shadow-2xl">
+                <p className="text-sm font-black italic">📍 해당 카테고리에 등록된 업체가 없습니다.</p>
+              </div>
             </div>
           )}
         </>
       )}
       
+      {/* 왼쪽 상단 타이틀 레이어 */}
       <div className="absolute top-4 left-4 z-10 bg-black/70 p-4 rounded-lg border border-white/10 backdrop-blur-md">
         <h1 className="text-xl font-black text-white italic text-red-600 tracking-tighter uppercase">Honolja Map</h1>
-        <p className="text-[10px] text-gray-400 font-bold">검색된 마커: {stores.length}개</p>
+        <p className="text-[10px] text-gray-400 font-bold">검색 결과: {stores.length}개</p>
       </div>
     </div>
   );
