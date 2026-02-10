@@ -5,6 +5,7 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
+// 지도 연동을 위한 라이브러리 추가
 import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
 const Home: React.FC = () => {
@@ -34,41 +35,37 @@ const Home: React.FC = () => {
       if (!initialized || !currentUser) return;
       const today = new Date().toLocaleDateString('en-CA'); 
       try {
-        const { data: existing, error: fetchError } = await supabase
+        const { data: existing } = await supabase
           .from('attendance')
           .select('*')
           .eq('user_id', currentUser.id)
           .eq('check_in_date', today)
           .maybeSingle();
 
-        if (!existing && !fetchError) {
+        if (!existing) {
           const { error: insertError } = await supabase
             .from('attendance')
             .insert([{ user_id: currentUser.id, check_in_date: today }]);
 
           if (!insertError) {
-            const rewardPoints = 5; 
-            await supabase
-              .from('profiles')
-              .update({ points: (currentUser.points || 0) + rewardPoints })
-              .eq('id', currentUser.id);
-
-            await supabase.from('point_history').insert([{
-              user_id: currentUser.id,
-              amount: rewardPoints,
-              reason: '일일 자동 출석 보상 (5P)'
-            }]);
-
+            await supabase.from('profiles').update({ points: (currentUser.points || 0) + 5 }).eq('id', currentUser.id);
             await refreshUser();
-            alert(`✨ 반가워요! 오늘의 출석 보상 ${rewardPoints}P가 지급되었습니다.`);
+            alert(`✨ 반가워요! 오늘의 출석 보상 5P가 지급되었습니다.`);
           }
         }
-      } catch (err) {
-        console.error('Attendance Check Error:', err);
-      }
+      } catch (err) { console.error('Attendance Error:', err); }
     };
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
+
+  // 📍 [지도용 필터링 로직 핵심]
+  const mapStores = useMemo(() => {
+    return stores.filter((s: any) => {
+      const hasCoords = s.lat && s.lng;
+      const matchesCategory = activeCategory === 'all' || s.category === activeCategory;
+      return hasCoords && matchesCategory;
+    });
+  }, [stores, activeCategory]);
 
   // 🔥 [인기 업소 로직]
   const hotServiceStores = useMemo(() => {
@@ -78,25 +75,13 @@ const Home: React.FC = () => {
       .slice(0, 14);
   }, [stores]);
 
-  // 📍 [지도용 좌표 데이터 추출 & 필터링 로직 강화]
-  const mapStores = useMemo(() => {
-    return stores.filter((s: any) => {
-      const hasCoords = s.lat && s.lng;
-      // activeCategory가 'all'이면 모든 좌표 있는 업소 표시, 아니면 카테고리 매칭
-      const matchesCategory = activeCategory === 'all' || s.category === activeCategory;
-      return hasCoords && matchesCategory;
-    });
-  }, [stores, activeCategory]);
-
   const premiumHotStays = useMemo(() => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
 
-  // 상단 배너 타이머
+  // 배너 타이머
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
-    }, 5000);
+    const timer = setInterval(() => setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0)), 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -111,87 +96,78 @@ const Home: React.FC = () => {
       if (postRes.data) setLatestPosts(postRes.data);
       if (vipRes.data) setLatestVipPosts(vipRes.data);
       if (noticeRes.data) setLatestNotices(noticeRes.data);
-    } catch (err) {
-      console.error('Home 데이터 동기화 에러:', err);
-    }
+    } catch (err) { console.error('Data Fetch Error:', err); }
   };
 
-  useEffect(() => {
-    if (initialized) fetchHomeData();
-  }, [initialized]);
-
-  const handleVIPClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!currentUser || currentUser.level < 3) {
-      setShowLevelModal(true);
-    } else {
-      navigate('/vip-lounge');
-    }
-  };
+  useEffect(() => { if (initialized) fetchHomeData(); }, [initialized]);
 
   const handleVipPostClick = (e: React.MouseEvent, postId: string) => {
     e.preventDefault();
-    if (!currentUser || currentUser.level < 3) {
-      setShowLevelModal(true);
-    } else {
-      navigate(`/post/${postId}`);
-    }
+    if (!currentUser || currentUser.level < 3) setShowLevelModal(true);
+    else navigate(`/post/${postId}`);
   };
 
-  // 🎨 카테고리별 마커 아이콘 설정 함수 (40x40 최적 사이즈 적용)
+  // 🎨 카테고리별 커스텀 마커 아이콘
   const getMarkerIcon = (category: string) => {
     const icons: { [key: string]: string } = {
       karaoke: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png",
       massage: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png",
       barber: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png",
       barclub: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png",
-      villa: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png" 
+      villa: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png"
     };
-
     return {
       url: icons[category] || icons['massage'],
       scaledSize: new window.google.maps.Size(40, 40),
-      origin: new window.google.maps.Point(0, 0),
       anchor: new window.google.maps.Point(20, 40)
     };
   };
+
+  const categories = [
+    { id: 'massage', name: '마사지/스파', icon: '💆‍♀️' },
+    { id: 'barber', name: '이발소', icon: '💈' },
+    { id: 'karaoke', name: '가라오케', icon: '🎤' },
+    { id: 'barclub', name: '바/클럽', icon: '🍸' },
+    { id: 'villa', name: '숙소/풀빌라', icon: '🏠' }
+  ];
 
   if (!initialized) return null;
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
       <Helmet>
-        <title>호놀자 | 베트남 호치민 유흥 · 밤문화 · 마사지 · 가라오케 · 맛집 프리미엄 가이드</title>
+        <title>호놀자 | 베트남 호치민 유흥 · 밤문화 프리미엄 가이드</title>
       </Helmet>
 
-      {showLevelModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
-          <div className="relative bg-[#111] border border-yellow-600/30 p-8 rounded-[2rem] max-w-[340px] w-full text-center shadow-2xl animate-in zoom-in duration-200">
-            <h3 className="text-xl font-black italic mb-2 uppercase text-yellow-500">ACCESS DENIED</h3>
-            <p className="text-slate-400 text-sm font-bold mb-8">VIP 라운지는 베테랑(Lv.3) 이상만 입장 가능합니다.</p>
-            <button onClick={() => setShowLevelModal(false)} className="w-full py-4 bg-yellow-600 text-black rounded-xl font-black text-sm hover:bg-yellow-500 transition-all">확인</button>
-          </div>
-        </div>
-      )}
-
-      {/* Hero 섹션 및 카테고리 필터 버튼 */}
+      {/* 🚀 Hero 섹션 (복구 및 필터 연동) */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
+        <div className="mb-6">
+          <span className="text-red-600 font-black tracking-[0.3em] uppercase italic text-xs md:text-sm bg-red-600/10 px-4 py-2 rounded-full border border-red-600/20 shadow-[0_0_15px_rgba(255,0,0,0.1)]">
+            Premium Ho Chi Minh Guide
+          </span>
+        </div>
+        
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">호</span>치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] tracking-tighter">놀자<span className="ml-5 md:ml-3">!</span></span>
         </h2>
+
+        <div className="flex flex-col gap-3 mb-16">
+          <p className="text-lg md:text-3xl font-black italic text-white/90 uppercase tracking-tighter">
+            남성들을 위한 호치민의 <span className="text-red-600">모든 것</span>
+          </p>
+          <p className="text-[10px] md:text-sm font-bold text-gray-500 uppercase tracking-[0.2em]">
+            검증된 업소 정보부터 아파트·풀빌라 예약까지 한 번에
+          </p>
+        </div>
         
         <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2 font-sans">
-          {[
-            { id: 'massage', name: '마사지/스파', icon: '💆‍♀️' }, 
-            { id: 'barber', name: '이발소', icon: '💈' }, 
-            { id: 'karaoke', name: '가라오케', icon: '🎤' }, 
-            { id: 'barclub', name: '바/클럽', icon: '🍸' }, 
-            { id: 'villa', name: '숙소/풀빌라', icon: '🏠' }
-          ].map((cat) => (
+          {categories.map((cat) => (
             <button 
               key={cat.id} 
-              onClick={() => setActiveCategory(cat.id)}
+              onClick={() => {
+                setActiveCategory(cat.id);
+                document.getElementById('map-finder')?.scrollIntoView({ behavior: 'smooth' });
+              }}
               className={`flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 rounded-2xl md:rounded-[32px] border transition-all group shadow-lg ${
                 activeCategory === cat.id ? 'bg-red-600/20 border-red-600 shadow-red-600/20' : 'bg-white/5 border-white/5 hover:bg-white/10'
               }`}
@@ -205,7 +181,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 실시간 인기 업소 */}
+      {/* 실시간 인기 업소 섹션 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -216,28 +192,41 @@ const Home: React.FC = () => {
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
           {storesLoading ? 
-            [...Array(14)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
+            [...Array(10)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
             hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)
           }
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 찾기 (지도 섹션) */}
-      <section className="max-w-[1400px] mx-auto px-6 py-10">
+      {/* 🗺️ 내 주변 방앗간 찾기 (지도 & 필터링) */}
+      <section id="map-finder" className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
             <div className="flex items-center gap-4">
               <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
               <h3 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter">
-                내 주변 <span className="text-emerald-500">{activeCategory === 'all' ? '방앗간' : '추천 업소'}</span> 찾기
+                내 주변 <span className="text-emerald-500">{activeCategory === 'all' ? '방앗간' : categories.find(c => c.id === activeCategory)?.name.split('/')[0]}</span> 찾기
               </h3>
             </div>
-            <button 
-              onClick={() => setActiveCategory('all')} 
-              className="text-[10px] md:text-xs font-black bg-white/5 px-4 py-2 rounded-full border border-white/10 hover:bg-white/10 transition-all uppercase italic"
-            >
-              필터 초기화
-            </button>
+
+            {/* 지도 전용 미니 필터 탭 */}
+            <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/5">
+              <button 
+                onClick={() => setActiveCategory('all')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:text-white'}`}
+              >
+                ALL
+              </button>
+              {categories.map(c => (
+                <button 
+                  key={c.id}
+                  onClick={() => setActiveCategory(c.id)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === c.id ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-gray-500 hover:text-white'}`}
+                >
+                  {c.name.split('/')[0]}
+                </button>
+              ))}
+            </div>
           </div>
           
           <div className="w-full h-[500px] md:h-[650px] rounded-[2rem] overflow-hidden border-4 border-white/5 shadow-inner relative">
@@ -246,12 +235,9 @@ const Home: React.FC = () => {
                 mapContainerStyle={{ width: '100%', height: '100%' }}
                 center={{ lat: 10.7769, lng: 106.7009 }} 
                 zoom={14}
-                options={{
-                  mapId: "69a6320a10996f9", 
-                  disableDefaultUI: false,
-                }}
+                options={{ mapId: "69a6320a10996f9", disableDefaultUI: false }}
               >
-                {/* 필터링된 데이터(mapStores)만 마커로 렌더링 */}
+                {/* 필터링된 데이터(mapStores) 렌더링 */}
                 {mapStores.map((store: any) => (
                   <MarkerF
                     key={store.id}
@@ -287,22 +273,21 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 통합 섹션 */}
+      {/* 커뮤니티 & VIP & 공지 섹션 */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
-            <span className="absolute -right-4 -bottom-8 text-white/10 text-9xl font-black italic select-none">H</span>
-            <span className="text-[8px] md:text-[10px] font-black text-white/60 uppercase block mb-1 relative z-10 italic">Channel</span>
-            <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter relative z-10 leading-tight">호놀자 텔레그램</h4>
+            <span className="text-[8px] font-black text-white/60 uppercase block mb-1 relative z-10 italic">Channel</span>
+            <h4 className="text-sm md:text-xl font-black italic text-white tracking-tighter relative z-10">호놀자 텔레그램</h4>
           </a>
           <a href="https://open.kakao.com/o/gx4EsPRg" target="_blank" rel="noreferrer" className="flex-1 bg-[#FEE500] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all text-black shadow-xl flex flex-col justify-center min-h-[140px]">
-            <span className="absolute -right-4 -bottom-8 text-black/5 text-9xl font-black italic select-none">H</span>
-            <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase block mb-1 relative z-10 italic">Open Chat</span>
-            <h4 className="text-sm md:text-xl font-black italic tracking-tighter relative z-10 leading-tight">호놀자 카카오톡</h4>
+            <span className="text-[8px] font-black text-black/40 uppercase block mb-1 relative z-10 italic">Open Chat</span>
+            <h4 className="text-sm md:text-xl font-black italic tracking-tighter relative z-10">호놀자 카카오톡</h4>
           </a>
         </div>
 
         <div className="lg:col-span-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* 자유게시판 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4>
@@ -317,10 +302,10 @@ const Home: React.FC = () => {
               ))}
             </div>
           </div>
+          {/* VIP 라운지 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4>
-              <button onClick={handleVIPClick} className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</button>
             </div>
             <div className="bg-[#111] rounded-2xl border border-yellow-500/10 divide-y divide-white/5 overflow-hidden shadow-2xl">
               {latestVipPosts.map(post => (
@@ -331,14 +316,14 @@ const Home: React.FC = () => {
               ))}
             </div>
           </div>
+          {/* 공지사항 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4>
-              <Link to="/notice" className="text-[10px] text-gray-300 font-bold underline hover:text-white uppercase italic">더보기</Link>
             </div>
             <div className="space-y-3">
               {latestNotices.map(notice => (
-                <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all shadow-xl">
+                <Link key={notice.id} to={`/notice/${notice.id}`} className="block bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/10 transition-all shadow-xl">
                   <p className={`text-sm font-bold truncate ${notice.is_important ? 'text-red-500' : 'text-slate-200'}`}>
                     {notice.is_important && '[필독] '}{notice.title}
                   </p>
@@ -355,26 +340,21 @@ const Home: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
             <div>
               <h3 className="text-3xl md:text-5xl font-black italic mb-3 tracking-tighter uppercase leading-none">Premium Stays</h3>
-              <p className="text-gray-500 font-bold text-sm md:text-lg">호놀자가 검증한 최고급 풀빌라 정보</p>
+              <p className="text-gray-500 font-bold text-sm md:text-lg">최고급 아파트·풀빌라 예약 서비스</p>
             </div>
-            <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all italic">예약문의</Link>
+            <Link to="/stores/villa" className="bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all italic">예약문의</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
-            {storesLoading ? [1, 2].map(i => <div key={i} className="h-[250px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
-              premiumHotStays.map((store: any) => (
-                <Link to={`/store/${store.id}`} key={store.id} className="group relative block w-full h-[250px] md:h-[350px] overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl transition-all">
-                  <img src={store.image_url} alt={store.name} className="w-full h-full object-cover transform transition-transform duration-1000 group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                  <div className="absolute top-6 left-6 flex gap-2">
-                    <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase italic shadow-lg">Hot Pick</span>
-                  </div>
-                  <div className="absolute bottom-8 left-8 right-8">
-                    <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">{store.name}</h4>
-                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">Ho Chi Minh Villa</span>
-                  </div>
-                </Link>
-              ))
-            }
+            {premiumHotStays.map((store: any) => (
+              <Link to={`/store/${store.id}`} key={store.id} className="group relative block w-full h-[250px] md:h-[350px] overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl transition-all">
+                <img src={store.image_url} alt={store.name} className="w-full h-full object-cover transform transition-transform duration-1000 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                <div className="absolute bottom-8 left-8 right-8">
+                  <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">{store.name}</h4>
+                  <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">Ho Chi Minh Villa</span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -389,12 +369,24 @@ const Home: React.FC = () => {
             </div>
             <a href="https://t.me/honolja84" target="_blank" rel="noreferrer" className="min-w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-10 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] text-white">
               <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4 italic">Telegram Ad Contact</span>
-              <h4 className="text-white text-lg md:text-4xl font-black italic tracking-tighter mb-6">호놀자 광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
+              <h4 className="text-white text-lg md:text-4xl font-black italic tracking-tighter mb-6">광고제휴 텔레그램 <span className="text-blue-400">@honolja84</span></h4>
               <div className="px-8 py-3 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-400 text-xs font-black uppercase tracking-widest italic hover:bg-blue-600 hover:text-white transition-all">Contact Now</div>
             </a>
           </div>
         </div>
       </section>
+
+      {/* VIP 레벨 모달 */}
+      {showLevelModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
+          <div className="relative bg-[#111] border border-yellow-600/30 p-8 rounded-[2rem] max-w-[340px] w-full text-center shadow-2xl animate-in zoom-in duration-200">
+            <h3 className="text-xl font-black italic mb-2 uppercase text-yellow-500">ACCESS DENIED</h3>
+            <p className="text-slate-400 text-sm font-bold mb-8">VIP 라운지는 베테랑(Lv.3) 이상만 입장 가능합니다.</p>
+            <button onClick={() => setShowLevelModal(false)} className="w-full py-4 bg-yellow-600 text-black rounded-xl font-black text-sm hover:bg-yellow-500 transition-all">확인</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
