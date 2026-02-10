@@ -6,13 +6,11 @@ const mapContainerStyle = {
   height: '100%',
 };
 
-// 호치민 1군 중심 좌표
 const center = {
   lat: 10.7769,
   lng: 106.7009,
 };
 
-// 구글맵 다크모드 스타일
 const darkMapStyle = [
   { "elementType": "geometry", "stylers": [{ "color": "#212121" }] },
   { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
@@ -34,27 +32,25 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
   });
 
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  // 🔴 수정 포인트: [map, setMap] 대신 [, setMap]으로 변경하여 미사용 변수 에러 방지
+  const [, setMap] = useState<google.maps.Map | null>(null);
   const [selectedStore, setSelectedStore] = useState<any>(null);
 
-  // 1. onLoad: 지도가 로드되었을 때 인스턴스 저장
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map);
+  const onLoad = useCallback((mapInstance: google.maps.Map) => {
+    setMap(mapInstance);
   }, []);
 
-  // 2. onUnmount: 지도가 사라질 때 인스턴스 정리 (TS6133 에러 해결을 위해 useCallback 사용)
   const onUnmount = useCallback(() => {
     setMap(null);
   }, []);
 
-  // 카테고리별 커스텀 아이콘 설정
   const getIcon = (category: string) => {
-    let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png'; // 기본핀
+    let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
     
-    if (category === 'karaoke') url = 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png'; // 별
-    if (category === 'massage') url = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; // 하트
-    if (category === 'barber') url = 'https://cdn-icons-png.flaticon.com/512/8146/8146003.png'; // 다이아몬드
-    if (category === 'barclub') url = 'https://cdn-icons-png.flaticon.com/512/3813/3813681.png'; // 클로버
+    if (category === 'karaoke') url = 'https://cdn-icons-png.flaticon.com/512/1828/1828884.png';
+    if (category === 'massage') url = 'https://cdn-icons-png.flaticon.com/512/833/833472.png';
+    if (category === 'barber') url = 'https://cdn-icons-png.flaticon.com/512/8146/8146003.png';
+    if (category === 'barclub') url = 'https://cdn-icons-png.flaticon.com/512/3813/3813681.png';
 
     return {
       url,
