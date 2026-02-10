@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 
 const mapContainerStyle = {
@@ -23,15 +23,15 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
 
   const [selectedStore, setSelectedStore] = useState<any>(null);
 
-  // 아이콘을 생성하는 함수
+  // 아이콘 생성 함수
   const getIcon = (category: string) => {
-    // window.google 객체가 로드된 후에만 실행되도록 보장
     if (typeof window === 'undefined' || !window.google) return undefined;
 
     const cat = category?.toLowerCase().trim();
-    let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png'; // 기본 핀
+    // 기본 아이콘 주소
+    let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
 
-    // 사용자가 제공한 Cloudinary 링크 매핑
+    // Cloudinary 직접 링크 매핑
     if (cat === 'karaoke') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png';
     if (cat === 'barber') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png';
     if (cat === 'massage') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png';
@@ -39,7 +39,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
 
     return {
       url,
-      scaledSize: new window.google.maps.Size(45, 45), // 아이콘 크기 확대
+      scaledSize: new window.google.maps.Size(45, 45), // 아이콘을 큼직하게 설정
       origin: new window.google.maps.Point(0, 0),
       anchor: new window.google.maps.Point(22, 22),
     };
@@ -53,7 +53,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
       center={center}
       zoom={14}
       options={{
-        // 빈 배열을 설정하여 기존 다크모드 스타일을 강제로 덮어씌웁니다.
+        // 🚨 이 부분이 빈 배열이어야 검은 지도가 사라집니다.
         styles: [], 
         disableDefaultUI: false,
         zoomControl: true,
@@ -71,7 +71,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
             position={{ lat, lng }}
             icon={getIcon(store.category)}
             onClick={() => setSelectedStore(store)}
-            animation={window.google.maps.Animation.DROP} // 마커 애니메이션
+            animation={window.google.maps.Animation.DROP}
           />
         );
       })}
