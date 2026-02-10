@@ -2,24 +2,36 @@
 
 @layer base {
   :root {
+    /* background-color를 여기서 빼고 body나 특정 레이아웃에 적용하는 게 좋지만, 
+       유지하고 싶다면 아래 .gm-style 설정을 추가해야 합니다. */
     background-color: #050505;
     color: #ffffff;
     font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
   }
+  
   body {
     margin: 0;
     display: block !important;
   }
+
+  /* 🚨 구글 지도 영역을 전역 스타일에서 보호하는 코드 추가 */
+  .gm-style, .gm-style * {
+    background-color: transparent !important;
+    color: initial !important; /* 글자색을 구글 기본값으로 복구 */
+  }
+
+  /* 인포윈도우(클릭 시 뜨는 창) 텍스트 검정색 유지 */
+  .gm-style .gm-style-iw-d, 
+  .gm-style .gm-style-iw-c {
+    color: #000000 !important;
+  }
 }
 
 @layer components {
-  /* "놀자!" 부분의 강렬한 레드 네온 효과 */
   .text-glow-red {
     color: #ff0000;
     text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 0, 0, 0.4);
   }
-  
-  /* 다낭/나트랑 버튼의 발광 테두리 */
   .btn-outline-blue {
     border: 1px solid #1e40af;
     box-shadow: 0 0 5px rgba(30, 64, 175, 0.5);
