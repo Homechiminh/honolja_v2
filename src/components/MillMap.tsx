@@ -1,19 +1,10 @@
 import React, { useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-};
+const mapContainerStyle = { width: '100%', height: '100%' };
+const center = { lat: 10.7769, lng: 106.7009 };
 
-const center = {
-  lat: 10.7769,
-  lng: 106.7009,
-};
-
-interface MillMapProps {
-  stores: any[];
-}
+interface MillMapProps { stores: any[]; }
 
 const MillMap: React.FC<MillMapProps> = ({ stores }) => {
   const { isLoaded } = useJsApiLoader({
@@ -31,8 +22,9 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
       center={center}
       zoom={14}
       options={{
-        // 🚨 중요: undefined가 아니라 null이나 []를 주어 기존 스타일을 강제 초기화합니다.
+        // 🚨 중요: 아래 두 줄이 구글 콘솔의 다크 스타일을 강제로 해제합니다.
         styles: [], 
+        mapId: "", 
         disableDefaultUI: false,
         zoomControl: true,
       }}
@@ -42,7 +34,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
         const lng = Number(store.lng);
         const cat = store.category?.toLowerCase().trim();
 
-        // 🔗 아이콘 경로 설정
+        // 🔗 직접 제공하신 Cloudinary 링크들
         let iconUrl = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
         if (cat === 'karaoke') iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png';
         if (cat === 'barber') iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png';
@@ -51,15 +43,15 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
 
         return (
           <Marker
-            key={`${store.id}-${cat}`} // 카테고리 변경 시 마커 리렌더링 강제
+            key={`${store.id}-${cat}`} 
             position={{ lat, lng }}
             onClick={() => setSelectedStore(store)}
-            // 🚨 아이콘 객체를 Marker 내부에 직접 선언
-            icon={{
+            // 🚨 브라우저 엔진이 아이콘을 제대로 그리도록 직접 주입
+            icon={window.google ? {
               url: iconUrl,
-              scaledSize: new window.google.maps.Size(45, 45),
-              anchor: new window.google.maps.Point(22, 22),
-            }}
+              scaledSize: new window.google.maps.Size(42, 42),
+              anchor: new window.google.maps.Point(21, 21),
+            } : undefined}
           />
         );
       })}
@@ -70,14 +62,10 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
           onCloseClick={() => setSelectedStore(null)}
         >
           <div className="p-2 text-black min-w-[150px]">
-            <p className="text-[9px] font-black text-red-600 uppercase italic mb-0.5">
-              {selectedStore.category}
-            </p>
+            <p className="text-[9px] font-black text-red-600 uppercase italic mb-0.5">{selectedStore.category}</p>
             <h4 className="font-bold text-sm mb-1">{selectedStore.name}</h4>
             <p className="text-[10px] text-gray-600 mb-2">{selectedStore.address}</p>
-            <a href={`/store/${selectedStore.id}`} className="text-[10px] font-bold text-blue-600 underline">
-              상세보기
-            </a>
+            <a href={`/store/${selectedStore.id}`} className="text-[10px] font-bold text-blue-600 underline italic">상세보기 VIEW MORE</a>
           </div>
         </InfoWindow>
       )}
