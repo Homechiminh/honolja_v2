@@ -11,7 +11,9 @@ import { useFetchGuard } from '../hooks/useFetchGuard';
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const couponRef = useRef<HTMLDivElement>(null);
-  const { currentUser, loading: authLoading, initialized, refreshUser } = useAuth(); 
+  
+  // refreshUser를 사용하지 않으므로 구조 분해 할당에서 제외했습니다.
+  const { currentUser, loading: authLoading, initialized } = useAuth(); 
 
   const [activeTab, setActiveTab] = useState<'activity' | 'points' | 'coupons'>('activity');
   const [isEditing, setIsEditing] = useState(false);
@@ -26,7 +28,6 @@ const MyPage: React.FC = () => {
   const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
   const [generatedSerial, setGeneratedSerial] = useState('');
 
-  // 데이터 로드 로직
   const fetchMyData = async () => {
     if (!currentUser?.id) return;
     setDataLoading(true);
@@ -67,7 +68,7 @@ const MyPage: React.FC = () => {
       await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
       
       alert('프로필 이미지가 변경되었습니다.');
-      window.location.reload(); // 새로고침으로 상태 동기화
+      window.location.reload(); 
     } catch (err: any) { 
       alert(`업로드 실패: ${err.message}`); 
     } finally { 
@@ -79,7 +80,6 @@ const MyPage: React.FC = () => {
     if (!currentUser || !newNickname.trim()) return;
     setLoading(true);
     try {
-      // 1. Supabase 프로필 업데이트
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ nickname: newNickname.trim() })
@@ -87,7 +87,7 @@ const MyPage: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      // 2. 성공 알림 및 새로고침 (l is not a function 에러 방지)
+      setIsEditing(false);
       alert('닉네임이 변경되었습니다.');
       window.location.reload(); 
       
@@ -152,7 +152,6 @@ const MyPage: React.FC = () => {
       <Helmet><title>호놀자 | 마이페이지</title></Helmet>
 
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
-        {/* 상단 프로필 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-14 border border-white/5 relative shadow-2xl overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
           <div className="flex flex-col lg:flex-row items-center gap-8 md:gap-12 relative z-10">
@@ -229,7 +228,6 @@ const MyPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 활동 탭 섹션 */}
         <div className="bg-[#0f0f0f] rounded-[2.5rem] md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
           <div className="flex bg-white/[0.02] p-2 gap-1 md:gap-2">
             {(['activity', 'points', 'coupons'] as const).map(tab => (
@@ -300,7 +298,6 @@ const MyPage: React.FC = () => {
         </div>
       </div>
 
-      {/* QR 모달 */}
       {selectedCoupon && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative bg-[#0a0a0a] border border-red-600/30 p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] max-w-[400px] w-full text-center">
