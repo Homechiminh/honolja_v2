@@ -5,10 +5,10 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
-// Advanced Marker 기능을 위한 라이브러리 로드
+// Advanced Marker 기능을 위한 라이브러리 및 컴포넌트 로드
 import { GoogleMap, useJsApiLoader, AdvancedMarker, InfoWindowF } from '@react-google-maps/api';
 
-// 리렌더링 시 라이브러리 재로드 방지를 위해 컴포넌트 외부 선언
+// 리렌더링 방지를 위해 라이브러리 상수를 컴포넌트 외부로 선언
 const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker'];
 
 const Home: React.FC = () => {
@@ -26,14 +26,14 @@ const Home: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState('all'); 
 
-  // 🛠️ Google Maps API 로더
+  // 🛠️ Google Maps API 로더 (Map ID와 함께 사용)
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
     libraries: LIBRARIES
   });
 
-  // 🔴 [자동 출석 체크]
+  // 🔴 [자동 출석 체크 시스템]
   useEffect(() => {
     const checkAttendance = async () => {
       if (!initialized || !currentUser) return;
@@ -157,7 +157,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 (Map ID 적용 + 높이 축소) */}
+      {/* 🗺️ 내 주변 방앗간 (섹터별 커스텀 아이콘 + Map ID) */}
       <section id="map-section" className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
@@ -176,7 +176,6 @@ const Home: React.FC = () => {
             </div>
           </div>
           
-          {/* 지도 높이를 70% 수준인 350px~450px로 유지 */}
           <div className="w-full h-[350px] md:h-[450px] rounded-[2rem] overflow-hidden border-4 border-white/5 relative shadow-inner">
             {isLoaded ? (
               <GoogleMap
@@ -184,7 +183,7 @@ const Home: React.FC = () => {
                 center={{ lat: 10.7769, lng: 106.7009 }} 
                 zoom={14}
                 options={{
-                  mapId: '5485af0bf2bb4ebe63c8f331', // 🔑 요청하신 고유 MAP ID
+                  mapId: '5485af0bf2bb4ebe63c8f331', 
                   mapTypeControl: false, 
                   streetViewControl: false,
                   fullscreenControl: false,
@@ -194,28 +193,52 @@ const Home: React.FC = () => {
                   ],
                 }}
               >
-                {mapStores.map((store: any) => (
-                  <AdvancedMarker
-                    key={store.id}
-                    position={{ lat: Number(store.lat), lng: Number(store.lng) }}
-                    onClick={() => setSelectedStore(store)}
-                  >
-                    <div className="hover:scale-110 transition-transform cursor-pointer">
-                      {store.map_icon_url ? (
-                        <img src={store.map_icon_url} alt="icon" style={{ width: '42px', height: '42px' }} />
-                      ) : (
-                        <div className="bg-red-600 p-2 rounded-full border-2 border-white shadow-lg text-lg">📍</div>
-                      )}
-                    </div>
-                  </AdvancedMarker>
-                ))}
+                {mapStores.map((store: any) => {
+                  // 🎨 섹터별(카테고리별) 아이콘 URL 매핑 로직
+                  let iconUrl = store.map_icon_url; // 1순위: DB 개별 아이콘
+                  
+                  if (!iconUrl) { // 2순위: 카테고리별 지정 아이콘
+                    switch(store.category) {
+                      case 'massage':
+                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png";
+                        break;
+                      case 'barber':
+                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png";
+                        break;
+                      case 'karaoke':
+                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png";
+                        break;
+                      case 'barclub':
+                        iconUrl = "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png";
+                        break;
+                      default:
+                        iconUrl = null;
+                    }
+                  }
+
+                  return (
+                    <AdvancedMarker
+                      key={store.id}
+                      position={{ lat: Number(store.lat), lng: Number(store.lng) }}
+                      onClick={() => setSelectedStore(store)}
+                    >
+                      <div className="hover:scale-125 transition-transform cursor-pointer drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+                        {iconUrl ? (
+                          <img src={iconUrl} alt="marker" style={{ width: '45px', height: '45px' }} />
+                        ) : (
+                          <div className="bg-red-600 p-2 rounded-full border-2 border-white shadow-lg text-[10px]">📍</div>
+                        )}
+                      </div>
+                    </AdvancedMarker>
+                  );
+                })}
 
                 {selectedStore && (
                   <InfoWindowF
                     position={{ lat: Number(selectedStore.lat), lng: Number(selectedStore.lng) }}
                     onCloseClick={() => setSelectedStore(null)}
                   >
-                    <div className="p-2 min-w-[200px] text-black">
+                    <div className="p-2 min-w-[200px] text-black font-sans">
                       <img src={selectedStore.image_url} className="w-full h-24 object-cover rounded-lg mb-2" />
                       <h4 className="font-black text-sm mb-1">{selectedStore.name}</h4>
                       <p className="text-[10px] text-gray-600 mb-2">{selectedStore.address}</p>
@@ -237,7 +260,7 @@ const Home: React.FC = () => {
           </h3>
           <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 font-sans">
           {storesLoading ? [...Array(10)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)}
         </div>
       </section>
@@ -340,7 +363,7 @@ const Home: React.FC = () => {
 
       {/* VIP 모달 */}
       {showLevelModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 font-sans">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
           <div className="relative bg-[#111] border border-yellow-600/30 p-8 rounded-[2rem] max-w-[340px] w-full text-center shadow-2xl">
             <h3 className="text-xl font-black italic mb-2 uppercase text-yellow-500">ACCESS DENIED</h3>
