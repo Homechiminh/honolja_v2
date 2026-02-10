@@ -21,18 +21,19 @@ const Home: React.FC = () => {
 
   // 🗺️ 지도 관련 상태 및 로더
   const [selectedStore, setSelectedStore] = useState<any>(null);
+  const [activeCategory, setActiveCategory] = useState('all'); 
+
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['marker'] 
   });
 
-  // 🔴 [자동 출석 시스템] 1일 1회 5P 지급
+  // 🔴 [자동 출석 시스템] (기존 유지)
   useEffect(() => {
     const checkAttendance = async () => {
       if (!initialized || !currentUser) return;
-
       const today = new Date().toLocaleDateString('en-CA'); 
-      
       try {
         const { data: existing, error: fetchError } = await supabase
           .from('attendance')
@@ -67,11 +68,10 @@ const Home: React.FC = () => {
         console.error('Attendance Check Error:', err);
       }
     };
-
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
 
-  // 🔥 [인기 업소 로직] HOT 업소 중 최대 14개를 무작위로 추출
+  // 🔥 [인기 업소 로직] (기존 유지)
   const hotServiceStores = useMemo(() => {
     return stores
       .filter((s: any) => s.is_hot && s.category !== 'villa')
@@ -79,16 +79,20 @@ const Home: React.FC = () => {
       .slice(0, 14);
   }, [stores]);
 
-  // 📍 [지도용 좌표 데이터 추출] - any 처리로 TS 에러 방지
+  // 📍 [지도용 좌표 데이터 추출 & 필터링 로직]
   const mapStores = useMemo(() => {
-    return stores.filter((s: any) => s.lat && s.lng);
-  }, [stores]);
+    return stores.filter((s: any) => {
+      const hasCoords = s.lat && s.lng;
+      const matchesCategory = activeCategory === 'all' || s.category === activeCategory;
+      return hasCoords && matchesCategory;
+    });
+  }, [stores, activeCategory]);
 
   const premiumHotStays = useMemo(() => {
     return stores.filter((s: any) => s.category === 'villa' && s.is_hot).slice(0, 2);
   }, [stores]);
 
-  // 상단 배너 타이머
+  // 상단 배너 타이머 (기존 유지)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentAdIdx((prev) => (prev === 0 ? 1 : 0));
@@ -96,7 +100,7 @@ const Home: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // 커뮤니티 데이터 페칭
+  // 커뮤니티 데이터 페칭 (기존 유지)
   const fetchHomeData = async () => {
     try {
       const [postRes, vipRes, noticeRes] = await Promise.all([
@@ -134,17 +138,30 @@ const Home: React.FC = () => {
     }
   };
 
+  // 🎨 카테고리별 마커 아이콘 설정 함수
+  const getMarkerIcon = (category: string) => {
+    const icons: { [key: string]: string } = {
+      karaoke: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png",
+      massage: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png",
+      barber: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png",
+      barclub: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png",
+      villa: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png" // 빌라 아이콘 미지정시 기본값
+    };
+
+    return {
+      url: icons[category] || icons['massage'], // 카테고리 없으면 마사지 아이콘 기본
+      scaledSize: new window.google.maps.Size(40, 40),
+      origin: new window.google.maps.Point(0, 0),
+      anchor: new window.google.maps.Point(20, 40)
+    };
+  };
+
   if (!initialized) return null;
 
   return (
     <div className="w-full bg-[#050505] relative overflow-hidden selection:bg-red-600/30 font-sans text-white">
       <Helmet>
         <title>호놀자 | 베트남 호치민 유흥 · 밤문화 · 마사지 · 가라오케 · 맛집 프리미엄 가이드</title>
-        <meta name="description" content="베트남 호치민 여행의 모든 것! 마사지, 가라오케, 이발소, 클럽, 맛집 정보와 실시간 후기를 제공하는 호치민 No.1 커뮤니티 호놀자입니다." />
-        <meta name="keywords" content="호치민여행, 호치민 유흥, 호치민 밤문화, 베트남여행, 호치민 가라오케, 호치민 마사지, 호치민 이발소, 호치민 맛집" />
-        <meta property="og:title" content="호놀자 - 호치민 밤문화 & 여행 프리미엄 가이드" />
-        <meta property="og:url" content="https://honolja.com" />
-        <meta property="og:type" content="website" />
       </Helmet>
 
       {showLevelModal && (
@@ -163,23 +180,22 @@ const Home: React.FC = () => {
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">호</span>치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] tracking-tighter">놀자<span className="ml-5 md:ml-3">!</span></span>
         </h2>
-        <div className="space-y-4 mb-16 z-10 px-4 flex flex-col items-center">
-          <p className="text-[17px] sm:text-2xl md:text-4xl font-black tracking-tight uppercase whitespace-nowrap leading-tight">남성들을 위한 호치민의 모든 것</p>
-          <p className="text-blue-500 font-black text-lg md:text-2xl italic leading-snug">실시간 정보 + 검증된 업장 + 그 이상의 즐거움(α)</p>
-          <p className="text-emerald-400 font-bold text-sm md:text-lg opacity-90 mt-2 italic">풀빌라 · 아파트 예약까지 한번에!</p>
-        </div>
-
+        
         <div className="grid grid-cols-5 gap-2 md:gap-4 max-w-5xl w-full z-10 px-2 font-sans">
           {[{ id: 'massage', name: '마사지/스파', icon: '💆‍♀️' }, { id: 'barber', name: '이발소', icon: '💈' }, { id: 'karaoke', name: '가라오케', icon: '🎤' }, { id: 'barclub', name: '바/클럽', icon: '🍸' }, { id: 'villa', name: '숙소/풀빌라', icon: '🏠' }].map((cat) => (
-            <Link key={cat.id} to={`/stores/${cat.id}`} className="flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 bg-white/5 backdrop-blur-sm rounded-2xl md:rounded-[32px] border border-white/5 hover:bg-white/10 transition-all group shadow-lg">
+            <button 
+              key={cat.id} 
+              onClick={() => setActiveCategory(cat.id)}
+              className={`flex flex-col items-center gap-2 md:gap-4 p-3 md:p-10 rounded-2xl md:rounded-[32px] border transition-all group shadow-lg ${activeCategory === cat.id ? 'bg-red-600/20 border-red-600' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+            >
               <span className="text-2xl md:text-5xl group-hover:scale-110 transition-transform">{cat.icon}</span>
-              <span className="text-[8px] md:text-sm font-black text-gray-400 group-hover:text-white uppercase tracking-tighter whitespace-nowrap">{cat.name}</span>
-            </Link>
+              <span className={`text-[8px] md:text-sm font-black uppercase tracking-tighter whitespace-nowrap ${activeCategory === cat.id ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>{cat.name}</span>
+            </button>
           ))}
         </div>
       </section>
 
-      {/* 실시간 인기 업소 */}
+      {/* 실시간 인기 업소 (기존 유지) */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -199,11 +215,19 @@ const Home: React.FC = () => {
       {/* 🗺️ 내 주변 방앗간 찾기 (지도 섹션) */}
       <section className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
-            <h3 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter">
-              내 주변 <span className="text-emerald-500">방앗간</span> 찾기
-            </h3>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
+              <h3 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter">
+                내 주변 <span className="text-emerald-500">방앗간</span> 찾기
+              </h3>
+            </div>
+            <button 
+              onClick={() => setActiveCategory('all')} 
+              className="text-[10px] md:text-xs font-black bg-white/5 px-4 py-2 rounded-full border border-white/10 hover:bg-white/10 transition-all uppercase italic"
+            >
+              전체보기
+            </button>
           </div>
           
           <div className="w-full h-[500px] md:h-[650px] rounded-[2rem] overflow-hidden border-4 border-white/5 shadow-inner relative">
@@ -213,20 +237,16 @@ const Home: React.FC = () => {
                 center={{ lat: 10.7769, lng: 106.7009 }} 
                 zoom={14}
                 options={{
-                  // 🚨 지도가 어둡게 나오는 문제 해결을 위한 mapId 추가
                   mapId: "69a6320a10996f9", 
-                  styles: [
-                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-                  ],
+                  disableDefaultUI: false,
                 }}
               >
-                {/* 📍 마커 렌더링 수정 완료 */}
                 {mapStores.map((store: any) => (
                   <MarkerF
                     key={store.id}
                     position={{ lat: Number(store.lat), lng: Number(store.lng) }}
                     onClick={() => setSelectedStore(store)}
+                    icon={getMarkerIcon(store.category)} // 🔴 카테고리별 커스텀 아이콘 함수 호출
                   />
                 ))}
 
@@ -256,8 +276,9 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SNS & 커뮤니티 통합 섹션 */}
+      {/* SNS & 커뮤니티 통합 섹션 (기존 유지) */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10 font-sans text-white">
+        {/* ...기존 코드와 동일... */}
         <div className="lg:col-span-2 flex flex-row lg:flex-col gap-4">
           <a href="https://t.me/honolja" target="_blank" rel="noreferrer" className="flex-1 bg-[#0088cc] rounded-[1.5rem] p-6 relative overflow-hidden group hover:scale-[1.03] transition-all shadow-xl flex flex-col justify-center min-h-[140px]">
             <span className="absolute -right-4 -bottom-8 text-white/10 text-9xl font-black italic select-none">H</span>
@@ -318,7 +339,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* PREMIUM STAYS */}
+      {/* PREMIUM STAYS (기존 유지) */}
       <section className="max-w-[1400px] mx-auto px-6 py-24 font-sans text-white">
         <div className="bg-[#080808] rounded-[2.5rem] p-8 md:p-14 border border-white/5 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
@@ -348,7 +369,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 하단 제휴 배너 */}
+      {/* 하단 제휴 배너 (기존 유지) */}
       <section className="max-w-[1400px] mx-auto px-6 pb-24 font-sans">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#111] h-[200px] md:h-[260px] shadow-2xl">
           <div className="flex h-full transition-transform duration-1000 ease-in-out" style={{ transform: `translateX(-${currentAdIdx * 100}%)` }}>
