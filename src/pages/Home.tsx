@@ -5,6 +5,8 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
+// 지도 연동을 위한 라이브러리 추가
+import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +18,13 @@ const Home: React.FC = () => {
   const [latestNotices, setLatestNotices] = useState<any[]>([]);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
+
+  // 🗺️ 지도 관련 상태 및 로더
+  const [selectedStore, setSelectedStore] = useState<any>(null);
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY // .env 파일에 키가 있어야 합니다.
+  });
 
   // 🔴 [자동 출석 시스템] 1일 1회 5P 지급
   useEffect(() => {
@@ -68,6 +77,11 @@ const Home: React.FC = () => {
       .filter((s: any) => s.is_hot && s.category !== 'villa')
       .sort(() => Math.random() - 0.5)
       .slice(0, 14);
+  }, [stores]);
+
+  // 📍 [지도용 좌표 데이터 추출]
+  const mapStores = useMemo(() => {
+    return stores.filter((s: any) => s.lat && s.lng);
   }, [stores]);
 
   const premiumHotStays = useMemo(() => {
@@ -165,7 +179,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 실시간 인기 업소 (14개 그리드 적용) */}
+      {/* 실시간 인기 업소 */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
         <div className="flex items-center justify-between mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -179,6 +193,63 @@ const Home: React.FC = () => {
             [...Array(14)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />) : 
             hotServiceStores.map((store: any) => <StoreCard key={store.id} store={store} />)
           }
+        </div>
+      </section>
+
+      {/* 🗺️ 내 주변 방앗간 찾기 (지도 섹션 명칭: 호치민 방앗간) */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10">
+        <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
+            <h3 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter">
+              내 주변 <span className="text-emerald-500">방앗간</span> 찾기
+            </h3>
+          </div>
+          
+          <div className="w-full h-[500px] md:h-[650px] rounded-[2rem] overflow-hidden border-4 border-white/5 shadow-inner relative">
+            {isLoaded ? (
+              <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '100%' }}
+                center={{ lat: 10.7769, lng: 106.7009 }} // 호치민 시내 중심점
+                zoom={14}
+                options={{
+                  styles: [
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+                  ],
+                }}
+              >
+                {mapStores.map((store) => (
+                  <MarkerF
+                    key={store.id}
+                    position={{ lat: store.lat, lng: store.lng }}
+                    onClick={() => setSelectedStore(store)}
+                  />
+                ))}
+
+                {selectedStore && (
+                  <InfoWindowF
+                    position={{ lat: selectedStore.lat, lng: selectedStore.lng }}
+                    onCloseClick={() => setSelectedStore(null)}
+                  >
+                    <div className="p-2 min-w-[200px] text-black">
+                      <img src={selectedStore.image_url} className="w-full h-24 object-cover rounded-lg mb-2" alt="" />
+                      <h4 className="font-black text-sm mb-1">{selectedStore.name}</h4>
+                      <p className="text-[10px] text-gray-600 mb-2">{selectedStore.address}</p>
+                      <button 
+                        onClick={() => navigate(`/store/${selectedStore.id}`)}
+                        className="w-full py-2 bg-red-600 text-white text-[10px] font-black rounded uppercase"
+                      >
+                        방앗간 방문하기
+                      </button>
+                    </div>
+                  </InfoWindowF>
+                )}
+              </GoogleMap>
+            ) : (
+              <div className="w-full h-full bg-white/5 animate-pulse flex items-center justify-center text-gray-500 font-black">MAP LOADING...</div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -198,7 +269,6 @@ const Home: React.FC = () => {
         </div>
 
         <div className="lg:col-span-10 grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* 자유게시판 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-red-600 pl-3 uppercase">Community</h4>
@@ -213,7 +283,6 @@ const Home: React.FC = () => {
               ))}
             </div>
           </div>
-          {/* VIP 라운지 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-yellow-500 pl-3 uppercase text-yellow-500">VIP 라운지</h4>
@@ -228,7 +297,6 @@ const Home: React.FC = () => {
               ))}
             </div>
           </div>
-          {/* 공지사항 */}
           <div>
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black italic text-lg border-l-4 border-sky-500 pl-3 uppercase text-sky-500">Notice</h4>
@@ -257,24 +325,17 @@ const Home: React.FC = () => {
             </div>
             <Link to="/stores/villa" className="w-full md:w-auto text-center bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all italic">예약문의</Link>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
             {storesLoading ? [1, 2].map(i => <div key={i} className="h-[250px] bg-white/5 rounded-[2.5rem] animate-pulse" />) : 
               premiumHotStays.map((store: any) => (
                 <Link to={`/store/${store.id}`} key={store.id} className="group relative block w-full h-[250px] md:h-[350px] overflow-hidden rounded-[2.5rem] border border-white/10 shadow-2xl transition-all">
-                  <img 
-                    src={store.image_url} 
-                    alt={store.name} 
-                    className="w-full h-full object-cover transform transition-transform duration-1000 group-hover:scale-110"
-                  />
+                  <img src={store.image_url} alt={store.name} className="w-full h-full object-cover transform transition-transform duration-1000 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                   <div className="absolute top-6 left-6 flex gap-2">
                     <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase italic shadow-lg">Hot Pick</span>
                   </div>
                   <div className="absolute bottom-8 left-8 right-8">
-                    <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">
-                      {store.name}
-                    </h4>
+                    <h4 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter mb-2 group-hover:text-red-500 transition-colors">{store.name}</h4>
                     <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">Ho Chi Minh Villa</span>
                   </div>
                 </Link>
