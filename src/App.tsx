@@ -35,7 +35,6 @@ import AdminManageStores from './pages/AdminManageStores';
 import AdminStoreEdit from './pages/AdminStoreEdit';
 import AdminManageCoupons from './pages/AdminManageCoupons';
 
-// 🔴 추가: 구글 지도를 보여줄 페이지 (이름은 프로젝트 상황에 맞춰 변경 가능)
 import StoreMapPage from './pages/StoreMapPage'; 
 
 // 🔒 관리자 가드 (탭 전환 시 컴포넌트 언마운트 방지)
