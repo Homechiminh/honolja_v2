@@ -23,29 +23,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
 
   const [selectedStore, setSelectedStore] = useState<any>(null);
 
-  // 아이콘 생성 함수
-  const getIcon = (category: string) => {
-    if (typeof window === 'undefined' || !window.google) return undefined;
-
-    const cat = category?.toLowerCase().trim();
-    // 기본 아이콘 주소
-    let url = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
-
-    // Cloudinary 직접 링크 매핑
-    if (cat === 'karaoke') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png';
-    if (cat === 'barber') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png';
-    if (cat === 'massage') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png';
-    if (cat === 'barclub') url = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png';
-
-    return {
-      url,
-      scaledSize: new window.google.maps.Size(45, 45), // 아이콘을 큼직하게 설정
-      origin: new window.google.maps.Point(0, 0),
-      anchor: new window.google.maps.Point(22, 22),
-    };
-  };
-
-  if (!isLoaded) return <div className="w-full h-full bg-white animate-pulse" />;
+  if (!isLoaded) return <div className="w-full h-full bg-white" />;
 
   return (
     <GoogleMap
@@ -53,7 +31,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
       center={center}
       zoom={14}
       options={{
-        // 🚨 이 부분이 빈 배열이어야 검은 지도가 사라집니다.
+        // 🚨 중요: undefined가 아니라 null이나 []를 주어 기존 스타일을 강제 초기화합니다.
         styles: [], 
         disableDefaultUI: false,
         zoomControl: true,
@@ -62,26 +40,33 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
       {stores.map((store) => {
         const lat = Number(store.lat);
         const lng = Number(store.lng);
+        const cat = store.category?.toLowerCase().trim();
 
-        if (isNaN(lat) || isNaN(lng)) return null;
+        // 🔗 아이콘 경로 설정
+        let iconUrl = 'https://cdn-icons-png.flaticon.com/512/684/684908.png';
+        if (cat === 'karaoke') iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png';
+        if (cat === 'barber') iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png';
+        if (cat === 'massage') iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png';
+        if (cat === 'barclub') iconUrl = 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png';
 
         return (
           <Marker
-            key={store.id}
+            key={`${store.id}-${cat}`} // 카테고리 변경 시 마커 리렌더링 강제
             position={{ lat, lng }}
-            icon={getIcon(store.category)}
             onClick={() => setSelectedStore(store)}
-            animation={window.google.maps.Animation.DROP}
+            // 🚨 아이콘 객체를 Marker 내부에 직접 선언
+            icon={{
+              url: iconUrl,
+              scaledSize: new window.google.maps.Size(45, 45),
+              anchor: new window.google.maps.Point(22, 22),
+            }}
           />
         );
       })}
 
       {selectedStore && (
         <InfoWindow
-          position={{ 
-            lat: Number(selectedStore.lat), 
-            lng: Number(selectedStore.lng) 
-          }}
+          position={{ lat: Number(selectedStore.lat), lng: Number(selectedStore.lng) }}
           onCloseClick={() => setSelectedStore(null)}
         >
           <div className="p-2 text-black min-w-[150px]">
@@ -90,10 +75,7 @@ const MillMap: React.FC<MillMapProps> = ({ stores }) => {
             </p>
             <h4 className="font-bold text-sm mb-1">{selectedStore.name}</h4>
             <p className="text-[10px] text-gray-600 mb-2">{selectedStore.address}</p>
-            <a 
-              href={`/store/${selectedStore.id}`}
-              className="text-[10px] font-bold text-blue-600 underline"
-            >
+            <a href={`/store/${selectedStore.id}`} className="text-[10px] font-bold text-blue-600 underline">
               상세보기
             </a>
           </div>
