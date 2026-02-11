@@ -35,11 +35,14 @@ const StoreDetail: React.FC = () => {
       if (storeError) throw storeError;
       
       if (storeData) {
-        // 위경도 값이 문자열로 인식되어 마커가 안 뜨는 현상을 방지하기 위해 parseFloat 처리
+        // 위경도 값이 숫자가 아닐 경우를 대비해 parseFloat로 엄격하게 변환
+        const latVal = parseFloat(String(storeData.lat || storeData.Lat || 0));
+        const lngVal = parseFloat(String(storeData.lng || storeData.Ing || storeData.Lng || 0));
+        
         setStore({
           ...storeData,
-          lat: parseFloat(String(storeData.lat || storeData.Lat || 0)),
-          lng: parseFloat(String(storeData.lng || storeData.Ing || storeData.Lng || 0))
+          lat: latVal,
+          lng: lngVal
         } as Store);
       }
 
@@ -49,7 +52,7 @@ const StoreDetail: React.FC = () => {
         .select('*');
 
       if (!allError && allData) {
-        // 커뮤니티 페이지에서 성공했던 로직을 그대로 가져오되, 데이터 타입을 엄격하게 숫자로 변환
+        // 마커가 정상적으로 뜨는 커뮤니티 페이지의 데이터 정제 로직 적용
         const validData = allData.map((item: any) => ({
           ...item,
           lat: parseFloat(String(item.lat || item.Lat || 0)),
@@ -59,7 +62,7 @@ const StoreDetail: React.FC = () => {
         setAllStores(validData);
       }
     } catch (err: any) {
-      console.error('Error fetching data:', err);
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -229,10 +232,16 @@ const StoreDetail: React.FC = () => {
                 <div className="bg-black/50 px-6 py-4 rounded-xl border border-white/5">
                   <p className="text-white font-black italic text-base break-all leading-snug">📍 {store.address}</p>
                 </div>
+                {/* 핵심: 지도가 깨지거나 마커가 안 뜨는 현상을 방지하기 위해 
+                  1. key에 id를 부여하여 업소 이동 시 지도를 초기화합니다.
+                  2. stores 데이터가 로드된 후에만 MillMap을 렌더링합니다.
+                */}
                 <div className="h-[400px] md:h-[500px] relative rounded-[2rem] overflow-hidden border-2 border-white/5">
-                  {/* key를 id로 주어 업소가 변경될 때 지도를 다시 그리게 하여 마커 로딩을 확실히 합니다. */}
-                  {allStores.length > 0 && (
-                    <MillMap key={store.id} stores={allStores} />
+                  {!loading && allStores.length > 0 && (
+                    <MillMap 
+                      key={store.id} 
+                      stores={allStores} 
+                    />
                   )}
                 </div>
                 <p className="text-center text-gray-500 text-[10px] font-bold italic uppercase tracking-widest">Ho Chi Minh Premium Guide Map © Honolja</p>
