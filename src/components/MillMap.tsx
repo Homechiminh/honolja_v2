@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 const mapContainerStyle = { width: '100%', height: '100%' };
 const center = { lat: 10.7769, lng: 106.7009 };
 
+// ✅ 1. 라이브러리 배열을 컴포넌트 외부로 빼서 "고정"시켜야 재로딩 경고가 사라집니다.
+const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker'];
+
 const ICON_ASSETS: Record<string, string> = {
   karaoke: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png',
   barber: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png',
@@ -21,7 +24,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: ['marker'] 
+    libraries: LIBRARIES // ✅ 고정된 변수 사용 (경고 해결 핵심)
   });
 
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -29,37 +32,54 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
 
   useEffect(() => {
     const renderMarkers = async () => {
-      if (isLoaded && mapRef.current && stores.length > 0) {
+      // ✅ isLoaded와 mapRef.current가 확실히 있을 때만 실행
+      if (isLoaded && mapRef.current && stores && stores.length > 0) {
+        // 기존 마커 제거
         markersRef.current.forEach(marker => (marker.map = null));
         markersRef.current = [];
 
-        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
+        try {
+          const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
-        stores.forEach((store) => {
-          const lat = Number(store.lat);
-          const lng = Number(store.lng);
-          if (isNaN(lat) || isNaN(lng)) return;
+          stores.forEach((store) => {
+            const lat = Number(store.lat);
+            const lng = Number(store.lng);
+            if (isNaN(lat) || isNaN(lng) || lat === 0) return;
 
-          const iconImg = document.createElement('img');
-          iconImg.src = ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default;
-          iconImg.style.width = '40px';
-          iconImg.style.height = '40px';
-          iconImg.style.cursor = 'pointer';
+            const iconImg = document.createElement('img');
+            iconImg.src = ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default;
+            iconImg.style.width = '40px';
+            iconImg.style.height = '40px';
+            iconImg.style.cursor = 'pointer';
 
-          const marker = new AdvancedMarkerElement({
-            map: mapRef.current,
-            position: { lat, lng },
-            title: store.name,
-            content: iconImg, 
+            const marker = new AdvancedMarkerElement({
+              map: mapRef.current,
+              position: { lat, lng },
+              title: store.name,
+              content: iconImg, 
+            });
+
+            marker.addListener("click", () => {
+              setSelectedStore(store);
+              mapRef.current?.panTo({ lat, lng });
+              // 줌 인 효과 추가 (상세페이지 지도에서 가시성 확보)
+              mapRef.current?.setZoom(16);
+            });
+
+            markersRef.current.push(marker);
           });
 
-          marker.addListener("click", () => {
-            setSelectedStore(store);
-            mapRef.current?.panTo({ lat, lng });
-          });
-
-          markersRef.current.push(marker);
-        });
+          // 상세페이지용: 데이터가 하나뿐일 경우 해당 위치로 중심 이동
+          if (stores.length === 1) {
+            const singleLat = Number(stores[0].lat);
+            const singleLng = Number(stores[0].lng);
+            if (!isNaN(singleLat)) {
+               mapRef.current.setCenter({ lat: singleLat, lng: singleLng });
+            }
+          }
+        } catch (error) {
+          console.error("Marker rendering failed:", error);
+        }
       }
     };
     renderMarkers();
@@ -92,7 +112,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
               alt={selectedStore.name}
             />
             <button 
-              onClick={() => setSelectedStore(null)}
+              onClick={(e) => { e.stopPropagation(); setSelectedStore(null); }}
               className="absolute top-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg"
             >
               ✕
@@ -102,7 +122,6 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             <h4 className="text-xl font-black italic text-white mb-1 uppercase tracking-tighter">
               {selectedStore.name}
             </h4>
-            {/* 📍 수정된 주소 텍스트: 색상을 밝게(text-gray-300) 조정하고 불투명도를 높였습니다. */}
             <p className="text-gray-300 text-[10px] font-bold uppercase mb-4 tracking-tight leading-relaxed line-clamp-2">
               {selectedStore.address}
             </p>
