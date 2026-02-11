@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const mapContainerStyle = { width: '100%', height: '100%' };
 const DEFAULT_CENTER = { lat: 10.7769, lng: 106.7009 };
 
-// 라이브러리 고정
+// 1. 라이브러리 배열을 외부에 고정하여 리렌더링 시 재로드 방지
 const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker', 'places'];
 
 const ICON_ASSETS: Record<string, string> = {
@@ -28,6 +28,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     libraries: LIBRARIES
   });
 
+  // 2. 중심점 계산: 상세페이지(stores 1개)일 경우 해당 좌표로 자동 이동
   const mapCenter = useMemo(() => {
     if (stores && stores.length > 0) {
       const target = stores[0];
@@ -72,20 +73,15 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
           ]
         }}
       >
+        {/* 3. 마커 렌더링 로직 분석 및 수정 */}
         {stores.map((store, idx) => {
           const lat = Number(store.lat || store.Lat);
           const lng = Number(store.lng || store.Ing || store.Lng);
 
           if (isNaN(lat) || lat === 0) return null;
 
-          // ✅ TS2769 에러 해결을 위한 최종 장치: as google.maps.Icon 사용
-          // 만약 google.maps.Icon 정의를 찾지 못할 경우를 대비해 (as any)로 우회 처리합니다.
-          const iconConfig = {
-            url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-            scaledSize: new window.google.maps.Size(42, 42),
-            anchor: new window.google.maps.Point(21, 21),
-          };
-
+          // [핵심] TS2769 방지: 
+          // 객체 리터럴 대신 인라인으로 직접 값을 넣고, 타입을 우회하거나 명확히 합니다.
           return (
             <MarkerF
               key={`${store.id}-${idx}`}
@@ -94,14 +90,19 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
               }}
-              icon={iconConfig as any}
+              // 타입 엄격도를 낮추기 위해 객체 정의를 단순화하고 강제 형변환 사용
+              icon={{
+                url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
+                scaledSize: new window.google.maps.Size(42, 42),
+                anchor: new window.google.maps.Point(21, 21),
+              } as google.maps.Icon}
               title={store.name}
             />
           );
         })}
       </GoogleMap>
 
-      {/* 선택된 스토어 카드 */}
+      {/* 선택된 스토어 카드 디자인 (변경 없음) */}
       {selectedStore && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
           <div className="relative h-32">
@@ -112,7 +113,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             />
             <button 
               onClick={(e) => { e.stopPropagation(); setSelectedStore(null); }}
-              className="absolute top-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-all"
+              className="absolute top-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg"
             >
               ✕
             </button>
@@ -126,7 +127,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             </p>
             <button 
               onClick={() => navigate(`/store/${selectedStore.id}`)}
-              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg active:scale-95 transition-all"
+              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg shadow-red-600/30 active:scale-95 transition-all"
             >
               상세 정보 보기
             </button>
