@@ -15,8 +15,10 @@ const Home: React.FC = () => {
   const [latestVipPosts, setLatestVipPosts] = useState<any[]>([]);
   const [latestNotices, setLatestNotices] = useState<any[]>([]);
   const [showLevelModal, setShowLevelModal] = useState(false);
-  const [showAttendanceModal, setShowAttendanceModal] = useState(false); // 출석 팝업 상태
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
+
+  // 탭 필터 상태 (인기 업소 리스트용)
   const [activeCategory, setActiveCategory] = useState('all'); 
 
   // 🔴 [자동 출석 체크 & 팝업 시스템]
@@ -24,7 +26,6 @@ const Home: React.FC = () => {
     const checkAttendance = async () => {
       if (!initialized || !currentUser) return;
       
-      // 로컬 스토리지로 오늘 이미 팝업을 봤는지 체크 (중복 팝업 방지)
       const today = new Date().toLocaleDateString('en-CA');
       const hasSeenToday = localStorage.getItem(`attendance_${currentUser.id}_${today}`);
       
@@ -50,8 +51,12 @@ const Home: React.FC = () => {
               .eq('id', currentUser.id);
             
             await refreshUser();
-            setShowAttendanceModal(true); // 성공 팝업 띄우기
-            localStorage.setItem(`attendance_${currentUser.id}_${today}`, 'true');
+
+            // 오늘 팝업을 아직 안 본 경우에만 띄우기
+            if (!hasSeenToday) {
+              setShowAttendanceModal(true);
+              localStorage.setItem(`attendance_${currentUser.id}_${today}`, 'true');
+            }
           }
         }
       } catch (err) { 
@@ -62,7 +67,7 @@ const Home: React.FC = () => {
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
 
-  // 📍 [데이터 필터링]
+  // 📍 [데이터 필터링 로직]
   const filteredStores = useMemo(() => {
     return stores.filter((s: any) => activeCategory === 'all' || s.category === activeCategory);
   }, [stores, activeCategory]);
@@ -144,7 +149,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🔥 실시간 인기 업소 */}
+      {/* 🔥 실시간 인기 업소 (탭 필터링 포함) */}
       <section className="max-w-[1400px] mx-auto px-6 py-10 text-white">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
@@ -265,7 +270,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🟢 출석체크 성공 모달 (신규 추가) */}
+      {/* 🟢 출석체크 성공 모달 */}
       {showAttendanceModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAttendanceModal(false)}></div>
@@ -286,7 +291,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* VIP 레벨 제한 모달 */}
+      {/* VIP 모달 */}
       {showLevelModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 font-sans">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
