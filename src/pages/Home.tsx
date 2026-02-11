@@ -233,7 +233,7 @@ const Home: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16 relative z-10">
             <div>
               <h3 className="text-3xl md:text-6xl font-black italic mb-3 tracking-tighter uppercase leading-none">Premium Stays</h3>
-              <p className="text-gray-500 font-bold text-sm md:text-xl">호놀자가 검증한 최고급 풀빌라 정보</p>
+              <p className="text-gray-500 font-bold text-sm md:text-xl">호놀자가 검증한 최고급 풀빌라와 가성비 아파트</p>
             </div>
             <Link to="/stores/villa" className="bg-red-600 px-12 py-5 rounded-2xl font-black text-lg shadow-xl active:scale-95 italic transition-all">전체보기</Link>
           </div>
