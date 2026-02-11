@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext'; 
-// [추가] 만들어두신 MillMap 컴포넌트를 임포트합니다.
-import MillMap from './MillMap'; 
+// MillMap 컴포넌트 경로 (components 폴더 기준)
+import MillMap from '../components/MillMap'; 
 
 const Community: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, initialized } = useAuth(); 
+  const { currentUser, initialized } = useAuth();  
   
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ const Community: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const ITEMS_PER_PAGE = 10;
 
-  // [추가] 지도에 표시할 업소 데이터를 위한 상태
+  // 지도에 표시할 업소 데이터를 위한 상태
   const [allStores, setAllStores] = useState<any[]>([]);
 
   const categories = [
@@ -36,7 +36,7 @@ const Community: React.FC = () => {
     return categories.find(c => c.id === id)?.name || '커뮤니티';
   };
 
-  // [추가] 지도에 뿌려줄 업소 리스트를 가져오는 함수
+  // 모든 업소 정보 가져오기 (지도 마커용)
   const fetchAllStores = async () => {
     try {
       const { data, error } = await supabase
@@ -91,7 +91,7 @@ const Community: React.FC = () => {
   useEffect(() => {
     if (initialized) {
       fetchPosts();
-      fetchAllStores(); // 페이지 로드 시 업소 데이터도 함께 호출
+      fetchAllStores();
     }
   }, [initialized, activeCategory, sortBy, currentPage]);
 
@@ -122,11 +122,13 @@ const Community: React.FC = () => {
   if (!initialized) return null;
 
   return (
-    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30">
+    <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30 text-white">
       <Helmet>
         <title>호놀자 커뮤니티 | {getCategoryName(activeCategory)} - 호치민 유흥 · 밤문화 · 여행 리얼 후기</title>
-        <meta name="description" content={`베트남 호치민 여행의 생생한 현장! ${getCategoryName(activeCategory)} 채널에서 마사지, 가라오케, 맛집, 밤문화 정보를 공유하세요.`} />
+        <meta name="description" content={`베트남 호치민 여행의 생생한 현장! ${getCategoryName(activeCategory)} 채널에서 정보를 공유하세요.`} />
         <meta property="og:title" content={`호놀자 커뮤니티 - ${getCategoryName(activeCategory)}`} />
+        <meta property="og:url" content="https://honolja.com/community" />
+        <meta property="og:type" content="website" />
       </Helmet>
 
       <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row gap-10">
@@ -196,11 +198,11 @@ const Community: React.FC = () => {
             </div>
           </header>
 
-          {/* 게시글 리스트 */}
           <div className="space-y-4">
             {loading ? (
               <div className="py-20 text-center">
                 <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin inline-block"></div>
+                <p className="text-gray-500 text-xs mt-4 italic">데이터를 불러오고 있습니다...</p>
               </div>
             ) : posts.length === 0 ? (
               <div className="py-32 text-center text-gray-700 font-black italic uppercase tracking-widest border border-dashed border-white/5 rounded-3xl">
@@ -229,28 +231,62 @@ const Community: React.FC = () => {
                       <p className="text-red-600 font-black text-xl italic group-hover:scale-110 transition-transform">+{post.likes || 0}</p>
                     </div>
                   </div>
+                  <div className="absolute right-0 bottom-0 opacity-[0.02] font-black italic text-6xl pointer-events-none uppercase">COMMUNITY</div>
                 </Link>
               ))
             )}
           </div>
 
-          {/* 페이지네이션 생략 (기존과 동일하게 유지됨) */}
+          {/* 페이지네이션 (전체 복구) */}
+          {totalPages > 1 && (
+            <div className="mt-16 flex justify-center items-center gap-2">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#111] border border-white/5 text-gray-500 hover:text-white disabled:opacity-20 transition-all"
+              >
+                ←
+              </button>
+              
+              <div className="flex gap-2">
+                {[...Array(totalPages)].map((_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-10 h-10 rounded-xl font-black italic text-xs transition-all ${
+                        currentPage === pageNum 
+                        ? 'bg-red-600 text-white shadow-lg shadow-red-600/30' 
+                        : 'bg-[#111] border border-white/5 text-gray-500 hover:text-white'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
 
-          {/* 📍 [수정된 지도 섹션] MillMap 컴포넌트 적용 */}
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#111] border border-white/5 text-gray-500 hover:text-white disabled:opacity-20 transition-all"
+              >
+                →
+              </button>
+            </div>
+          )}
+
+          {/* 하단 호치민 방앗간 지도 섹션 (MillMap 적용) */}
           <section className="mt-24">
             <div className="flex items-center gap-3 mb-8">
               <span className="w-1.5 h-6 bg-red-600 rounded-full"></span>
               <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">호치민 방앗간 <span className="text-red-600">MAP</span></h3>
             </div>
-            
-            <div className="relative w-full aspect-video md:aspect-[21/9] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl bg-[#111]">
-              {/* [중요] MillMap 컴포넌트에 불러온 업소 데이터를 전달합니다. */}
+            <div className="relative w-full aspect-video md:aspect-[21/9] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl bg-[#0f0f0f]">
               <MillMap stores={allStores} />
-              
-              {/* 테두리 디자인 효과 */}
               <div className="absolute inset-0 pointer-events-none border-[12px] border-[#050505] rounded-[2.5rem]"></div>
             </div>
-            
             <p className="text-center mt-6 text-gray-500 text-[10px] font-bold italic uppercase tracking-[0.2em]">Ho Chi Minh Premium Guide Map © Honolja</p>
           </section>
 
