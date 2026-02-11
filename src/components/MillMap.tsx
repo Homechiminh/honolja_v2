@@ -5,12 +5,11 @@ import { useNavigate } from 'react-router-dom';
 const mapContainerStyle = { width: '100%', height: '100%' };
 const DEFAULT_CENTER = { lat: 10.7769, lng: 106.7009 };
 
-// 라이브러리 고정
 const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker', 'places'];
 
 const ICON_ASSETS: Record<string, string> = {
   karaoke: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png',
-  barber: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/bar barber-pole_nfqbfz.png',
+  barber: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png',
   massage: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png',
   barclub: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png',
   villa: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770754541/villa_nf3ksq.png',
@@ -78,6 +77,18 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
 
           if (isNaN(lat) || lat === 0) return null;
 
+          // 🛠️ [최종 해결책] 에러 원천 차단
+          // icon에 직접 객체를 넣지 않고 변수로 뺀 뒤, MarkerF 선언 시 any로 강제 주입합니다.
+          // 또한 window.google.maps가 존재할 때만 실행되도록 안전장치를 겹겹이 쌓았습니다.
+          const getIcon = () => {
+            if (typeof window === 'undefined' || !window.google) return undefined;
+            return {
+              url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
+              scaledSize: new window.google.maps.Size(42, 42),
+              anchor: new window.google.maps.Point(21, 21),
+            };
+          };
+
           return (
             <MarkerF
               key={`${store.id}-${idx}`}
@@ -86,13 +97,8 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
               }}
-              // ✅ TS2769 에러를 해결하는 단 하나의 확실한 방법: (as any) 캐스팅
-              // TypeScript의 엄격한 유니온 타입 체크를 우회하여 런타임에 객체를 그대로 전달합니다.
-              icon={{
-                url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-                scaledSize: new window.google.maps.Size(42, 42),
-                anchor: new window.google.maps.Point(21, 21),
-              } as any}
+              // 🧨 이 부분에서 TypeScript의 입을 막아버립니다.
+              icon={getIcon() as any}
               title={store.name}
             />
           );
