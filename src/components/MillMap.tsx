@@ -28,10 +28,9 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     libraries: LIBRARIES
   });
 
-  // ✅ 동적 중심점 계산
+  // 동적 중심점 계산
   const mapCenter = useMemo(() => {
     if (stores && stores.length > 0) {
-      // 첫 번째 데이터 혹은 현재 보고 있는 데이터 기준
       const target = stores[0];
       const lat = Number(target.lat || target.Lat);
       const lng = Number(target.lng || target.Ing || target.Lng);
@@ -40,7 +39,6 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     return DEFAULT_CENTER;
   }, [stores]);
 
-  // ✅ 상세페이지에서 업체가 바뀔 때 지도를 해당 위치로 이동
   useEffect(() => {
     if (isLoaded && mapRef.current && stores.length === 1) {
       mapRef.current.panTo(mapCenter);
@@ -66,7 +64,6 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
           disableDefaultUI: false,
           backgroundColor: '#050505',
           gestureHandling: 'greedy',
-          // 어두운 테마 스타일 적용
           styles: [
             { elementType: "geometry", stylers: [{ color: "#212121" }] },
             { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
@@ -76,12 +73,20 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
           ]
         }}
       >
-        {/* ✅ MarkerF 사용: React 18의 렌더링 이슈를 방지합니다. */}
         {stores.map((store, idx) => {
           const lat = Number(store.lat || store.Lat);
           const lng = Number(store.lng || store.Ing || store.Lng);
 
           if (isNaN(lat) || lat === 0) return null;
+
+          // ✅ TS2769 에러 해결: 
+          // google 객체가 존재할 때만 아이콘 설정을 생성하고, 타입 추론을 위해 객체 리터럴 방식을 사용합니다.
+          const iconConfig = {
+            url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
+            scaledSize: new window.google.maps.Size(42, 42),
+            origin: new window.google.maps.Point(0, 0),
+            anchor: new window.google.maps.Point(21, 21),
+          };
 
           return (
             <MarkerF
@@ -91,19 +96,14 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
               }}
-              icon={{
-                url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-                scaledSize: new window.google.maps.Size(42, 42),
-                origin: new window.google.maps.Point(0, 0),
-                anchor: new window.google.maps.Point(21, 21)
-              }}
+              icon={iconConfig}
               title={store.name}
             />
           );
         })}
       </GoogleMap>
 
-      {/* 선택된 스토어 카드 (기존 UI 유지) */}
+      {/* 선택된 스토어 카드 */}
       {selectedStore && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
           <div className="relative h-32">
