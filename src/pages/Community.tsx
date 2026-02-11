@@ -36,7 +36,7 @@ const Community: React.FC = () => {
     return categories.find(c => c.id === id)?.name || '커뮤니티';
   };
 
-  // [수정된 부분] 모든 업소 정보 가져오기 (좌표 데이터 보정 로직 추가)
+  // 모든 업소 정보 가져오기 (지도 마커용 및 상세페이지 연결용)
   const fetchAllStores = async () => {
     try {
       const { data, error } = await supabase
@@ -45,7 +45,7 @@ const Community: React.FC = () => {
       if (error) throw error;
 
       if (data) {
-        // StoreMapPage에서 사용한 것과 동일한 좌표 보정 로직 적용
+        // 좌표 데이터 보정 로직 (상세페이지 이동을 위해 id 포함)
         const validData = data
           .map((item: any) => ({
             ...item,
@@ -64,6 +64,7 @@ const Community: React.FC = () => {
   const fetchPosts = async () => {
     setLoading(true);
     try {
+      // 1. 전체 개수 쿼리
       let countQuery = supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
@@ -75,6 +76,7 @@ const Community: React.FC = () => {
       const { count } = await countQuery;
       setTotalCount(count || 0);
 
+      // 2. 실제 데이터 쿼리
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
@@ -88,10 +90,11 @@ const Community: React.FC = () => {
       if (activeCategory !== 'all') query = query.eq('category', activeCategory);
       if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
 
-      const { data, error } = query; // await을 생략하지 않도록 주의
-      const result = await query;
-      if (result.error) throw result.error;
-      setPosts(result.data || []);
+      // 🚨 에러 해결 포인트: await를 사용하여 결과값을 받아온 후 구조 분해 할당
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      setPosts(data || []);
       
       window.scrollTo(0, 0);
     } catch (err: any) {
@@ -138,10 +141,6 @@ const Community: React.FC = () => {
     <div className="min-h-screen bg-[#050505] pt-32 pb-20 px-4 md:px-10 font-sans selection:bg-red-600/30 text-white">
       <Helmet>
         <title>호놀자 커뮤니티 | {getCategoryName(activeCategory)} - 호치민 유흥 · 밤문화 · 여행 리얼 후기</title>
-        <meta name="description" content={`베트남 호치민 여행의 생생한 현장! ${getCategoryName(activeCategory)} 채널에서 정보를 공유하세요.`} />
-        <meta property="og:title" content={`호놀자 커뮤니티 - ${getCategoryName(activeCategory)}`} />
-        <meta property="og:url" content="https://honolja.com/community" />
-        <meta property="og:type" content="website" />
       </Helmet>
 
       <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row gap-10">
@@ -215,7 +214,6 @@ const Community: React.FC = () => {
             {loading ? (
               <div className="py-20 text-center">
                 <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin inline-block"></div>
-                <p className="text-gray-500 text-xs mt-4 italic">데이터를 불러오고 있습니다...</p>
               </div>
             ) : posts.length === 0 ? (
               <div className="py-32 text-center text-gray-700 font-black italic uppercase tracking-widest border border-dashed border-white/5 rounded-3xl">
@@ -290,14 +288,13 @@ const Community: React.FC = () => {
             </div>
           )}
 
-          {/* 하단 호치민 방앗간 지도 섹션 */}
+          {/* 하단 지도 섹션 */}
           <section className="mt-24">
             <div className="flex items-center gap-3 mb-8">
               <span className="w-1.5 h-6 bg-red-600 rounded-full"></span>
               <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">호치민 방앗간 <span className="text-red-600">MAP</span></h3>
             </div>
             <div className="relative w-full aspect-video md:aspect-[21/9] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl bg-[#0f0f0f]">
-              {/* 보정된 데이터를 MillMap에 전달 */}
               <MillMap stores={allStores} />
               <div className="absolute inset-0 pointer-events-none border-[12px] border-[#050505] rounded-[2.5rem]"></div>
             </div>
