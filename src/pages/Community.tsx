@@ -112,10 +112,9 @@ const Community: React.FC = () => {
         <meta property="og:type" content="website" />
       </Helmet>
 
-      {/* 모바일에서 순서를 바꾸기 위해 flex-col-reverse(모바일) -> flex-row(PC) 적용 */}
       <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row gap-10">
         
-        {/* 메뉴 사이드바: 모바일에서는 하단에 위치 */}
+        {/* 메뉴 사이드바 */}
         <aside className="lg:w-72 space-y-6">
           <button 
             onClick={handleVIPAccess}
@@ -143,7 +142,7 @@ const Community: React.FC = () => {
           </div>
         </aside>
 
-        {/* 메인 게시글 영역: 모바일에서 상단에 위치 */}
+        {/* 메인 게시글 영역 */}
         <main className="flex-1">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
             <div>
@@ -219,6 +218,7 @@ const Community: React.FC = () => {
             )}
           </div>
 
+          {/* 페이지네이션 */}
           {totalPages > 1 && (
             <div className="mt-16 flex justify-center items-center gap-2">
               <button 
@@ -257,6 +257,27 @@ const Community: React.FC = () => {
               </button>
             </div>
           )}
+
+          {/* 📍 [추가된 섹션] 커뮤니티 하단 호치민 방앗간 지도 */}
+          <section className="mt-24">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="w-1.5 h-6 bg-red-600 rounded-full"></span>
+              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">호치민 방앗간 <span className="text-red-600">MAP</span></h3>
+            </div>
+            <div className="relative w-full aspect-video md:aspect-[21/9] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl">
+              <iframe 
+                src="https://www.google.com/maps/d/u/0/embed?mid=1vX-vS4M6nB8Qf4G8z0E9S-v7S0X-vS4M" 
+                className="absolute inset-0 w-full h-full grayscale-[0.2] invert-[0.9] contrast-[1.1]"
+                style={{ border: 0 }}
+                allowFullScreen={true}
+                loading="lazy"
+                title="Ho Chi Minh Premium Map"
+              ></iframe>
+              <div className="absolute inset-0 pointer-events-none border-[12px] border-[#050505] rounded-[2.5rem]"></div>
+            </div>
+            <p className="text-center mt-6 text-gray-500 text-[10px] font-bold italic uppercase tracking-[0.2em]">Ho Chi Minh Premium Guide Map © Honolja</p>
+          </section>
+
         </main>
       </div>
     </div>
