@@ -36,14 +36,26 @@ const Community: React.FC = () => {
     return categories.find(c => c.id === id)?.name || '커뮤니티';
   };
 
-  // 모든 업소 정보 가져오기 (지도 마커용)
+  // [수정된 부분] 모든 업소 정보 가져오기 (좌표 데이터 보정 로직 추가)
   const fetchAllStores = async () => {
     try {
       const { data, error } = await supabase
         .from('stores')
         .select('*');
       if (error) throw error;
-      setAllStores(data || []);
+
+      if (data) {
+        // StoreMapPage에서 사용한 것과 동일한 좌표 보정 로직 적용
+        const validData = data
+          .map((item: any) => ({
+            ...item,
+            lat: item.lat || item.Lat ? Number(item.lat || item.Lat) : null,
+            lng: item.lng || item.Ing || item.Lng ? Number(item.lng || item.Ing || item.Lng) : null
+          }))
+          .filter(item => item.lat !== null && item.lng !== null && !isNaN(item.lat));
+
+        setAllStores(validData);
+      }
     } catch (err: any) {
       console.error('Map Data Fetch Failed:', err.message);
     }
@@ -76,9 +88,10 @@ const Community: React.FC = () => {
       if (activeCategory !== 'all') query = query.eq('category', activeCategory);
       if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
 
-      const { data, error } = await query;
-      if (error) throw error;
-      setPosts(data || []);
+      const { data, error } = query; // await을 생략하지 않도록 주의
+      const result = await query;
+      if (result.error) throw result.error;
+      setPosts(result.data || []);
       
       window.scrollTo(0, 0);
     } catch (err: any) {
@@ -237,7 +250,7 @@ const Community: React.FC = () => {
             )}
           </div>
 
-          {/* 페이지네이션 (전체 복구) */}
+          {/* 페이지네이션 */}
           {totalPages > 1 && (
             <div className="mt-16 flex justify-center items-center gap-2">
               <button 
@@ -277,13 +290,14 @@ const Community: React.FC = () => {
             </div>
           )}
 
-          {/* 하단 호치민 방앗간 지도 섹션 (MillMap 적용) */}
+          {/* 하단 호치민 방앗간 지도 섹션 */}
           <section className="mt-24">
             <div className="flex items-center gap-3 mb-8">
               <span className="w-1.5 h-6 bg-red-600 rounded-full"></span>
               <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">호치민 방앗간 <span className="text-red-600">MAP</span></h3>
             </div>
             <div className="relative w-full aspect-video md:aspect-[21/9] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl bg-[#0f0f0f]">
+              {/* 보정된 데이터를 MillMap에 전달 */}
               <MillMap stores={allStores} />
               <div className="absolute inset-0 pointer-events-none border-[12px] border-[#050505] rounded-[2.5rem]"></div>
             </div>
