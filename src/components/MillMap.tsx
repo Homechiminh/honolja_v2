@@ -53,7 +53,6 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             content: iconImg, 
           });
 
-          // 마커 클릭 시 카드 노출
           marker.addListener("click", () => {
             setSelectedStore(store);
             mapRef.current?.panTo({ lat, lng });
@@ -84,9 +83,8 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
         }}
       />
 
-      {/* 📍 업소 정보 카드 - 이전 StoreMapPage에서 쓰던 그 스타일 */}
       {selectedStore && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#111]/95 backdrop-blur-md border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
           <div className="relative h-32">
             <img 
               src={selectedStore.image_url || 'https://via.placeholder.com/400x200?text=No+Image'} 
@@ -95,17 +93,22 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             />
             <button 
               onClick={() => setSelectedStore(null)}
-              className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+              className="absolute top-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg"
             >
               ✕
             </button>
           </div>
           <div className="p-5">
-            <h4 className="text-xl font-black italic text-white mb-1 uppercase tracking-tighter">{selectedStore.name}</h4>
-            <p className="text-gray-500 text-[10px] font-bold uppercase mb-4 opacity-60 truncate">{selectedStore.address}</p>
+            <h4 className="text-xl font-black italic text-white mb-1 uppercase tracking-tighter">
+              {selectedStore.name}
+            </h4>
+            {/* 📍 수정된 주소 텍스트: 색상을 밝게(text-gray-300) 조정하고 불투명도를 높였습니다. */}
+            <p className="text-gray-300 text-[10px] font-bold uppercase mb-4 tracking-tight leading-relaxed line-clamp-2">
+              {selectedStore.address}
+            </p>
             <button 
               onClick={() => navigate(`/store/${selectedStore.id}`)}
-              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg shadow-red-600/20 active:scale-95 transition-all"
+              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg shadow-red-600/30 active:scale-95 transition-all"
             >
               상세 정보 보기
             </button>
