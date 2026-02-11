@@ -35,10 +35,11 @@ const StoreDetail: React.FC = () => {
       if (storeError) throw storeError;
       
       if (storeData) {
+        // 위경도 값이 문자열로 인식되어 마커가 안 뜨는 현상을 방지하기 위해 parseFloat 처리
         setStore({
           ...storeData,
-          lat: Number(storeData.lat || storeData.Lat),
-          lng: Number(storeData.lng || storeData.Ing || storeData.Lng)
+          lat: parseFloat(String(storeData.lat || storeData.Lat || 0)),
+          lng: parseFloat(String(storeData.lng || storeData.Ing || storeData.Lng || 0))
         } as Store);
       }
 
@@ -48,13 +49,12 @@ const StoreDetail: React.FC = () => {
         .select('*');
 
       if (!allError && allData) {
-        // 커뮤니티 페이지에서 마커가 잘 떴던 로직을 유지하기 위해 
-        // 데이터 필드명을 표준화(lat, lng)하고 숫자로 변환합니다.
+        // 커뮤니티 페이지에서 성공했던 로직을 그대로 가져오되, 데이터 타입을 엄격하게 숫자로 변환
         const validData = allData.map((item: any) => ({
           ...item,
-          lat: Number(item.lat || item.Lat),
-          lng: Number(item.lng || item.Ing || item.Lng)
-        })).filter(item => !isNaN(item.lat) && !isNaN(item.lng));
+          lat: parseFloat(String(item.lat || item.Lat || 0)),
+          lng: parseFloat(String(item.lng || item.Ing || item.Lng || 0))
+        })).filter(item => item.lat !== 0 && item.lng !== 0);
         
         setAllStores(validData);
       }
@@ -175,8 +175,6 @@ const StoreDetail: React.FC = () => {
                 {displayImages.map((img: string, i: number) => (
                   <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[1.5rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    
-                    {/* 마우스 오버 시 "사진 보기" 버튼 표기 */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center">
                        <span className="text-white font-black text-[11px] uppercase italic bg-red-600 px-4 py-1.5 rounded-full shadow-2xl transform scale-90 group-hover:scale-100 transition-all">
                           {i === 5 && galleryImages.length > 6 ? '사진 더보기' : '사진 보기'}
@@ -221,7 +219,7 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
-            {/* 위치 안내 */}
+            {/* 위치 안내 - MillMap */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
@@ -232,9 +230,9 @@ const StoreDetail: React.FC = () => {
                   <p className="text-white font-black italic text-base break-all leading-snug">📍 {store.address}</p>
                 </div>
                 <div className="h-[400px] md:h-[500px] relative rounded-[2rem] overflow-hidden border-2 border-white/5">
-                  {/* 에러 수정을 위해 center 속성을 제거하고 stores만 전달합니다. */}
+                  {/* key를 id로 주어 업소가 변경될 때 지도를 다시 그리게 하여 마커 로딩을 확실히 합니다. */}
                   {allStores.length > 0 && (
-                    <MillMap stores={allStores} />
+                    <MillMap key={store.id} stores={allStores} />
                   )}
                 </div>
                 <p className="text-center text-gray-500 text-[10px] font-bold italic uppercase tracking-widest">Ho Chi Minh Premium Guide Map © Honolja</p>
