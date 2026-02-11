@@ -34,14 +34,12 @@ const StoreDetail: React.FC = () => {
       
       if (storeError) throw storeError;
       
-      let currentStore: Store | null = null;
       if (storeData) {
-        currentStore = {
+        setStore({
           ...storeData,
           lat: Number(storeData.lat || storeData.Lat),
           lng: Number(storeData.lng || storeData.Ing || storeData.Lng)
-        } as Store;
-        setStore(currentStore);
+        } as Store);
       }
 
       // 2. 전체 업소 데이터 (마커 표시용)
@@ -50,7 +48,8 @@ const StoreDetail: React.FC = () => {
         .select('*');
 
       if (!allError && allData) {
-        // 마커가 잘 떴던 커뮤니티 로직과 동일하게 숫자 타입 강제 변환
+        // 커뮤니티 페이지에서 마커가 잘 떴던 로직을 유지하기 위해 
+        // 데이터 필드명을 표준화(lat, lng)하고 숫자로 변환합니다.
         const validData = allData.map((item: any) => ({
           ...item,
           lat: Number(item.lat || item.Lat),
@@ -177,6 +176,7 @@ const StoreDetail: React.FC = () => {
                   <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[1.5rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     
+                    {/* 마우스 오버 시 "사진 보기" 버튼 표기 */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center">
                        <span className="text-white font-black text-[11px] uppercase italic bg-red-600 px-4 py-1.5 rounded-full shadow-2xl transform scale-90 group-hover:scale-100 transition-all">
                           {i === 5 && galleryImages.length > 6 ? '사진 더보기' : '사진 보기'}
@@ -232,12 +232,9 @@ const StoreDetail: React.FC = () => {
                   <p className="text-white font-black italic text-base break-all leading-snug">📍 {store.address}</p>
                 </div>
                 <div className="h-[400px] md:h-[500px] relative rounded-[2rem] overflow-hidden border-2 border-white/5">
-                  {/* allStores가 로드된 후에만 MillMap을 렌더링하도록 조건부 렌더링 강화 */}
+                  {/* 에러 수정을 위해 center 속성을 제거하고 stores만 전달합니다. */}
                   {allStores.length > 0 && (
-                    <MillMap 
-                      stores={allStores} 
-                      center={{ lat: Number(store.lat), lng: Number(store.lng) }} 
-                    />
+                    <MillMap stores={allStores} />
                   )}
                 </div>
                 <p className="text-center text-gray-500 text-[10px] font-bold italic uppercase tracking-widest">Ho Chi Minh Premium Guide Map © Honolja</p>
