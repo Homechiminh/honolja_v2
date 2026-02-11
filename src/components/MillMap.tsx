@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate } from 'react-router-dom';
 
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -20,6 +20,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
   const navigate = useNavigate();
   const [selectedStore, setSelectedStore] = useState<any | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]); // 마커 객체들을 관리할 Ref
   
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -37,12 +38,45 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     return DEFAULT_CENTER;
   }, [stores]);
 
+  // 마커를 직접 생성하는 로직
   useEffect(() => {
-    if (isLoaded && mapRef.current && stores.length === 1) {
-      mapRef.current.panTo(mapCenter);
-      mapRef.current.setZoom(17);
+    if (isLoaded && mapRef.current && stores) {
+      // 1. 기존 마커 제거
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
+
+      // 2. 새 마커 생성 (순수 JS 방식)
+      stores.forEach(store => {
+        const lat = Number(store.lat || store.Lat);
+        const lng = Number(store.lng || store.Ing || store.Lng);
+        if (isNaN(lat) || lat === 0) return;
+
+        const marker = new google.maps.Marker({
+          position: { lat, lng },
+          map: mapRef.current as google.maps.Map,
+          title: store.name,
+          icon: {
+            url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
+            scaledSize: new google.maps.Size(42, 42),
+            anchor: new google.maps.Point(21, 21),
+          }
+        });
+
+        marker.addListener('click', () => {
+          setSelectedStore(store);
+          mapRef.current?.panTo({ lat, lng });
+        });
+
+        markersRef.current.push(marker);
+      });
+
+      // 3. 상세페이지인 경우 포커싱
+      if (stores.length === 1) {
+        mapRef.current.panTo(mapCenter);
+        mapRef.current.setZoom(17);
+      }
     }
-  }, [isLoaded, mapCenter, stores.length]);
+  }, [isLoaded, stores, mapCenter]);
 
   if (!isLoaded) return (
     <div className="w-full h-full bg-[#050505] flex items-center justify-center">
@@ -70,37 +104,9 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] }
           ]
         }}
-      >
-        {stores.map((store, idx) => {
-          const lat = Number(store.lat || store.Lat);
-          const lng = Number(store.lng || store.Ing || store.Lng);
+      />
 
-          if (isNaN(lat) || lat === 0) return null;
-
-          // ✅ [전략 변경] 에러가 나는 MarkerF 대신, 
-          // MarkerF 컴포넌트 자체를 'any'로 취급하여 타입 검사를 건너뜁니다.
-          const SafeMarker = MarkerF as any;
-
-          return (
-            <SafeMarker
-              key={`${store.id}-${idx}`}
-              position={{ lat, lng }}
-              onClick={() => {
-                setSelectedStore(store);
-                mapRef.current?.panTo({ lat, lng });
-              }}
-              // 아이콘 설정을 가장 단순한 구조로 전달
-              icon={{
-                url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-                scaledSize: new window.google.maps.Size(42, 42),
-                anchor: new window.google.maps.Point(21, 21),
-              }}
-              title={store.name}
-            />
-          );
-        })}
-      </GoogleMap>
-
+      {/* 선택된 스토어 카드 */}
       {selectedStore && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
           <div className="relative h-32">
