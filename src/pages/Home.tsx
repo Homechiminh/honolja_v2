@@ -145,7 +145,7 @@ const Home: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
             <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span> 
-            실시간 인기 업소
+            HOT 실시간 인기 업소
           </h3>
           <div className="flex flex-wrap gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5 font-sans">
             <button onClick={() => setActiveCategory('all')} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-gray-500 hover:text-white'}`}>전체</button>
