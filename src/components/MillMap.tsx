@@ -10,7 +10,7 @@ const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization"
 
 const ICON_ASSETS: Record<string, string> = {
   karaoke: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png',
-  barber: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png',
+  barber: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/bar barber-pole_nfqbfz.png',
   massage: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png',
   barclub: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png',
   villa: 'https://res.cloudinary.com/dtkfzuyew/image/upload/v1770754541/villa_nf3ksq.png',
@@ -28,7 +28,6 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     libraries: LIBRARIES
   });
 
-  // 중심점 계산
   const mapCenter = useMemo(() => {
     if (stores && stores.length > 0) {
       const target = stores[0];
@@ -79,14 +78,6 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
 
           if (isNaN(lat) || lat === 0) return null;
 
-          // ✅ [해결책] icon 객체를 any로 강제 형변환하여 TS2769 에러를 완전히 무시합니다.
-          // 이 방법은 런타임 성능에는 영향을 주지 않으면서 빌드 에러만 깔끔하게 제거합니다.
-          const markerIcon: any = {
-            url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-            scaledSize: new window.google.maps.Size(42, 42),
-            anchor: new window.google.maps.Point(21, 21),
-          };
-
           return (
             <MarkerF
               key={`${store.id}-${idx}`}
@@ -95,14 +86,19 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
               }}
-              icon={markerIcon}
+              // ✅ TS2769 에러를 해결하는 단 하나의 확실한 방법: (as any) 캐스팅
+              // TypeScript의 엄격한 유니온 타입 체크를 우회하여 런타임에 객체를 그대로 전달합니다.
+              icon={{
+                url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
+                scaledSize: new window.google.maps.Size(42, 42),
+                anchor: new window.google.maps.Point(21, 21),
+              } as any}
               title={store.name}
             />
           );
         })}
       </GoogleMap>
 
-      {/* 선택된 스토어 카드 UI */}
       {selectedStore && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
           <div className="relative h-32">
@@ -127,7 +123,7 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             </p>
             <button 
               onClick={() => navigate(`/store/${selectedStore.id}`)}
-              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg shadow-red-600/30 active:scale-95 transition-all"
+              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg active:scale-95 transition-all"
             >
               상세 정보 보기
             </button>
