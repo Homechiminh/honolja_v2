@@ -17,7 +17,8 @@ const ICON_ASSETS: Record<string, string> = {
   default: 'https://cdn-icons-png.flaticon.com/512/684/684908.png'
 };
 
-const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
+// focusStoreId 프롭을 추가해서 특정 업소 강조 기능을 넣었습니다.
+const MillMap: React.FC<{ stores: any[], focusStoreId?: string | number }> = ({ stores, focusStoreId }) => {
   const navigate = useNavigate();
   const [selectedStore, setSelectedStore] = useState<any | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -28,22 +29,38 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     libraries: LIBRARIES
   });
 
-  const mapCenter = useMemo(() => {
+  // 1. 중심점과 줌 레벨 결정 로직
+  const { center, zoomLevel } = useMemo(() => {
+    // 강조할 특정 업소가 있는 경우 (StoreDetail 상황)
+    if (focusStoreId && stores.length > 0) {
+      const target = stores.find(s => String(s.id) === String(focusStoreId));
+      if (target) {
+        return {
+          center: { lat: Number(target.lat || target.Lat), lng: Number(target.lng || target.Ing || target.Lng) },
+          zoomLevel: 19 // 초밀착 확대
+        };
+      }
+    }
+    
+    // 강조할 업소는 없지만 매물들이 있는 경우 (Community 상황)
     if (stores && stores.length > 0) {
-      const target = stores[0];
-      const lat = Number(target.lat || target.Lat);
-      const lng = Number(target.lng || target.Ing || target.Lng);
-      if (!isNaN(lat) && lat !== 0) return { lat, lng };
+      const first = stores[0];
+      return {
+        center: { lat: Number(first.lat || first.Lat), lng: Number(first.lng || first.Ing || first.Lng) },
+        zoomLevel: 15 // 일반적인 동네 뷰
+      };
     }
-    return DEFAULT_CENTER;
-  }, [stores]);
 
+    return { center: DEFAULT_CENTER, zoomLevel: 14 };
+  }, [stores, focusStoreId]);
+
+  // 2. 데이터 변경 시 지도 이동 처리
   useEffect(() => {
-    if (isLoaded && mapRef.current && stores.length === 1) {
-      mapRef.current.panTo(mapCenter);
-      mapRef.current.setZoom(17);
+    if (isLoaded && mapRef.current) {
+      mapRef.current.panTo(center);
+      mapRef.current.setZoom(zoomLevel);
     }
-  }, [isLoaded, mapCenter, stores.length]);
+  }, [isLoaded, center, zoomLevel]);
 
   if (!isLoaded) return (
     <div className="w-full h-full bg-white flex items-center justify-center">
@@ -55,22 +72,20 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
     <div className="relative w-full h-full">
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
-        center={mapCenter}
-        zoom={stores.length === 1 ? 17 : 14}
+        center={center}
+        zoom={zoomLevel}
         onLoad={(map) => { mapRef.current = map; }}
         onClick={() => setSelectedStore(null)}
         options={{
           disableDefaultUI: false,
           gestureHandling: 'greedy',
-          // ✅ .env에서 Map ID를 가져와 적용합니다.
           mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID,
-          styles: [] // 별도의 인라인 스타일은 사용하지 않음
+          styles: [] 
         }}
       >
         {stores.map((store, idx) => {
           const lat = Number(store.lat || store.Lat);
           const lng = Number(store.lng || store.Ing || store.Lng);
-
           if (isNaN(lat) || lat === 0) return null;
 
           return (
@@ -80,21 +95,24 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
               onClick={() => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
+                mapRef.current?.setZoom(19); // 클릭 시에도 확대
               }}
               icon={{
                 url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-                scaledSize: new window.google.maps.Size(42, 42),
-                anchor: new window.google.maps.Point(21, 21),
+                scaledSize: new window.google.maps.Size(46, 46),
+                anchor: new window.google.maps.Point(23, 23),
               }}
               title={store.name}
+              // 강조된 마커를 가장 위로 올림
+              zIndex={String(store.id) === String(focusStoreId) ? 999 : 1}
             />
           );
         })}
       </GoogleMap>
 
-      {/* 선택된 스토어 카드 */}
-      {selectedStore && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
+      {/* 카드 팝업 (여러 개일 때만 표시) */}
+      {selectedStore && stores.length > 1 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999]">
           <div className="relative h-32">
             <img 
               src={selectedStore.image_url || 'https://via.placeholder.com/400x200?text=No+Image'} 
@@ -103,21 +121,17 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
             />
             <button 
               onClick={(e) => { e.stopPropagation(); setSelectedStore(null); }}
-              className="absolute top-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg"
+              className="absolute top-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full text-white flex items-center justify-center"
             >
               ✕
             </button>
           </div>
           <div className="p-5">
-            <h4 className="text-xl font-black italic text-white mb-1 uppercase tracking-tighter">
-              {selectedStore.name}
-            </h4>
-            <p className="text-gray-300 text-[10px] font-bold uppercase mb-4 tracking-tight leading-relaxed line-clamp-2">
-              {selectedStore.address}
-            </p>
+            <h4 className="text-xl font-black italic text-white mb-1 uppercase tracking-tighter">{selectedStore.name}</h4>
+            <p className="text-gray-300 text-[10px] font-bold uppercase mb-4 tracking-tight leading-relaxed line-clamp-2">{selectedStore.address}</p>
             <button 
               onClick={() => navigate(`/store/${selectedStore.id}`)}
-              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg active:scale-95 transition-all"
+              className="w-full py-3.5 bg-red-600 text-white font-black italic uppercase text-xs rounded-2xl shadow-lg"
             >
               상세 정보 보기
             </button>
