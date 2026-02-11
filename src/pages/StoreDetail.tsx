@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { SNS_LINKS } from '../constants';
 import { UserRole } from '../types'; 
 import type { Store } from '../types';
+// 공통 지도 컴포넌트 임포트
+import MillMap from '../components/MillMap';
 
 const StoreDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,30 +15,42 @@ const StoreDetail: React.FC = () => {
   const { currentUser, initialized } = useAuth(); 
 
   const [store, setStore] = useState<Store | null>(null);
+  const [allStores, setAllStores] = useState<any[]>([]); // 지도용 전체 업소 데이터
   const [loading, setLoading] = useState(true);
   const [activeImgIndex, setActiveImgIndex] = useState<number | null>(null);
 
   const isAdmin = currentUser?.role === UserRole.ADMIN;
 
-  const fetchStoreDetail = async () => {
+  const fetchData = async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('stores').select('*').eq('id', id).single();
-      if (error) throw error;
-      if (data) setStore(data as Store);
+      // 1. 현재 업소 상세 정보
+      const { data: storeData, error: storeError } = await supabase.from('stores').select('*').eq('id', id).single();
+      if (storeError) throw storeError;
+      if (storeData) setStore(storeData as Store);
+
+      // 2. 지도 표시를 위한 전체 업소 데이터
+      const { data: allData, error: allError } = await supabase.from('stores').select('*');
+      if (!allError && allData) {
+        const validData = allData.map((item: any) => ({
+          ...item,
+          lat: Number(item.lat || item.Lat),
+          lng: Number(item.lng || item.Ing || item.Lng)
+        })).filter(item => !isNaN(item.lat) && !isNaN(item.lng));
+        setAllStores(validData);
+      }
     } catch (err: any) {
-      setStore(null);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (initialized) fetchStoreDetail();
+    if (initialized) fetchData();
   }, [id, initialized]);
 
-  // 태그 리스트 변환 로직
   const tagList = useMemo<string[]>(() => {
     if (!store?.tags) return [];
     if (Array.isArray(store.tags)) return store.tags as string[];
@@ -46,12 +60,6 @@ const StoreDetail: React.FC = () => {
     return [];
   }, [store?.tags]);
 
-  // 구글 지도 URL 생성
-  const mapUrl = useMemo(() => {
-    if (!store?.address) return "";
-    return `https://maps.google.com/maps?q=${encodeURIComponent(store.address)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
-  }, [store?.address]);
-
   // 갤러리 이미지 추출
   const galleryImages = useMemo<string[]>(() => {
     if (!store) return [];
@@ -60,18 +68,14 @@ const StoreDetail: React.FC = () => {
       : [store.image_url].filter(Boolean) as string[];
   }, [store]);
 
-  // SEO용 카테고리 한글 변환
+  // 메인 화면에는 6개만 노출
+  const displayImages = galleryImages.slice(0, 6);
+
   const getCategoryKR = (cat: string) => {
     const mapping: {[key: string]: string} = {
-      massage: '마사지 스파',
-      barber: '이발소',
-      karaoke: '가라오케',
-      barclub: '바 클럽',
-      villa: '풀빌라 숙소',
-      restaurant: '호치민 맛집',
-      cafe: '호치민 카페',
-      tour: '투어 서비스',
-      vehicle: '차량 렌트'
+      massage: '마사지 스파', barber: '이발소', karaoke: '가라오케',
+      barclub: '바 클럽', villa: '풀빌라 숙소', restaurant: '호치민 맛집',
+      cafe: '호치민 카페', tour: '투어 서비스', vehicle: '차량 렌트'
     };
     return mapping[cat] || cat;
   };
@@ -95,9 +99,6 @@ const StoreDetail: React.FC = () => {
     <div className="min-h-screen bg-[#050505] font-sans selection:bg-red-600/30 text-white overflow-x-hidden">
       <Helmet>
         <title>호놀자 | {store.name} - 호치민 {getCategoryKR(store.category)} 추천 및 후기</title>
-        <meta name="description" content={`${store.name} - 호치민 ${getCategoryKR(store.category)}의 위치, 가격, 예약 혜택 정보입니다.`} />
-        <meta property="og:title" content={`${store.name} | 호치민 ${getCategoryKR(store.category)} - 호놀자`} />
-        <meta property="og:image" content={store.image_url} />
       </Helmet>
 
       {/* Hero Header */}
@@ -118,7 +119,6 @@ const StoreDetail: React.FC = () => {
               </div>
               <h1 className="text-3xl md:text-6xl font-black text-white mb-2 tracking-tighter italic leading-none uppercase break-keep">{store.name}</h1>
               
-              {/* 🔴 [수정] 빌라 카테고리일 때 가격 표시 (Hero 영역) */}
               {store.category === 'villa' && store.price && (
                 <div className="mb-4 text-red-500 font-black text-xl md:text-2xl italic tracking-tighter uppercase">
                    {store.price} <span className="text-xs md:text-sm opacity-80">/ Per Night</span>
@@ -149,25 +149,32 @@ const StoreDetail: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-16">
             
-            {/* Gallery */}
+            {/* 시설 사진 Section */}
             <section>
               <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
-                Interior Gallery
+                시설 사진
               </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {galleryImages.map((img: string, i: number) => (
-                  <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[2rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {displayImages.map((img: string, i: number) => (
+                  <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[1.5rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all flex items-center justify-center">
-                       <span className="opacity-0 group-hover:opacity-100 text-white font-black text-[10px] uppercase italic bg-red-600 px-3 py-1 rounded-full shadow-lg transition-opacity">Zoom In</span>
+                    
+                    {/* 호버 시 텍스트 변경: "사진 보기" / 마지막 사진은 "사진 더보기" */}
+                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex flex-col items-center justify-center">
+                       <span className="text-white font-black text-[11px] uppercase italic bg-red-600 px-4 py-1.5 rounded-full shadow-2xl transform scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all">
+                          {i === 5 && galleryImages.length > 6 ? '사진 더보기' : '사진 보기'}
+                       </span>
+                       {i === 5 && galleryImages.length > 6 && (
+                         <span className="text-white/60 text-[9px] font-bold mt-2 uppercase tracking-widest group-hover:opacity-100 opacity-0 transition-opacity">+{galleryImages.length - 6} more photos</span>
+                       )}
                     </div>
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* Benefits */}
+            {/* 호놀자 제휴 혜택 */}
             <section className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-[2.5rem] p-8 md:p-10 border border-red-600/20 shadow-2xl">
               <div className="flex items-center space-x-4 mb-8">
                 <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -185,11 +192,11 @@ const StoreDetail: React.FC = () => {
               </ul>
             </section>
 
-            {/* Description */}
+            {/* 상세 정보 */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
-                Information
+                상세 정보
               </h3>
               <div className="bg-[#0f0f0f] rounded-[2rem] p-8 border border-white/5">
                 <p className="text-slate-400 text-base md:text-lg leading-[1.8] font-medium whitespace-pre-line break-keep italic">
@@ -198,19 +205,21 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
-            {/* Location */}
+            {/* 위치 안내 - MillMap 통합 적용 */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
-                Location
+                위치 안내
               </h3>
               <div className="bg-[#0f0f0f] rounded-[2.5rem] p-8 border border-white/5 space-y-6">
                 <div className="bg-black/50 px-6 py-4 rounded-xl border border-white/5">
                   <p className="text-white font-black italic text-base break-all leading-snug">📍 {store.address}</p>
                 </div>
-                <div className="h-[300px] md:h-[450px] bg-slate-900 rounded-[2rem] overflow-hidden border-2 border-white/5">
-                  <iframe title="map" width="100%" height="100%" frameBorder="0" style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }} src={mapUrl} allowFullScreen></iframe>
+                {/* 현재 업소를 포함한 전체 업소 데이터를 MillMap에 전달 */}
+                <div className="h-[400px] md:h-[500px] relative rounded-[2rem] overflow-hidden border-2 border-white/5">
+                  <MillMap stores={allStores} />
                 </div>
+                <p className="text-center text-gray-500 text-[10px] font-bold italic uppercase tracking-widest">Ho Chi Minh Premium Guide Map © Honolja</p>
               </div>
             </section>
           </div>
@@ -221,7 +230,6 @@ const StoreDetail: React.FC = () => {
                 <span className="text-red-600 font-black text-[10px] uppercase tracking-[0.2em] block mb-2 italic text-center">Exclusive Reservation</span>
                 <h4 className="text-2xl font-black mb-4 tracking-tighter italic uppercase leading-none text-center">실시간 예약 및 문의</h4>
                 
-                {/* 🔴 [수정] 빌라 카테고리일 때 가격 표시 (사이드바 예약창 내) */}
                 {store.category === 'villa' && store.price && (
                   <div className="mb-6 py-3 border-y border-gray-100 text-center">
                     <p className="text-[10px] text-gray-400 font-black uppercase italic mb-1">Stay Price</p>
@@ -241,14 +249,33 @@ const StoreDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal - 화살표 슬라이드 적용 */}
       {activeImgIndex !== null && (
-        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in">
-          <button onClick={() => setActiveImgIndex(null)} className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all text-white text-2xl">✕</button>
-          <img src={galleryImages[activeImgIndex]} alt="Zoom" className="max-w-5xl w-full max-h-[70vh] object-contain rounded-3xl border border-white/10 shadow-2xl" />
-          <div className="mt-10 flex gap-4">
-            <button onClick={() => setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1))} className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-black italic uppercase text-xs hover:bg-white hover:text-black transition-all">Prev</button>
-            <button onClick={() => setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0))} className="px-8 py-3 bg-red-600 rounded-2xl font-black italic uppercase text-xs shadow-xl active:scale-95 transition-all">Next</button>
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-300">
+          <button onClick={() => setActiveImgIndex(null)} className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all text-white text-2xl z-50">✕</button>
+          
+          <div className="relative w-full max-w-5xl flex items-center justify-center group">
+            {/* 좌측 화살표 */}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1)); }}
+              className="absolute left-0 md:-left-16 w-14 h-14 bg-white/5 hover:bg-red-600/80 rounded-full flex items-center justify-center transition-all border border-white/10 group-hover:scale-110 active:scale-90"
+            >
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+
+            <img src={galleryImages[activeImgIndex]} alt="Zoom" className="w-full max-h-[75vh] object-contain rounded-3xl border border-white/10 shadow-2xl transition-all duration-500" />
+
+            {/* 우측 화살표 */}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0)); }}
+              className="absolute right-0 md:-right-16 w-14 h-14 bg-white/5 hover:bg-red-600/80 rounded-full flex items-center justify-center transition-all border border-white/10 group-hover:scale-110 active:scale-90"
+            >
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="mt-8 px-8 py-2.5 bg-red-600 rounded-full border border-white/20 text-[10px] font-black italic uppercase tracking-[0.2em] shadow-lg">
+            {activeImgIndex + 1} / {galleryImages.length}
           </div>
         </div>
       )}
