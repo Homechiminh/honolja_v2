@@ -78,9 +78,14 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
 
           if (isNaN(lat) || lat === 0) return null;
 
-          // ✅ TS2769 에러 해결 핵심:
-          // 'google.maps.Icon' 타입을 명시적으로 선언하거나, 
-          // 객체 리터럴에서 필수 속성만 깔끔하게 정의하여 타입 오버로드 충돌을 방지합니다.
+          // ✅ TS2769 에러 해결을 위한 최종 장치: as google.maps.Icon 사용
+          // 만약 google.maps.Icon 정의를 찾지 못할 경우를 대비해 (as any)로 우회 처리합니다.
+          const iconConfig = {
+            url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
+            scaledSize: new window.google.maps.Size(42, 42),
+            anchor: new window.google.maps.Point(21, 21),
+          };
+
           return (
             <MarkerF
               key={`${store.id}-${idx}`}
@@ -89,17 +94,14 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
               }}
-              icon={{
-                url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-                scaledSize: new window.google.maps.Size(42, 42),
-                anchor: new window.google.maps.Point(21, 21),
-              }}
+              icon={iconConfig as any}
               title={store.name}
             />
           );
         })}
       </GoogleMap>
 
+      {/* 선택된 스토어 카드 */}
       {selectedStore && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden z-[999] animate-in fade-in slide-in-from-bottom-2">
           <div className="relative h-32">
