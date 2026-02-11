@@ -5,11 +5,6 @@ import { useStores } from '../hooks/useStores';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import StoreCard from '../components/StoreCard';
-// @react-google-maps/api에서 지원하지 않는 AdvancedMarker 대신 MarkerF를 사용하여 에러 해결
-import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF } from '@react-google-maps/api';
-
-// 라이브러리 로드 고정 (재로드 방지)
-const LIBRARIES: ("marker" | "drawing" | "geometry" | "places" | "visualization")[] = ['marker'];
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -20,24 +15,19 @@ const Home: React.FC = () => {
   const [latestVipPosts, setLatestVipPosts] = useState<any[]>([]);
   const [latestNotices, setLatestNotices] = useState<any[]>([]);
   const [showLevelModal, setShowLevelModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false); // 출석 팝업 상태
   const [currentAdIdx, setCurrentAdIdx] = useState(0);
-
-  // 🗺️ 지도 및 하단 리스트 필터 관련 상태
-  const [selectedStore, setSelectedStore] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState('all'); 
 
-  // 🛠️ Google Maps API 로더
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: LIBRARIES
-  });
-
-  // 🔴 [자동 출석 체크 시스템]
+  // 🔴 [자동 출석 체크 & 팝업 시스템]
   useEffect(() => {
     const checkAttendance = async () => {
       if (!initialized || !currentUser) return;
-      const today = new Date().toLocaleDateString('en-CA'); 
+      
+      // 로컬 스토리지로 오늘 이미 팝업을 봤는지 체크 (중복 팝업 방지)
+      const today = new Date().toLocaleDateString('en-CA');
+      const hasSeenToday = localStorage.getItem(`attendance_${currentUser.id}_${today}`);
+      
       try {
         const { data: existing } = await supabase
           .from('attendance')
@@ -47,29 +37,35 @@ const Home: React.FC = () => {
           .maybeSingle();
 
         if (!existing) {
+          // DB에 출석 기록 저장
           const { error: insertError } = await supabase
             .from('attendance')
             .insert([{ user_id: currentUser.id, check_in_date: today }]);
 
           if (!insertError) {
             const rewardPoints = 5;
-            await supabase.from('profiles').update({ points: (currentUser.points || 0) + rewardPoints }).eq('id', currentUser.id);
+            // 포인트 업데이트
+            await supabase.from('profiles')
+              .update({ points: (currentUser.points || 0) + rewardPoints })
+              .eq('id', currentUser.id);
+            
             await refreshUser();
+            setShowAttendanceModal(true); // 성공 팝업 띄우기
+            localStorage.setItem(`attendance_${currentUser.id}_${today}`, 'true');
           }
         }
-      } catch (err) { console.error(err); }
+      } catch (err) { 
+        console.error("Attendance Error:", err); 
+      }
     };
+
     checkAttendance();
   }, [initialized, currentUser, refreshUser]);
 
-  // 📍 [필터링 로직] - 지도 마커 및 인기 업소 리스트 연동
+  // 📍 [데이터 필터링]
   const filteredStores = useMemo(() => {
     return stores.filter((s: any) => activeCategory === 'all' || s.category === activeCategory);
   }, [stores, activeCategory]);
-
-  const mapStores = useMemo(() => {
-    return filteredStores.filter((s: any) => s.lat && s.lng);
-  }, [filteredStores]);
 
   const hotServiceStores = useMemo(() => {
     return filteredStores.filter((s: any) => s.is_hot && s.category !== 'villa').sort(() => Math.random() - 0.5).slice(0, 14);
@@ -122,7 +118,7 @@ const Home: React.FC = () => {
         <title>호놀자 | 베트남 호치민 프리미엄 가이드</title>
       </Helmet>
 
-      {/* Hero 섹션 - 아이콘 클릭 시 /stores/카테고리명 이동 */}
+      {/* Hero 섹션 */}
       <section className="relative pt-44 pb-24 px-6 flex flex-col items-center text-center">
         <h2 className="text-7xl md:text-9xl font-black italic tracking-tighter mb-8 leading-none">
           <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]">호</span>치민에서 <span className="text-[#FF0000] brightness-125 saturate-200 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] tracking-tighter">놀자<span className="ml-5 md:ml-3">!</span></span>
@@ -148,97 +144,22 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* 🗺️ 내 주변 방앗간 (지도 전용 필터 유지) */}
-      <section id="map-section" className="max-w-[1400px] mx-auto px-6 py-10">
-        <div className="bg-[#111] rounded-[3rem] p-8 md:p-12 border border-white/5 shadow-2xl">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
-              <h3 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter">
-                내 주변 <span className="text-emerald-500">방앗간</span>
-              </h3>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 bg-black/40 p-2 rounded-2xl border border-white/5 font-sans">
-              <button onClick={() => setActiveCategory('all')} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-emerald-500 text-black' : 'text-gray-500 hover:text-white'}`}>전체</button>
-              {categories.map(c => (
-                <button key={c.id} onClick={() => setActiveCategory(c.id)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === c.id ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-white'}`}>{c.name.split('/')[0]}</button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="w-full h-[350px] md:h-[450px] rounded-[2rem] overflow-hidden border-4 border-white/5 relative shadow-inner">
-            {isLoaded ? (
-              <GoogleMap
-                mapContainerStyle={{ width: '100%', height: '100%' }}
-                center={{ lat: 10.7769, lng: 106.7009 }} 
-                zoom={14}
-                options={{
-                  mapId: '5485af0bf2bb4ebe63c8f331', 
-                  mapTypeControl: false, 
-                  streetViewControl: false,
-                  fullscreenControl: false,
-                  styles: [
-                    { "elementType": "geometry", "stylers": [{ "color": "#242f3e" }] },
-                    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#17263c" }] }
-                  ],
-                }}
-              >
-                {mapStores.map((store: any) => {
-                  let iconUrl = store.map_icon_url;
-                  if (!iconUrl) {
-                    const iconMap: any = {
-                      massage: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/foot-massage_ox9or9.png",
-                      barber: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/barber-pole_nfqbfz.png",
-                      karaoke: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743624/microphone_nq2l7d.png",
-                      barclub: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770743565/cocktail_byowmk.png",
-                      villa: "https://res.cloudinary.com/dtkfzuyew/image/upload/v1770754541/villa_nf3ksq.png"
-                    };
-                    iconUrl = iconMap[store.category] || null;
-                  }
-
-                  return (
-                    <MarkerF
-                      key={store.id}
-                      position={{ lat: Number(store.lat), lng: Number(store.lng) }}
-                      onClick={() => setSelectedStore(store)}
-                      icon={iconUrl ? {
-                        url: iconUrl,
-                        scaledSize: new window.google.maps.Size(42, 42),
-                        anchor: new window.google.maps.Point(21, 21)
-                      } : undefined}
-                    />
-                  );
-                })}
-
-                {selectedStore && (
-                  <InfoWindowF
-                    position={{ lat: Number(selectedStore.lat), lng: Number(selectedStore.lng) }}
-                    onCloseClick={() => setSelectedStore(null)}
-                  >
-                    <div className="p-2 min-w-[200px] text-black font-sans">
-                      <img src={selectedStore.image_url} className="w-full h-24 object-cover rounded-lg mb-2" />
-                      <h4 className="font-black text-sm mb-1">{selectedStore.name}</h4>
-                      <p className="text-[10px] text-gray-600 mb-2">{selectedStore.address}</p>
-                      <button onClick={() => navigate(`/store/${selectedStore.id}`)} className="w-full py-2 bg-red-600 text-white text-[10px] font-black rounded uppercase">방앗간 방문하기</button>
-                    </div>
-                  </InfoWindowF>
-                )}
-              </GoogleMap>
-            ) : <div className="w-full h-full bg-white/5 animate-pulse flex items-center justify-center text-gray-500 font-black italic">MAP LOADING...</div>}
-          </div>
-        </div>
-      </section>
-
-      {/* 🔥 실시간 인기 업소 (지도 필터와 연동됨) */}
-      <section className="max-w-[1400px] mx-auto px-6 py-20 text-white">
-        <div className="flex items-center justify-between mb-12">
+      {/* 🔥 실시간 인기 업소 */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10 text-white">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
           <h3 className="text-xl md:text-3xl font-black italic flex items-center gap-3">
             <span className="w-1.5 h-6 md:h-8 bg-red-600 rounded-full"></span> 
             {activeCategory === 'all' ? 'HOT 실시간 인기 업소' : `${activeCategory.toUpperCase()} 추천 리스트`}
           </h3>
-          <Link to="/stores/all" className="text-gray-400 font-bold text-[10px] md:text-sm hover:text-white underline italic">전체보기</Link>
+          
+          <div className="flex flex-wrap gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5 font-sans">
+            <button onClick={() => setActiveCategory('all')} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === 'all' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-gray-500 hover:text-white'}`}>전체</button>
+            {categories.map(c => (
+              <button key={c.id} onClick={() => setActiveCategory(c.id)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activeCategory === c.id ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-gray-500 hover:text-white'}`}>{c.name.split('/')[0]}</button>
+            ))}
+          </div>
         </div>
+        
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 font-sans">
           {storesLoading ? (
             [...Array(10)].map((_, i) => <div key={i} className="aspect-[3/4] bg-white/5 rounded-[24px] animate-pulse" />)
@@ -344,7 +265,28 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* VIP 모달 */}
+      {/* 🟢 출석체크 성공 모달 (신규 추가) */}
+      {showAttendanceModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAttendanceModal(false)}></div>
+          <div className="relative bg-[#111] border-2 border-emerald-500/30 p-10 rounded-[3rem] max-w-[320px] w-full text-center shadow-[0_0_50px_rgba(16,185,129,0.2)] transform animate-in zoom-in-95 duration-300">
+            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">💰</span>
+            </div>
+            <h3 className="text-2xl font-black italic mb-2 uppercase text-emerald-500">Daily Bonus!</h3>
+            <p className="text-slate-300 text-sm font-bold mb-1">오늘의 첫 방문을 환영합니다.</p>
+            <p className="text-white text-lg font-black mb-8 underline decoration-emerald-500 decoration-4 underline-offset-4">+5 포인트가 적립되었습니다.</p>
+            <button 
+              onClick={() => setShowAttendanceModal(false)} 
+              className="w-full py-4 bg-emerald-500 text-black rounded-2xl font-black text-sm hover:bg-emerald-400 transition-all shadow-lg active:scale-95"
+            >
+              즐겁게 놀기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* VIP 레벨 제한 모달 */}
       {showLevelModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 font-sans">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLevelModal(false)}></div>
