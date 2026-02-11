@@ -15,7 +15,7 @@ const StoreDetail: React.FC = () => {
   const { currentUser, initialized } = useAuth(); 
 
   const [store, setStore] = useState<Store | null>(null);
-  const [allStores, setAllStores] = useState<any[]>([]); // 지도용 전체 업소 데이터
+  const [allStores, setAllStores] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
   const [activeImgIndex, setActiveImgIndex] = useState<number | null>(null);
 
@@ -26,22 +26,41 @@ const StoreDetail: React.FC = () => {
     setLoading(true);
     try {
       // 1. 현재 업소 상세 정보
-      const { data: storeData, error: storeError } = await supabase.from('stores').select('*').eq('id', id).single();
+      const { data: storeData, error: storeError } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
       if (storeError) throw storeError;
-      if (storeData) setStore(storeData as Store);
+      
+      let currentStore: Store | null = null;
+      if (storeData) {
+        currentStore = {
+          ...storeData,
+          lat: Number(storeData.lat || storeData.Lat),
+          lng: Number(storeData.lng || storeData.Ing || storeData.Lng)
+        } as Store;
+        setStore(currentStore);
+      }
 
-      // 2. 지도 표시를 위한 전체 업소 데이터
-      const { data: allData, error: allError } = await supabase.from('stores').select('*');
+      // 2. 전체 업소 데이터 (마커 표시용)
+      const { data: allData, error: allError } = await supabase
+        .from('stores')
+        .select('*');
+
       if (!allError && allData) {
+        // 마커가 잘 떴던 커뮤니티 로직과 동일하게 숫자 타입 강제 변환
         const validData = allData.map((item: any) => ({
           ...item,
           lat: Number(item.lat || item.Lat),
           lng: Number(item.lng || item.Ing || item.Lng)
         })).filter(item => !isNaN(item.lat) && !isNaN(item.lng));
+        
         setAllStores(validData);
       }
     } catch (err: any) {
-      console.error(err);
+      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
@@ -60,7 +79,6 @@ const StoreDetail: React.FC = () => {
     return [];
   }, [store?.tags]);
 
-  // 갤러리 이미지 추출
   const galleryImages = useMemo<string[]>(() => {
     if (!store) return [];
     return store.promo_images && store.promo_images.length > 0 
@@ -68,7 +86,6 @@ const StoreDetail: React.FC = () => {
       : [store.image_url].filter(Boolean) as string[];
   }, [store]);
 
-  // 메인 화면에는 6개만 노출
   const displayImages = galleryImages.slice(0, 6);
 
   const getCategoryKR = (cat: string) => {
@@ -160,13 +177,12 @@ const StoreDetail: React.FC = () => {
                   <div key={i} onClick={() => setActiveImgIndex(i)} className="aspect-[16/10] rounded-[1.5rem] overflow-hidden border-2 border-white/5 shadow-xl cursor-pointer group relative">
                     <img src={img} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     
-                    {/* 호버 시 텍스트 변경: "사진 보기" / 마지막 사진은 "사진 더보기" */}
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex flex-col items-center justify-center">
-                       <span className="text-white font-black text-[11px] uppercase italic bg-red-600 px-4 py-1.5 rounded-full shadow-2xl transform scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center">
+                       <span className="text-white font-black text-[11px] uppercase italic bg-red-600 px-4 py-1.5 rounded-full shadow-2xl transform scale-90 group-hover:scale-100 transition-all">
                           {i === 5 && galleryImages.length > 6 ? '사진 더보기' : '사진 보기'}
                        </span>
                        {i === 5 && galleryImages.length > 6 && (
-                         <span className="text-white/60 text-[9px] font-bold mt-2 uppercase tracking-widest group-hover:opacity-100 opacity-0 transition-opacity">+{galleryImages.length - 6} more photos</span>
+                         <span className="text-white/60 text-[9px] font-bold mt-2 uppercase tracking-widest">+{galleryImages.length - 6} more photos</span>
                        )}
                     </div>
                   </div>
@@ -205,7 +221,7 @@ const StoreDetail: React.FC = () => {
               </div>
             </section>
 
-            {/* 위치 안내 - MillMap 통합 적용 */}
+            {/* 위치 안내 */}
             <section>
               <h3 className="text-xl font-black text-white mb-6 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
@@ -215,9 +231,14 @@ const StoreDetail: React.FC = () => {
                 <div className="bg-black/50 px-6 py-4 rounded-xl border border-white/5">
                   <p className="text-white font-black italic text-base break-all leading-snug">📍 {store.address}</p>
                 </div>
-                {/* 현재 업소를 포함한 전체 업소 데이터를 MillMap에 전달 */}
                 <div className="h-[400px] md:h-[500px] relative rounded-[2rem] overflow-hidden border-2 border-white/5">
-                  <MillMap stores={allStores} />
+                  {/* allStores가 로드된 후에만 MillMap을 렌더링하도록 조건부 렌더링 강화 */}
+                  {allStores.length > 0 && (
+                    <MillMap 
+                      stores={allStores} 
+                      center={{ lat: Number(store.lat), lng: Number(store.lng) }} 
+                    />
+                  )}
                 </div>
                 <p className="text-center text-gray-500 text-[10px] font-bold italic uppercase tracking-widest">Ho Chi Minh Premium Guide Map © Honolja</p>
               </div>
@@ -249,13 +270,12 @@ const StoreDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal - 화살표 슬라이드 적용 */}
+      {/* Modal Slide UI */}
       {activeImgIndex !== null && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-in fade-in duration-300">
           <button onClick={() => setActiveImgIndex(null)} className="absolute top-10 right-10 w-12 h-12 bg-white/10 hover:bg-red-600 rounded-full flex items-center justify-center transition-all text-white text-2xl z-50">✕</button>
           
           <div className="relative w-full max-w-5xl flex items-center justify-center group">
-            {/* 좌측 화살표 */}
             <button 
               onClick={(e) => { e.stopPropagation(); setActiveImgIndex((prev) => (prev! > 0 ? prev! - 1 : galleryImages.length - 1)); }}
               className="absolute left-0 md:-left-16 w-14 h-14 bg-white/5 hover:bg-red-600/80 rounded-full flex items-center justify-center transition-all border border-white/10 group-hover:scale-110 active:scale-90"
@@ -265,7 +285,6 @@ const StoreDetail: React.FC = () => {
 
             <img src={galleryImages[activeImgIndex]} alt="Zoom" className="w-full max-h-[75vh] object-contain rounded-3xl border border-white/10 shadow-2xl transition-all duration-500" />
 
-            {/* 우측 화살표 */}
             <button 
               onClick={(e) => { e.stopPropagation(); setActiveImgIndex((prev) => (prev! < galleryImages.length - 1 ? prev! + 1 : 0)); }}
               className="absolute right-0 md:-right-16 w-14 h-14 bg-white/5 hover:bg-red-600/80 rounded-full flex items-center justify-center transition-all border border-white/10 group-hover:scale-110 active:scale-90"
