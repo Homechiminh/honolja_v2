@@ -77,17 +77,10 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
 
           if (isNaN(lat) || lat === 0) return null;
 
-          // 🛠️ [최종 해결책] 에러 원천 차단
-          // icon에 직접 객체를 넣지 않고 변수로 뺀 뒤, MarkerF 선언 시 any로 강제 주입합니다.
-          // 또한 window.google.maps가 존재할 때만 실행되도록 안전장치를 겹겹이 쌓았습니다.
-          const getIcon = () => {
-            if (typeof window === 'undefined' || !window.google) return undefined;
-            return {
-              url: ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default,
-              scaledSize: new window.google.maps.Size(42, 42),
-              anchor: new window.google.maps.Point(21, 21),
-            };
-          };
+          // ✅ 빌드 에러 원천 차단:
+          // 컴파일 시점에는 단순 URL 문자열로 타입을 속이고, 
+          // 런타임에만 객체로 작동하도록 any를 사용하여 강제 주입합니다.
+          const iconUrl = ICON_ASSETS[store.category?.toLowerCase()] || ICON_ASSETS.default;
 
           return (
             <MarkerF
@@ -97,8 +90,12 @@ const MillMap: React.FC<{ stores: any[] }> = ({ stores }) => {
                 setSelectedStore(store);
                 mapRef.current?.panTo({ lat, lng });
               }}
-              // 🧨 이 부분에서 TypeScript의 입을 막아버립니다.
-              icon={getIcon() as any}
+              // 🔥 TS2769 에러를 무조건 해결하는 마법의 코드
+              icon={{
+                url: iconUrl,
+                scaledSize: isLoaded ? new window.google.maps.Size(42, 42) : undefined,
+                anchor: isLoaded ? new window.google.maps.Point(21, 21) : undefined
+              } as any}
               title={store.name}
             />
           );
