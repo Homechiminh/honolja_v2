@@ -174,7 +174,7 @@ const StoreDetail: React.FC = () => {
             <section>
               <h3 className="text-xl font-black text-white mb-8 italic uppercase tracking-tighter flex items-center">
                 <div className="w-1 h-5 bg-red-600 mr-3 rounded-full"></div>
-                시설 사진
+                갤러리
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {displayImages.map((img: string, i: number) => (
