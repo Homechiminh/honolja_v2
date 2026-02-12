@@ -144,11 +144,13 @@ const StoreDetail: React.FC = () => {
                 </div>
               )}
 
+              {/* 상단에는 대표 태그 4개만 노출 */}
               {tagList.length > 0 && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-3 gap-y-1 mb-4">
-                  {tagList.map((tag: string, i: number) => (
+                  {tagList.slice(0, 4).map((tag: string, i: number) => (
                     <span key={i} className="text-red-500 text-xs md:text-sm font-black italic">#{tag}</span>
                   ))}
+                  {tagList.length > 4 && <span className="text-white/30 text-[10px] font-black italic self-center uppercase">...</span>}
                 </div>
               )}
 
@@ -237,11 +239,20 @@ const StoreDetail: React.FC = () => {
                     <MillMap 
                       key={store.id} 
                       stores={allStores} 
-                      // ✅ 핵심 포인트: 현재 보고 있는 업소 ID를 전달하여 클로즈업 유도
                       focusStoreId={store.id} 
                     />
                   )}
                 </div>
+
+                {/* 하단에 전체 해시태그 나열 (SEO 및 정보성) */}
+                {tagList.length > 0 && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-1.5 pt-4 border-t border-white/5">
+                    {tagList.map((tag: string, i: number) => (
+                      <span key={i} className="text-red-500/60 text-[11px] font-black italic">#{tag}</span>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-center text-gray-500 text-[10px] font-bold italic uppercase tracking-widest">Ho Chi Minh Premium Guide Map © Honolja</p>
               </div>
             </section>
