@@ -193,6 +193,11 @@ const AdminStoreEdit: React.FC = () => {
                   {Object.values(CategoryType).map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
                 </select>
               </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">💰 가격 정보 (예: 1,000,000 VND)</label>
+                <input value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className={inputStyle} />
+              </div>
+              
               <div className="md:col-span-2 space-y-4">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 italic">📍 상세 주소 및 위치 수정</label>
                 <div className="flex gap-4">
@@ -215,6 +220,18 @@ const AdminStoreEdit: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* 추가된 해시태그 필드 */}
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-black text-red-500 uppercase tracking-widest ml-2 italic">🏷️ 해시태그 (쉼표로 구분: 예: 호치민클럽, 불금, 핫플)</label>
+                <input value={formData.tags} onChange={(e) => setFormData({...formData, tags: e.target.value})} className={inputStyle} placeholder="호치민여행, 호치민클럽, 호치민밤문화" />
+              </div>
+
+              {/* 추가된 제휴혜택 필드 */}
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-2 italic">🎁 제휴 혜택 (쉼표로 구분: 예: 첫 방문 10% 할인, 음료 서비스)</label>
+                <input value={formData.benefits} onChange={(e) => setFormData({...formData, benefits: e.target.value})} className={inputStyle} placeholder="호놀자 특별 할인가 제공, 예약 대기 시간 최소화" />
               </div>
 
               <div className="space-y-4">
